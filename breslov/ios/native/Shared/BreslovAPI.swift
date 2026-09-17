@@ -64,7 +64,9 @@ enum BreslovAPI {
                             timeZone: timeZone, name: name)
         do {
             var request = URLRequest(url: url)
-            request.timeoutInterval = 15
+            // A free hosting plan sleeps when idle and takes up to about half
+            // a minute to wake, so give it room before falling back.
+            request.timeoutInterval = 35
             let (bytes, _) = try await URLSession.shared.data(for: request)
             let decoded = try JSONDecoder().decode(Widget.self, from: bytes)
             save(decoded)

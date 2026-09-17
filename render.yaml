@@ -1,5 +1,6 @@
-# Deploy on Render (render.com). In Render: New → Blueprint → point it at this
-# repo → set the Root Directory to "breslov".
+# Deploy on Render (render.com).
+# This file must sit at the top level of the repository for Render to find it.
+# In Render: New -> Blueprint -> pick this repo -> pick the branch.
 services:
   - type: web
     name: breslov-daily

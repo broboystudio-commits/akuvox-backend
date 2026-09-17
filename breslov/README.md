@@ -39,11 +39,82 @@ no internet needed for times and dates.
 
 ---
 
-## Getting it running
+## Getting it onto your phone
 
-### On your own computer, to try it
+Your phone cannot open this yet, because it is only code — nothing is running
+anywhere. There is one step in the middle: put it online. That gives you a web
+address, and then the phone just opens that address.
 
-You need Node.js installed (nodejs.org, the "LTS" button).
+**All of this happens in a web browser on your computer. Nothing to install,
+no black terminal window, no commands to type.**
+
+### Step 1 — put it online (about 5 minutes, free)
+
+1. Go to **[render.com](https://render.com)** and click **Get Started** →
+   **GitHub**. Let it connect to your GitHub account.
+2. Click **New +** (top right) → **Web Service**.
+3. Find this repository in the list and click **Connect**.
+   If you do not see it, click *Configure account* and give Render permission
+   to see it.
+4. Now fill in the boxes. Most are already right; these four matter:
+
+   | Box | What to put |
+   |---|---|
+   | **Branch** | `claude/daily-verses-app-widgets-promcg` |
+   | **Root Directory** | `breslov` |
+   | **Build Command** | `npm install` |
+   | **Start Command** | `npm start` |
+
+   Leave **Instance Type** on **Free**.
+5. Click **Create Web Service** and wait. It takes 2–3 minutes. When the log
+   stops and says **Live**, you are done.
+6. At the top of the page is your address, something like
+   **`https://breslov-daily.onrender.com`**. That is the app. Write it down —
+   you need it twice more below.
+
+Open that address in your computer's browser first, just to see it working.
+
+### Step 2 — put it on your home screen
+
+On your iPhone:
+
+1. Open **Safari** (it has to be Safari, not Chrome) and go to your address.
+2. Tap the **Share** button — the square with the arrow pointing up, at the
+   bottom of the screen.
+3. Scroll down the list and tap **Add to Home Screen**.
+4. Tap **Add**.
+
+You now have an icon on your home screen. Tapping it opens the app full
+screen, with no browser bars. Learning you have already opened stays readable
+even with no signal.
+
+### Step 3 — the widget
+
+Follow **[ios/README.md](ios/README.md)**. It takes about five minutes with a
+free app called Scriptable, and you will need the same web address from
+Step 1.
+
+### One thing to know about the free plan
+
+Render's free plan puts the server to sleep after about 15 minutes with nobody
+using it. The next visit has to wake it, which takes 30 seconds or so — the
+page just sits there and then loads normally. After that it is fast until it
+goes quiet again.
+
+The widget waits up to 35 seconds for this, and if the server is still waking
+it shows the last saved copy marked *"saved copy — offline"* rather than
+nothing.
+
+If that bothers you, Render's **Starter** plan is $7/month and never sleeps.
+Everything else is identical.
+
+---
+
+## Running it on your own computer instead
+
+Only needed if you want to change the code. Skip this otherwise.
+
+You need Node.js installed (nodejs.org, the green "LTS" button).
 
 ```bash
 cd breslov
@@ -51,7 +122,7 @@ npm install
 npm start
 ```
 
-Then open **http://localhost:3000** in your browser.
+Then open **http://localhost:3000**.
 
 To check everything is working:
 
@@ -59,37 +130,9 @@ To check everything is working:
 npm run check
 ```
 
-That prints a list with `ok` or `FAIL` next to each part. The calendar and
-zmanim should always pass. The last line tells you whether the computer can
-reach Sefaria for the texts.
-
-### Putting it on the internet (Render, free)
-
-1. Push this repo to GitHub.
-2. Go to [render.com](https://render.com), sign in with GitHub.
-3. **New → Blueprint**, pick this repo. Render reads `breslov/render.yaml`
-   and sets everything up.
-4. Wait for it to build. You get an address like
-   `https://breslov-daily.onrender.com`.
-5. Optional but worth it — in Render's **Shell** tab run:
-   ```bash
-   npm run seed
-   ```
-   That downloads the texts ahead of time so the site loads instantly.
-
-On Render's free plan the server goes to sleep when nobody uses it, so the
-first visit after a quiet spell takes 30 seconds or so. Any paid plan removes
-that.
-
-### Putting it on your iPhone
-
-**As an app icon:** open the site in Safari, tap the Share button, then
-**Add to Home Screen**. It opens full screen with no browser bars, and the
-learning you have already opened still works with no signal.
-
-**As a widget:** see **[ios/README.md](ios/README.md)**. The quick way takes
-about five minutes with the free Scriptable app and needs no Mac. There is
-also Swift source for a real App Store app in `ios/native/`, for later.
+That prints `ok` or `FAIL` next to each part. The calendar and zmanim should
+always pass. The last line tells you whether the computer can reach Sefaria
+for the texts.
 
 ---
 

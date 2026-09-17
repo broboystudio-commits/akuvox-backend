@@ -82,7 +82,10 @@ async function loadData() {
   const cachePath = cacheFile();
   try {
     const req = new Request(url);
-    req.timeoutInterval = 15;
+    // A free hosting plan puts the server to sleep when nobody is using it,
+    // and waking it takes up to about half a minute. Wait it out rather than
+    // falling back to yesterday's times.
+    req.timeoutInterval = 35;
     const data = await req.loadJSON();
     saveCache(cachePath, data);
     return { data, stale: false };

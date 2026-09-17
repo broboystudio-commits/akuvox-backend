@@ -1,5 +1,10 @@
 # Widgets on your iPhone
 
+**Before you start:** the app has to be online first, and you need its web
+address (something like `https://breslov-daily.onrender.com`). If you do not
+have one yet, do **Step 1** in the [main README](../README.md#getting-it-onto-your-phone)
+first — it takes about five minutes in a browser.
+
 There are two ways to get this on your home screen. They are very different
 amounts of work, so start with the first one.
 
