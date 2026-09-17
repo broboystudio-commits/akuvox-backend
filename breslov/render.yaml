@@ -1,0 +1,16 @@
+# Deploy on Render (render.com). In Render: New → Blueprint → point it at this
+# repo → set the Root Directory to "breslov".
+services:
+  - type: web
+    name: breslov-daily
+    runtime: node
+    plan: free
+    rootDir: breslov
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"

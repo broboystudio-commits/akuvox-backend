@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Breslov Daily</title>
+<meta name="description" content="A daily teaching from Rebbe Nachman, the day's Tehillim, the Tikkun HaKlali, zmanim, and a Torah for the week." />
+
+<meta name="theme-color" content="#14121c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Breslov Daily" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/icon-180.png" />
+<link rel="icon" href="/icons/icon-192.png" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="dateblock">
+      <div class="hebdate" id="hebDate">—</div>
+      <div class="gregdate" id="gregDate">Loading…</div>
+    </div>
+    <button class="place" id="placeBtn" type="button" title="Set your location">
+      <span id="placeName">Brooklyn, NY</span>
+    </button>
+  </div>
+  <div class="nextzman" id="nextZman" hidden></div>
+  <div class="readbar" id="readbar">
+    <button type="button" id="toggleEnglish" class="chip" aria-pressed="true">English on</button>
+    <button type="button" id="fontSmaller" class="chip" aria-label="Smaller text">A&minus;</button>
+    <button type="button" id="fontLarger" class="chip" aria-label="Larger text">A+</button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ------------------------------------------------------ TODAY -->
+  <section class="panel" id="panel-today">
+    <article class="card" id="cardSpark">
+      <div class="card-head">
+        <h2>Today's Teaching</h2>
+        <span class="tag" id="sparkRef"></span>
+      </div>
+      <div class="body" id="sparkBody"><div class="skeleton"></div></div>
+    </article>
+
+    <article class="card compact" id="cardTehillimToday">
+      <div class="card-head">
+        <h2>Today's Tehillim</h2>
+        <span class="tag" id="tehillimTag"></span>
+      </div>
+      <p class="hint" id="tehillimHint">The monthly cycle, by the day of the Hebrew month.</p>
+      <button class="btn" data-goto="tehillim" type="button">Open today's Tehillim</button>
+    </article>
+
+    <article class="card compact" id="cardTikkunToday">
+      <div class="card-head">
+        <h2>Tikkun HaKlali</h2>
+        <span class="tag">10 Psalms</span>
+      </div>
+      <p class="hint">Tehillim 16, 32, 41, 42, 59, 77, 90, 105, 137, 150.</p>
+      <button class="btn" data-goto="tikkun" type="button">Say the Tikkun HaKlali</button>
+    </article>
+
+    <article class="card compact" id="cardShabbos">
+      <div class="card-head"><h2>Shabbos</h2><span class="tag" id="parshaTag"></span></div>
+      <div id="shabbosTimes" class="kv"></div>
+    </article>
+  </section>
+
+  <!-- ------------------------------------------------------ TEHILLIM -->
+  <section class="panel" id="panel-tehillim" hidden>
+    <article class="card">
+      <div class="card-head">
+        <h2>Tehillim for Today</h2>
+        <span class="tag" id="tehillimDayTag"></span>
+      </div>
+      <div class="body" id="tehillimBody"><div class="skeleton"></div></div>
+    </article>
+  </section>
+
+  <!-- ------------------------------------------------------ TIKKUN -->
+  <section class="panel" id="panel-tikkun" hidden>
+    <article class="card">
+      <div class="card-head">
+        <h2>Tikkun HaKlali</h2>
+        <span class="tag">תִּקּוּן הַכְּלָלִי</span>
+      </div>
+      <p class="hint">The ten psalms Rebbe Nachman designated as the general remedy, in order.</p>
+      <div class="chapter-nav" id="tikkunNav"></div>
+      <div class="body" id="tikkunBody"><div class="skeleton"></div></div>
+    </article>
+  </section>
+
+  <!-- ------------------------------------------------------ WEEKLY -->
+  <section class="panel" id="panel-weekly" hidden>
+    <article class="card">
+      <div class="card-head">
+        <h2>Torah of the Week</h2>
+        <span class="tag" id="weeklyTag"></span>
+      </div>
+      <p class="hint" id="weeklyWhy"></p>
+      <div class="body" id="weeklyBody"><div class="skeleton"></div></div>
+    </article>
+  </section>
+
+  <!-- ------------------------------------------------------ ZMANIM -->
+  <section class="panel" id="panel-zmanim" hidden>
+    <article class="card">
+      <div class="card-head">
+        <h2>Zmanim</h2>
+        <span class="tag" id="zmanimPlace"></span>
+      </div>
+      <div class="zmanim" id="zmanimList"><div class="skeleton"></div></div>
+      <p class="hint">
+        Calculated for your location with the KosherJava algorithms. Times are a guide —
+        follow your rav and your shul's calendar.
+      </p>
+    </article>
+  </section>
+
+</main>
+
+<!-- ------------------------------------------------------ bottom tabs -->
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-panel="today" type="button"><span>✦</span>Today</button>
+  <button class="tab" data-panel="tehillim" type="button"><span>♪</span>Tehillim</button>
+  <button class="tab" data-panel="tikkun" type="button"><span>✧</span>Tikkun</button>
+  <button class="tab" data-panel="weekly" type="button"><span>❖</span>Weekly</button>
+  <button class="tab" data-panel="zmanim" type="button"><span>◔</span>Zmanim</button>
+</nav>
+
+<footer class="credits">
+  <p>Texts from <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>.
+  Zmanim by KosherJava / kosher-zmanim. Calendar by Hebcal.</p>
+  <p id="offlineNote" hidden>Showing saved content — you are offline.</p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
