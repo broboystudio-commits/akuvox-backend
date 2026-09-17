@@ -15,7 +15,8 @@ copy-and-paste.
 | **Today's teaching** | A piece of Reb Nachman every day, rotating through Likutei Moharan, Likutei Moharan II, Sichot HaRan, Sefer HaMiddot and Likutei Etzot |
 | **Today's Tehillim** | The standard monthly cycle, by the day of the Hebrew month |
 | **Tikkun HaKlali** | All ten psalms — 16, 32, 41, 42, 59, 77, 90, 105, 137, 150 — in order, with a tab for each |
-| **Zmanim** | Fourteen times for wherever you are: alos, misheyakir, netz, sof zman shema and tefilla (GRA and MGA), chatzos, mincha gedola and ketana, plag, shkia, tzais |
+| **Zmanim** | Every time for wherever you are: alos, misheyakir, netz, sof zman shema and tefilla (GRA and MGA), chatzos, mincha gedola and ketana, plag, shkia, tzais |
+| **Your minhag** | Pick how you hold — Standard, **Rabbeinu Tam (72 minutes)**, Rabbeinu Tam zmaniyos, Magen Avraham (16.1°) or Geonim — or set any single line yourself. The whole app follows, including the countdown and the phone widget. "Show every opinion" lists them all side by side |
 | **Shabbos** | The parsha, candle lighting and havdalah for your location |
 | **Torah of the week** | One lesson, the same all week. It looks for a lesson where Reb Nachman darshans a verse from that week's parsha, and if there isn't one it gives a featured lesson instead |
 
@@ -181,6 +182,7 @@ Handy if you want to build something else on top of it.
 | `/api/today` | Everything the home screen needs, in one go |
 | `/api/widget` | A small version for the iPhone widgets |
 | `/api/zmanim` | The times, with the next one marked |
+| `/api/zmanim?minhag=rabbeinu-tam` | The same, following that minhag. Also `standard`, `rabbeinu-tam-zmanis`, `magen-avraham`, `geonim`, or per-line such as `?tzais=72`, plus `&showAll=true` |
 | `/api/calendar` | Hebrew date, parsha, candles, yomim tovim |
 | `/api/daily` | Today's teaching |
 | `/api/tehillim` | Today's Tehillim |
@@ -204,7 +206,9 @@ different day.
 | To change | Edit |
 |---|---|
 | The default location | `lib/dates.js`, the `DEFAULT_PLACE` block at the top |
-| Which zmanim are shown, or which opinion | `lib/zmanim.js`, the `ZMANIM_TABLE` list |
+| Which zmanim are shown, or which opinions are offered | `lib/zmanim.js`, the `ZMANIM_SLOTS` list |
+| The ready-made minhag presets | `lib/zmanim.js`, the `PRESETS` block |
+| The minhag the iPhone widget uses | `ios/scriptable/BreslovDaily.js`, the `MINHAG` line near the top |
 | Which seforim are in the rotation, or how often each comes up | `lib/library.js`, the `BOOKS` list — `weight` is how often |
 | The Tehillim division | `lib/library.js`, `TEHILLIM_BY_DAY` |
 | Colours and fonts | `public/styles.css`, the `:root` block at the top |

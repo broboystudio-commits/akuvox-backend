@@ -55,6 +55,11 @@ function placeFromQuery(req) {
   });
 }
 
+/** Which opinions to follow (?minhag=rabbeinu-tam, or per-line ?tzais=72). */
+function zmanimPrefsFromQuery(req) {
+  return req.query; // normalisePrefs() whitelists these, so nothing unsafe gets through
+}
+
 /** The day being asked about: ?date=YYYY-MM-DD, otherwise today where the user is. */
 function dateFromQuery(req, place) {
   const asked = String(req.query.date || '').trim();
@@ -93,7 +98,7 @@ app.get('/api/zmanim', route(async (req) => {
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place);
   return {
-    ...zmanimLib.zmanimFor(date, place),
+    ...zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req)),
     hebrew: calendar.hebrew,
     gregorian: calendar.gregorian,
     candles: calendar.candles,
@@ -141,7 +146,7 @@ app.get('/api/today', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place);
-  const zmanim = zmanimLib.zmanimFor(date, place);
+  const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
   const week = Math.floor(daily.dayKey(date) / 7);
 
   const [spark, tehillim, weekly] = await Promise.all([
@@ -163,7 +168,7 @@ app.get('/api/widget', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place);
-  const zmanim = zmanimLib.zmanimFor(date, place);
+  const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
   const spark = await cached(`spark:${daily.dayKey(date)}`, DAY, () => daily.dailySpark(date));
 
   return {
@@ -176,9 +181,18 @@ app.get('/api/widget', route(async (req) => {
     candlesDate: calendar.candles ? calendar.candles.date : null,
     havdalah: calendar.havdalah ? calendar.havdalah.time : null,
     next: zmanim.next
-      ? { label: zmanim.next.en, he: zmanim.next.he, time: zmanim.next.time, minutesAway: zmanim.next.minutesAway }
+      ? {
+          label: zmanim.next.en,
+          he: zmanim.next.he,
+          time: zmanim.next.time,
+          opinion: zmanim.next.opinion,
+          minutesAway: zmanim.next.minutesAway,
+        }
       : null,
-    times: zmanim.times.map((t) => ({ key: t.key, en: t.en, he: t.he, time: t.time })),
+    minhag: zmanim.prefs.minhag,
+    times: zmanim.times
+      .filter((t) => t.isChosen)
+      .map((t) => ({ key: t.key, en: t.en, he: t.he, time: t.time, opinion: t.opinion })),
     teaching: spark.available
       ? { heading: spark.heading, he: spark.snippetHe, en: spark.snippetEn, url: spark.url }
       : null,

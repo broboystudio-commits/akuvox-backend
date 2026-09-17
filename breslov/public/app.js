@@ -8,10 +8,11 @@
     place: 'bd.place',
     english: 'bd.english',
     fontScale: 'bd.fontScale',
+    zmanim: 'bd.zmanim',
     lastToday: 'bd.lastToday',
   };
 
-  /** Safe localStorage -- Private Browsing can make it throw. */
+  /** localStorage throws in Private Browsing, so every use is wrapped. */
   function load(key, fallback) {
     try {
       var raw = localStorage.getItem(key);
@@ -22,46 +23,53 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* ignore */ }
   }
 
-  var DEFAULT_PLACE = {
-    name: 'Brooklyn, NY',
-    lat: 40.6501,
-    lng: -73.9496,
-    tz: 'America/New_York',
-  };
+  var DEFAULT_PLACE = { name: 'Brooklyn, NY', lat: 40.6501, lng: -73.9496, tz: 'America/New_York' };
 
   var state = {
     place: load(STORE.place, DEFAULT_PLACE),
     english: load(STORE.english, true),
     fontScale: load(STORE.fontScale, 1),
+    zmanim: load(STORE.zmanim, { minhag: 'standard', showAll: false }),
     today: null,
     tikkunChapter: 0,
+    panel: 'today',
   };
 
   var $ = function (id) { return document.getElementById(id); };
 
-  // ------------------------------------------------------------ requests
+  // ------------------------------------------------------------- requests
 
-  function placeQuery() {
+  function query() {
     var p = state.place || DEFAULT_PLACE;
     var tz = p.tz;
     if (!tz) {
       try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { tz = DEFAULT_PLACE.tz; }
     }
-    return 'lat=' + encodeURIComponent(p.lat) +
-           '&lng=' + encodeURIComponent(p.lng) +
-           '&tz=' + encodeURIComponent(tz) +
-           '&name=' + encodeURIComponent(p.name || '');
+    var parts = [
+      'lat=' + encodeURIComponent(p.lat),
+      'lng=' + encodeURIComponent(p.lng),
+      'tz=' + encodeURIComponent(tz),
+      'name=' + encodeURIComponent(p.name || ''),
+    ];
+    var z = state.zmanim || {};
+    if (z.minhag) parts.push('minhag=' + encodeURIComponent(z.minhag));
+    if (z.showAll) parts.push('showAll=true');
+    // Per-line choices override the preset.
+    ['alos', 'misheyakir', 'tzais', 'sofZmanShmaMGA', 'sofZmanTfilaMGA'].forEach(function (k) {
+      if (z[k]) parts.push(k + '=' + encodeURIComponent(z[k]));
+    });
+    return parts.join('&');
   }
 
   function api(path) {
-    var url = '/api/' + path + (path.indexOf('?') === -1 ? '?' : '&') + placeQuery();
+    var url = '/api/' + path + (path.indexOf('?') === -1 ? '?' : '&') + query();
     return fetch(url, { headers: { Accept: 'application/json' } }).then(function (r) {
       if (!r.ok) throw new Error('Request failed (' + r.status + ')');
       return r.json();
     });
   }
 
-  // ------------------------------------------------------------ drawing text
+  // ------------------------------------------------------------- building nodes
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -70,10 +78,46 @@
     return node;
   }
 
-  /** Turn an array of lines into paragraphs. Uses textContent, never innerHTML. */
-  function paragraphs(lines, className) {
+  function fill(node, child) {
+    node.textContent = '';
+    if (child) node.appendChild(child);
+  }
+
+  /**
+   * Sefaria hands back an array of lines. What that array *means* depends on
+   * the text: Tehillim comes one verse per entry, a lesson in Likutei Moharan
+   * comes one paragraph per entry.
+   *
+   * Rendering a psalm as one paragraph per verse looks broken -- a column of
+   * short disconnected lines. So we tell the two apart by shape: many short
+   * lines are verses and flow together with small verse numbers; longer lines
+   * are paragraphs and keep their breaks.
+   */
+  function looksLikeVerses(lines) {
+    if (!lines || lines.length < 4) return false;
+    var total = 0;
+    for (var i = 0; i < lines.length; i++) total += String(lines[i]).length;
+    return (total / lines.length) < 190;
+  }
+
+  function versesBlock(lines, className) {
+    var wrap = el('div', className + ' is-verses');
+    var para = el('p');
+    lines.forEach(function (line, i) {
+      var text = String(line).trim();
+      if (!text) return;
+      if (i > 0) para.appendChild(document.createTextNode(' '));
+      var num = el('span', 'vnum', String(i + 1));
+      para.appendChild(num);
+      para.appendChild(document.createTextNode(' ' + text));
+    });
+    wrap.appendChild(para);
+    return wrap;
+  }
+
+  function paragraphBlock(lines, className) {
     var wrap = el('div', className);
-    (lines || []).forEach(function (line) {
+    lines.forEach(function (line) {
       String(line).split(/\n{2,}/).forEach(function (chunk) {
         var t = chunk.trim();
         if (t) wrap.appendChild(el('p', null, t));
@@ -82,12 +126,22 @@
     return wrap;
   }
 
+  function textBlock(lines, className) {
+    var clean = (lines || []).map(function (l) { return String(l).trim(); })
+                             .filter(function (l) { return l.length > 0; });
+    if (!clean.length) return null;
+    return looksLikeVerses(clean) ? versesBlock(clean, className) : paragraphBlock(clean, className);
+  }
+
   /** One passage: Hebrew, then English, then the credit line. */
   function passage(data, label) {
     var box = el('div', 'passage');
     if (label) box.appendChild(el('div', 'passage-label', label));
-    if (data.hebrew && data.hebrew.length) box.appendChild(paragraphs(data.hebrew, 'he'));
-    if (data.english && data.english.length) box.appendChild(paragraphs(data.english, 'en'));
+
+    var he = textBlock(data.hebrew, 'he');
+    if (he) box.appendChild(he);
+    var en = textBlock(data.english, 'en');
+    if (en) box.appendChild(en);
 
     var bits = [];
     if (data.credit) {
@@ -113,20 +167,14 @@
   function unavailableNotice(data, what) {
     var box = el('div', 'notice');
     box.appendChild(el('strong', null, 'The ' + what + ' could not be loaded.'));
-    box.appendChild(document.createElement('br'));
     box.appendChild(document.createTextNode(
-      'The words come straight from Sefaria, and nothing is shown unless it arrives from there. ' +
-      (data && data.hint ? data.hint : 'Check the connection and pull down to refresh.')
+      'Every word here comes from Sefaria, and nothing is shown unless it arrives from there. ' +
+      (data && data.hint ? data.hint : 'Check the connection and try again.')
     ));
     return box;
   }
 
-  function fill(node, child) {
-    node.textContent = '';
-    node.appendChild(child);
-  }
-
-  // ------------------------------------------------------------ panels
+  // ------------------------------------------------------------- panels
 
   function renderToday(data) {
     state.today = data;
@@ -135,41 +183,41 @@
     var cal = data.calendar;
     $('hebDate').textContent = cal.hebrew.gematriya || cal.hebrew.en;
     $('gregDate').textContent = cal.gregorian.display;
-    $('placeName').textContent = cal.place.name;
+    $('placeBtn').textContent = cal.place.name;
+    $('aboutPlace').textContent = cal.place.name;
 
     var next = data.zmanim.next;
     var nz = $('nextZman');
     if (next) {
       nz.hidden = false;
       nz.textContent = '';
-      nz.appendChild(document.createTextNode('Next: '));
-      nz.appendChild(el('strong', null, next.en));
+      nz.appendChild(document.createTextNode('Next · '));
+      nz.appendChild(el('span', 'label', next.en));
       nz.appendChild(document.createTextNode(' '));
       nz.appendChild(el('span', 'he', next.he));
-      nz.appendChild(document.createTextNode(' · ' + next.time + ' (' + friendlyMinutes(next.minutesAway) + ')'));
+      nz.appendChild(document.createTextNode(' · ' + next.time + ' '));
+      nz.appendChild(el('span', 'away', friendlyMinutes(next.minutesAway)));
     } else {
       nz.hidden = true;
     }
 
-    // Today's teaching
     if (data.spark && data.spark.available) {
       $('sparkRef').textContent = data.spark.heading || data.spark.ref;
+      $('aboutSpark').textContent = data.spark.heading || data.spark.ref;
       fill($('sparkBody'), passage(data.spark));
     } else {
       $('sparkRef').textContent = '';
       fill($('sparkBody'), unavailableNotice(data.spark, 'daily teaching'));
     }
 
-    // Tehillim summary
     if (data.tehillim && data.tehillim.available) {
       $('tehillimTag').textContent = data.tehillim.label;
       $('tehillimHint').textContent =
-        'Day ' + data.tehillim.day + ' of the Hebrew month — ' + data.tehillim.cycle + '.';
+        'Day ' + data.tehillim.day + ' of the Hebrew month — the monthly cycle.';
     } else {
       $('tehillimTag').textContent = '';
     }
 
-    // Shabbos
     $('parshaTag').textContent = cal.parsha ? (cal.parsha.he || cal.parsha.en) : '';
     var rows = [];
     if (cal.parsha) rows.push(['Parsha', cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '')]);
@@ -179,14 +227,15 @@
       if (h.en.indexOf('Candle') === 0 || h.en.indexOf('Havdalah') === 0) return;
       rows.push([prettyDate(h.date), h.en]);
     });
-    var kv = el('div');
+    var kv = document.createDocumentFragment();
     rows.forEach(function (r) {
       var row = el('div', 'kv-row');
       row.appendChild(el('span', 'k', r[0]));
       row.appendChild(el('span', 'v', r[1]));
       kv.appendChild(row);
     });
-    fill($('shabbosTimes'), kv);
+    fill($('shabbosTimes'), null);
+    $('shabbosTimes').appendChild(kv);
 
     renderZmanim(data.zmanim, cal);
     renderWeekly(data.weekly);
@@ -195,18 +244,83 @@
 
   function renderZmanim(zmanim, cal) {
     $('zmanimPlace').textContent = cal.place.name;
-    var list = el('div');
+
+    var list = document.createDocumentFragment();
     (zmanim.times || []).forEach(function (t) {
-      var row = el('div', 'zman' + (zmanim.next && zmanim.next.key === t.key ? ' is-next' : ''));
+      var isNext = zmanim.next && zmanim.next.key === t.key && zmanim.next.choiceId === t.choiceId;
+      var row = el('div', 'zman' + (isNext ? ' is-next' : '') + (t.isChosen ? '' : ' is-alt'));
       var labels = el('div', 'labels');
-      labels.appendChild(el('div', 'en-label', t.en));
+      labels.appendChild(el('div', 'name', t.en));
       labels.appendChild(el('div', 'he-label', t.he));
-      if (t.note) labels.appendChild(el('div', 'note', t.note));
+      if (isNext && t.note) labels.appendChild(el('div', 'note', t.note));
+      else if (!t.isChosen && t.opinion) labels.appendChild(el('div', 'note', t.opinion));
       row.appendChild(labels);
       row.appendChild(el('div', 't', t.time));
       list.appendChild(row);
     });
-    fill($('zmanimList'), list);
+    fill($('zmanimList'), null);
+    $('zmanimList').appendChild(list);
+
+    renderMinhag(zmanim);
+  }
+
+  /** The minhag picker: a preset row, then per-line choices. */
+  function renderMinhag(zmanim) {
+    var opts = zmanim.options;
+    if (!opts) return;
+
+    var wrap = document.createDocumentFragment();
+
+    var presets = el('div', 'pills');
+    opts.presets.forEach(function (p) {
+      var b = el('button', 'pill' + (zmanim.prefs.minhag === p.id ? ' is-active' : ''), p.label);
+      b.type = 'button';
+      b.title = p.about;
+      b.addEventListener('click', function () {
+        state.zmanim = { minhag: p.id, showAll: state.zmanim.showAll };
+        save(STORE.zmanim, state.zmanim);
+        refresh();
+      });
+      presets.appendChild(b);
+    });
+    wrap.appendChild(presets);
+
+    opts.slots.forEach(function (slot) {
+      var row = el('label', 'choice-row');
+      row.appendChild(el('span', 'choice-name', slot.en));
+      var sel = el('select', 'choice');
+      slot.choices.forEach(function (c) {
+        var o = el('option', null, c.name);
+        o.value = c.id;
+        if (zmanim.prefs[slot.key] === c.id) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', function () {
+        state.zmanim = Object.assign({}, state.zmanim, { minhag: 'custom' });
+        state.zmanim[slot.key] = sel.value;
+        save(STORE.zmanim, state.zmanim);
+        refresh();
+      });
+      row.appendChild(sel);
+      wrap.appendChild(row);
+    });
+
+    var showAll = el('label', 'choice-row');
+    showAll.appendChild(el('span', 'choice-name', 'Show every opinion'));
+    var sw = el('button', 'switch');
+    sw.type = 'button';
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', String(!!state.zmanim.showAll));
+    sw.addEventListener('click', function () {
+      state.zmanim = Object.assign({}, state.zmanim, { showAll: !state.zmanim.showAll });
+      save(STORE.zmanim, state.zmanim);
+      refresh();
+    });
+    showAll.appendChild(sw);
+    wrap.appendChild(showAll);
+
+    fill($('minhagPicker'), null);
+    $('minhagPicker').appendChild(wrap);
   }
 
   function renderTehillim(teh) {
@@ -215,9 +329,10 @@
       fill($('tehillimBody'), unavailableNotice(teh, "day's Tehillim"));
       return;
     }
-    var wrap = el('div');
+    var wrap = document.createDocumentFragment();
     teh.parts.forEach(function (part) { wrap.appendChild(passage(part, part.label)); });
-    fill($('tehillimBody'), wrap);
+    fill($('tehillimBody'), null);
+    $('tehillimBody').appendChild(wrap);
   }
 
   function renderWeekly(weekly) {
@@ -229,9 +344,8 @@
     }
     $('weeklyTag').textContent = weekly.parshaHe || weekly.parsha || '';
     $('weeklyWhy').textContent =
-      (weekly.mode === 'parsha'
-        ? 'Parashas ' + weekly.parsha + ' — ' + weekly.why
-        : weekly.why) + ' It stays the same all week.';
+      (weekly.mode === 'parsha' ? 'Parashas ' + weekly.parsha + ' — ' + weekly.why : weekly.why) +
+      ' It stays the same all week.';
     fill($('weeklyBody'), passage(weekly, weekly.ref));
   }
 
@@ -240,31 +354,32 @@
       fill($('tikkunBody'), unavailableNotice(tikkun, 'Tikkun HaKlali'));
       return;
     }
-    var nav = el('div');
+    var nav = document.createDocumentFragment();
     tikkun.parts.forEach(function (part, i) {
-      var b = el('button', i === state.tikkunChapter ? 'active' : null, String(part.chapter));
+      var b = el('button', i === state.tikkunChapter ? 'is-active' : null, String(part.chapter));
       b.type = 'button';
       b.addEventListener('click', function () {
         state.tikkunChapter = i;
         renderTikkun(tikkun);
-        $('tikkunBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       nav.appendChild(b);
     });
-    fill($('tikkunNav'), nav);
-    fill($('tikkunBody'), passage(tikkun.parts[state.tikkunChapter],
-      tikkun.parts[state.tikkunChapter].label));
+    fill($('tikkunNav'), null);
+    $('tikkunNav').appendChild(nav);
+
+    var body = $('tikkunBody');
+    fill(body, passage(tikkun.parts[state.tikkunChapter], tikkun.parts[state.tikkunChapter].label));
+    replay(body);
   }
 
-  // ------------------------------------------------------------ helpers
+  // ------------------------------------------------------------- helpers
 
   function clock(hhmm) {
     if (!hhmm) return '';
     var bits = String(hhmm).split(':');
     var h = Number(bits[0]);
     var suffix = h >= 12 ? 'PM' : 'AM';
-    var h12 = h % 12 === 0 ? 12 : h % 12;
-    return h12 + ':' + bits[1] + ' ' + suffix;
+    return (h % 12 === 0 ? 12 : h % 12) + ':' + bits[1] + ' ' + suffix;
   }
 
   function prettyDate(iso) {
@@ -283,25 +398,38 @@
     return 'in ' + h + 'h' + (m ? ' ' + m + 'm' : '');
   }
 
-  function applyReadingPrefs() {
-    document.body.classList.toggle('hide-english', !state.english);
-    var btn = $('toggleEnglish');
-    btn.setAttribute('aria-pressed', String(state.english));
-    btn.textContent = state.english ? 'English on' : 'English off';
-    document.documentElement.style.setProperty('--reading', (1.05 * state.fontScale).toFixed(3) + 'rem');
+  /** Restart the entrance animation on a node whose contents just changed. */
+  function replay(node) {
+    node.classList.remove('is-entering');
+    void node.offsetWidth; // forces the browser to notice the class really left
+    node.classList.add('is-entering');
   }
 
-  // ------------------------------------------------------------ tabs
+  function applyReadingPrefs() {
+    document.body.classList.toggle('hide-english', !state.english);
+    var sw = $('toggleEnglish');
+    sw.setAttribute('aria-checked', String(state.english));
+    document.documentElement.style.setProperty('--reading',
+      (1.0625 * state.fontScale).toFixed(3) + 'rem');
+  }
 
+  // ------------------------------------------------------------- navigation
+
+  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'about'];
   var loaded = { tikkun: false };
 
   function showPanel(name) {
-    ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim'].forEach(function (p) {
-      $('panel-' + p).hidden = p !== name;
+    state.panel = name;
+    PANELS.forEach(function (p) {
+      var node = $('panel-' + p);
+      if (node) node.hidden = p !== name;
     });
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-      t.classList.toggle('active', t.getAttribute('data-panel') === name);
+      t.classList.toggle('is-active', t.getAttribute('data-panel') === name);
     });
+
+    var panel = $('panel-' + name);
+    if (panel) replay(panel);
     window.scrollTo({ top: 0, behavior: 'auto' });
 
     if (name === 'tikkun' && !loaded.tikkun) {
@@ -312,8 +440,6 @@
       });
     }
   }
-
-  // ------------------------------------------------------------ location
 
   function askForLocation() {
     if (!navigator.geolocation) {
@@ -336,16 +462,20 @@
     }, { timeout: 10000, maximumAge: 3600000 });
   }
 
-  // ------------------------------------------------------------ start up
+  // ------------------------------------------------------------- start up
 
   function refresh() {
     return api('today').then(function (data) {
-      $('offlineNote').hidden = true;
+      var banner = $('offlineBanner');
+      if (banner) banner.hidden = true;
       renderToday(data);
+      var panel = $('panel-' + state.panel);
+      if (panel) replay(panel);
     }).catch(function (err) {
       var saved = load(STORE.lastToday, null);
       if (saved) {
-        $('offlineNote').hidden = false;
+        var banner = $('offlineBanner');
+        if (banner) banner.hidden = false;
         renderToday(saved);
       } else {
         fill($('sparkBody'), unavailableNotice({ hint: err.message }, "day's learning"));
@@ -364,6 +494,23 @@
     });
 
     $('placeBtn').addEventListener('click', askForLocation);
+    $('aboutLocation').addEventListener('click', askForLocation);
+
+    var sheet = $('readerSheet');
+    var readerBtn = $('readerBtn');
+    readerBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = sheet.hidden;
+      sheet.hidden = !open;
+      readerBtn.setAttribute('aria-expanded', String(open));
+      if (open) { sheet.classList.remove('is-opening'); void sheet.offsetWidth; sheet.classList.add('is-opening'); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!sheet.hidden && !sheet.contains(e.target) && e.target !== readerBtn) {
+        sheet.hidden = true;
+        readerBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
 
     $('toggleEnglish').addEventListener('click', function () {
       state.english = !state.english;
@@ -381,18 +528,17 @@
       applyReadingPrefs();
     });
 
-    // Show yesterday's saved copy instantly, then update from the network.
+    // Show the saved copy straight away, then bring it up to date.
     var saved = load(STORE.lastToday, null);
     if (saved) { try { renderToday(saved); } catch (e) { /* ignore a stale shape */ } }
     refresh();
 
-    // Re-check when the app comes back to the foreground (the day may have turned).
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) refresh();
     });
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function () { /* offline mode is optional */ });
+      navigator.serviceWorker.register('/sw.js').catch(function () { /* offline is optional */ });
     }
   }
 

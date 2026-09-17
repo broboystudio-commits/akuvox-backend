@@ -17,6 +17,10 @@ struct BreslovProvider: TimelineProvider {
     private let timeZone = "America/New_York"
     private let placeName = "Brooklyn, NY"
 
+    /// Which zmanim you hold by: "standard", "rabbeinu-tam",
+    /// "rabbeinu-tam-zmanis", "magen-avraham" or "geonim".
+    private let minhag = "standard"
+
     func placeholder(in context: Context) -> BreslovEntry {
         BreslovEntry(date: Date(), data: nil, stale: false)
     }
@@ -24,7 +28,8 @@ struct BreslovProvider: TimelineProvider {
     func getSnapshot(in context: Context, completion: @escaping (BreslovEntry) -> Void) {
         Task {
             let result = await BreslovAPI.load(latitude: latitude, longitude: longitude,
-                                               timeZone: timeZone, name: placeName)
+                                               timeZone: timeZone, name: placeName,
+                                               minhag: minhag)
             completion(BreslovEntry(date: Date(), data: result.data, stale: result.stale))
         }
     }
@@ -32,7 +37,8 @@ struct BreslovProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<BreslovEntry>) -> Void) {
         Task {
             let result = await BreslovAPI.load(latitude: latitude, longitude: longitude,
-                                               timeZone: timeZone, name: placeName)
+                                               timeZone: timeZone, name: placeName,
+                                               minhag: minhag)
             let entry = BreslovEntry(date: Date(), data: result.data, stale: result.stale)
 
             // Refresh sooner when the next zman is close, so the countdown stays honest.

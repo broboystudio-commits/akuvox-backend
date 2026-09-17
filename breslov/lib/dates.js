@@ -184,6 +184,9 @@ function calendarFor(date, place) {
     gregorian: {
       iso,
       display: localDate.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+      }),
+      long: localDate.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
       }),
     },

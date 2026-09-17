@@ -21,6 +21,15 @@
 
 const SERVER = 'https://breslov-daily.onrender.com'; // <-- change to your address
 
+// Which zmanim you hold by. Options:
+//   'standard'             three stars (8.5 degrees)
+//   'rabbeinu-tam'         tzais 72 minutes after sunset
+//   'rabbeinu-tam-zmanis'  tzais 72 proportional minutes
+//   'magen-avraham'        degree-based alos and tzais (16.1)
+//   'geonim'               tzais 7.083 degrees
+// The countdown on the widget follows whichever you pick.
+const MINHAG = 'standard';
+
 // Used when the widget parameter is empty and location is not available.
 const LOCATION = {
   name: 'Brooklyn, NY',
@@ -77,7 +86,8 @@ async function resolveLocation() {
 async function loadData() {
   const place = await resolveLocation();
   const url = `${SERVER}/api/widget?lat=${place.lat}&lng=${place.lng}` +
-              `&tz=${encodeURIComponent(place.tz)}&name=${encodeURIComponent(place.name)}`;
+              `&tz=${encodeURIComponent(place.tz)}&name=${encodeURIComponent(place.name)}` +
+              `&minhag=${encodeURIComponent(MINHAG)}`;
 
   const cachePath = cacheFile();
   try {
@@ -100,7 +110,7 @@ function cacheFile() {
   const fm = FileManager.local();
   const dir = fm.joinPath(fm.cacheDirectory(), 'breslov-daily');
   if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
-  return fm.joinPath(dir, 'widget.json');
+  return fm.joinPath(dir, `widget-${MINHAG}.json`);
 }
 
 function saveCache(path, data) {

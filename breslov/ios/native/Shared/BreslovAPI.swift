@@ -23,6 +23,7 @@ enum BreslovAPI {
         let teaching: Teaching?
         let tehillim: String?
         let place: String
+        let minhag: String?
 
         struct Zman: Codable {
             let key: String?
@@ -45,7 +46,7 @@ enum BreslovAPI {
     }
 
     static func widgetURL(latitude: Double, longitude: Double,
-                          timeZone: String, name: String) -> URL {
+                          timeZone: String, name: String, minhag: String) -> URL {
         var components = URLComponents(url: server.appendingPathComponent("api/widget"),
                                        resolvingAgainstBaseURL: false)!
         components.queryItems = [
@@ -53,15 +54,17 @@ enum BreslovAPI {
             URLQueryItem(name: "lng", value: String(longitude)),
             URLQueryItem(name: "tz", value: timeZone),
             URLQueryItem(name: "name", value: name),
+            URLQueryItem(name: "minhag", value: minhag),
         ]
         return components.url!
     }
 
     /// Fetch today's lines. On failure, hand back the last saved copy.
     static func load(latitude: Double, longitude: Double,
-                     timeZone: String, name: String) async -> (data: Widget?, stale: Bool) {
+                     timeZone: String, name: String,
+                     minhag: String = "standard") async -> (data: Widget?, stale: Bool) {
         let url = widgetURL(latitude: latitude, longitude: longitude,
-                            timeZone: timeZone, name: name)
+                            timeZone: timeZone, name: name, minhag: minhag)
         do {
             var request = URLRequest(url: url)
             // A free hosting plan sleeps when idle and takes up to about half

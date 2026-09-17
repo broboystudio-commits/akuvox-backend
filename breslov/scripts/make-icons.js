@@ -84,10 +84,12 @@ function smoothstep(edge0, edge1, x) {
   return t * t * (3 - 2 * t);
 }
 
-const INK_DEEP = [16, 14, 23];
-const INK_MID = [42, 34, 66];
-const GOLD = [216, 168, 91];
-const GOLD_BRIGHT = [246, 214, 150];
+// Pastel: warm white paper, a rose-to-gold ring, a gold point at the centre.
+const PAPER_EDGE = [249, 233, 234];  // soft rose at the corners
+const PAPER_MID  = [253, 251, 249];  // warm white in the middle
+const ROSE       = [231, 185, 189];
+const GOLD       = [217, 185, 106];
+const GOLD_DEEP  = [156, 122, 48];
 
 /**
  * @param {number} size    pixels square
@@ -106,20 +108,23 @@ function drawIcon(size, inset = 0) {
       const dy = (y - c) / scale;
       const r = Math.sqrt(dx * dx + dy * dy);
 
-      // Background: a soft glow from the centre out to the corners.
-      let colour = mix(INK_MID, INK_DEEP, smoothstep(0, 1.25, r));
+      // Background: warm white in the middle, easing to rose at the corners.
+      let colour = mix(PAPER_MID, PAPER_EDGE, smoothstep(0.1, 1.2, r));
 
-      // Outer ring
-      const ringBand = 1 - smoothstep(0.022, 0.022 + aa, Math.abs(r - 0.74));
-      if (ringBand > 0) colour = mix(colour, GOLD, ringBand * 0.92);
+      // Outer ring, rose on the left easing to gold on the right.
+      const ringBand = 1 - smoothstep(0.026, 0.026 + aa, Math.abs(r - 0.74));
+      if (ringBand > 0) {
+        const sweep = smoothstep(-0.8, 0.8, dx);
+        colour = mix(colour, mix(ROSE, GOLD, sweep), ringBand);
+      }
 
       // Inner hairline ring
-      const hair = 1 - smoothstep(0.007, 0.007 + aa, Math.abs(r - 0.56));
-      if (hair > 0) colour = mix(colour, GOLD, hair * 0.4);
+      const hair = 1 - smoothstep(0.008, 0.008 + aa, Math.abs(r - 0.56));
+      if (hair > 0) colour = mix(colour, ROSE, hair * 0.55);
 
-      // The point itself, brighter at its centre
+      // The point itself, deepening towards its edge so it reads at any size.
       const dot = 1 - smoothstep(0.2, 0.2 + aa, r);
-      if (dot > 0) colour = mix(colour, mix(GOLD_BRIGHT, GOLD, smoothstep(0, 0.2, r)), dot);
+      if (dot > 0) colour = mix(colour, mix(GOLD, GOLD_DEEP, smoothstep(0, 0.22, r)), dot);
 
       const i = (y * size + x) * 4;
       px[i] = colour[0];
