@@ -4,6 +4,50 @@
 (function () {
   'use strict';
 
+  /**
+   * Bumped whenever index.html changes shape. It must match the data-build
+   * attribute on <html>.
+   *
+   * Why this exists: a service worker can hand the browser a cached
+   * index.html from an older deploy while serving this newer app.js. The two
+   * do not fit -- this file looks for elements the old page never had -- and
+   * startup dies on the first missing one, leaving a page stuck on "Loading".
+   * Rather than leave someone with a blank app they cannot fix from a phone,
+   * we notice the mismatch, throw away the caches and reload once.
+   */
+  var BUILD = '3';
+
+  /** The ?healed= marker survives a reload without needing storage, so this
+   *  can never turn into a refresh loop. */
+  function alreadyHealed() {
+    return window.location.search.indexOf('healed=' + BUILD) !== -1;
+  }
+
+  function selfHeal() {
+    if (alreadyHealed()) return false;
+
+    var jobs = [];
+    try {
+      if (window.caches && caches.keys) {
+        jobs.push(caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }));
+      }
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }));
+      }
+    } catch (e) { /* nothing to clear */ }
+
+    Promise.all(jobs)
+      .catch(function () { /* clear what we can */ })
+      .then(function () {
+        window.location.replace(window.location.pathname + '?healed=' + BUILD);
+      });
+    return true;
+  }
+
   var STORE = {
     place: 'bd.place',
     english: 'bd.english',
@@ -483,7 +527,7 @@
     });
   }
 
-  function init() {
+  function start() {
     applyReadingPrefs();
 
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
@@ -539,6 +583,20 @@
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(function () { /* offline is optional */ });
+    }
+  }
+
+  /** Check the page and this script agree before trusting either. */
+  function init() {
+    var pageBuild = document.documentElement.getAttribute('data-build');
+    if (pageBuild !== BUILD && selfHeal()) return;
+
+    try {
+      start();
+    } catch (err) {
+      // Something in the page was not what this script expected. Clearing the
+      // caches fixes the usual cause; if it does not, let the error surface.
+      if (!selfHeal()) throw err;
     }
   }
 
