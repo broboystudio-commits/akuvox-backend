@@ -24,6 +24,13 @@ const { isoDateInZone, dateFromIso } = require('./lib/util');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+/**
+ * Bumped with every change to the page, the script or the stylesheet.
+ * Open /api/health to see which build is actually running -- the quickest way
+ * to tell a stale browser apart from a deploy that never happened.
+ */
+const BUILD = '6';
+
 app.use(cors());
 app.use(express.json());
 
@@ -86,6 +93,7 @@ function route(handler) {
 
 app.get('/api/health', route(async () => ({
   ok: true,
+  build: BUILD,
   time: new Date().toISOString(),
   cache: sefaria.cacheStats(),
   memoryKeys: cache.size,
@@ -204,16 +212,42 @@ app.get('/api/widget', route(async (req) => {
 
 // ---------------------------------------------------------------- the website
 
+/**
+ * Caching rules.
+ *
+ * The page, the script and the stylesheet are served `no-cache`, which does
+ * not mean "never store" -- it means "ask me before reusing it". The browser
+ * still keeps a copy and still gets a cheap 304 when nothing changed.
+ *
+ * This matters because they have to move together. They were previously
+ * served with an hour of `max-age`, and a deploy then left the browser with a
+ * fresh index.html (a navigation revalidates) next to an hour-old app.js and
+ * styles.css from its own HTTP cache. That cache is not something the service
+ * worker or the page can clear, so the mismatch survived a refresh, a restart,
+ * and the app's own self-heal, and the site stayed half-drawn until the hour
+ * was up.
+ *
+ * Pictures do not have that problem, so they keep a long cache.
+ */
+const NEVER_STALE = /\.(?:html|js|css|webmanifest|json)$/;
+
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+  etag: true,
+  lastModified: true,
+  maxAge: 0,
   setHeaders(res, filePath) {
-    // The service worker must never be cached, or updates never reach phones.
-    if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');
+    if (NEVER_STALE.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      // Icons and images are safe to hold on to.
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    }
   },
 }));
 
 // Anything else that is not an API call goes to the app shell.
 app.get(/^\/(?!api\/).*/, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

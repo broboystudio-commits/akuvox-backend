@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '5';
+  var BUILD = '6';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -43,7 +43,9 @@
     Promise.all(jobs)
       .catch(function () { /* clear what we can */ })
       .then(function () {
-        window.location.replace(window.location.pathname + '?healed=' + BUILD);
+        // A brand new query string, so nothing in any cache matches it.
+        window.location.replace(
+          window.location.pathname + '?healed=' + BUILD + '&t=' + Date.now());
       });
     return true;
   }
