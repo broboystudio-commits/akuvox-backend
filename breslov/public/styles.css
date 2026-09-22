@@ -33,6 +33,8 @@
   --glass-cast-lifted: 0 2px 4px rgba(74, 59, 82, 0.12),
                        0 16px 30px -10px rgba(74, 59, 82, 0.28);
   --glass-blur: blur(14px) saturate(185%) brightness(1.04);
+  /* A card is a bigger pane, so it takes a deeper blur. */
+  --glass-blur-card: blur(22px) saturate(180%);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -309,10 +311,10 @@ main { max-width: 720px; margin: 0 auto; padding: 20px 16px 0; }
     rgba(255, 251, 247, 0.96) 0%,
     rgba(253, 240, 235, 0.92) 52%,
     rgba(250, 229, 228, 0.94) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-md);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
 }
 
 /* A hairline of rose-to-gold along the top edge of every card. */
@@ -372,7 +374,7 @@ main { max-width: 720px; margin: 0 auto; padding: 20px 16px 0; }
   transition: transform var(--fast) var(--ease), box-shadow var(--base) var(--ease);
 }
 .btn:hover { box-shadow: var(--shadow-md); }
-.btn:active { transform: scale(0.985); }
+.btn:active, .btn.is-pressed { transform: scale(0.985); }
 .btn.ghost {
   background: none;
   border: 1px solid var(--line-2);
@@ -518,7 +520,7 @@ body.hide-english .en { display: none; }
 @media (min-width: 560px) {
   .chapters button { padding: 11px 0; border-radius: 11px; font-size: 0.875rem; }
 }
-.chapters button:active { transform: scale(0.94); }
+.chapters button:active, .chapters button.is-pressed { transform: scale(0.94); }
 .chapters button.is-active {
   background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
   border-color: transparent;
@@ -566,7 +568,7 @@ body.hide-english .en { display: none; }
   stroke-linejoin: round;
   transition: transform var(--base) var(--ease);
 }
-.tab:active { transform: scale(0.93); }
+.tab:active, .tab.is-pressed { transform: scale(0.93); }
 .tab.is-active { color: var(--rose-700); }
 .tab.is-active svg { transform: translateY(-1px); }
 
@@ -653,18 +655,38 @@ body.hide-english .en { display: none; }
 .pill,
 .tab { will-change: transform; }
 
+/* Touch, properly.
+   `manipulation` tells the browser this is a tap, not possibly the first half
+   of a double-tap to zoom, so it stops holding the tap back to find out --
+   worth about a third of a second on every press. The text of a button is
+   also not something anyone means to select by holding it down. */
+.btn,
+.aa,
+.stepper button,
+.chapters button,
+.pill,
+.tab,
+.quick-card,
+.icon-btn,
+.resume button,
+.chip-tag {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .btn {
   border-radius: 999px;
   transition: transform var(--bounce) var(--spring),
               box-shadow var(--base) var(--ease),
               filter var(--fast) var(--ease);
 }
-.btn:active { transform: scale(0.94); transition-duration: var(--fast); }
+.btn:active, .btn.is-pressed { transform: scale(0.94); transition-duration: var(--fast); }
 
-.aa:active,
-.stepper button:active,
-.chapters button:active,
-.pill:active { transition-duration: var(--fast); }
+.aa:active, .aa.is-pressed,
+.stepper button:active, .stepper button.is-pressed,
+.chapters button:active, .chapters button.is-pressed,
+.pill:active, .pill.is-pressed { transition-duration: var(--fast); }
 
 .aa,
 .stepper button,
@@ -709,7 +731,7 @@ body.hide-english .en { display: none; }
   font-size: 0.8125rem;
   font-weight: 500;
 }
-.pill:active { transform: scale(0.94); }
+.pill:active, .pill.is-pressed { transform: scale(0.94); }
 .pill.is-active {
   background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
   border-color: transparent;
@@ -927,7 +949,7 @@ body.hide-english .en { display: none; }
   place-items: center;
   transition: transform var(--bounce) var(--spring), color var(--base) var(--ease);
 }
-.icon-btn:active { transform: scale(0.92); }
+.icon-btn:active, .icon-btn.is-pressed { transform: scale(0.92); }
 .icon-btn svg {
   width: 19px; height: 19px;
   fill: none;
@@ -952,8 +974,10 @@ body.hide-english .en { display: none; }
     rgba(255, 250, 246, 0.96) 0%,
     rgba(252, 236, 233, 0.92) 50%,
     rgba(247, 222, 226, 0.95) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur-card);
+  -webkit-backdrop-filter: var(--glass-blur-card);
   text-align: center;
   overflow: hidden;
 }
@@ -1314,7 +1338,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   font-weight: 600;
   transition: transform var(--bounce) var(--spring);
 }
-.resume button:active { transform: scale(0.94); }
+.resume button:active, .resume button.is-pressed { transform: scale(0.94); }
 
 /* Each psalm in the continuous reading. */
 .tikkun-chapter { scroll-margin-top: calc(var(--topbar-h, 96px) + 76px); }
@@ -1368,8 +1392,12 @@ body.hide-english .verse-card .verse-en { display: none; }
   body { padding-bottom: 48px; }
   main { width: 100%; }
 
-  .bar, .nextzman, .sheet { max-width: 1120px; padding-left: 28px; padding-right: 28px; }
-  main { max-width: 1120px; margin: 0 auto; padding: 24px 28px 0; }
+  /* How wide the whole page runs. One value, so the header, the times strip,
+     the tab row and the panels all line up at the same two edges. */
+  :root { --shell: 1240px; }
+
+  .bar, .nextzman, .sheet { max-width: var(--shell); padding-left: 28px; padding-right: 28px; }
+  main { max-width: var(--shell); margin: 0 auto; padding: 24px 28px 0; }
 
   .hebdate { font-size: 1.75rem; }
 
@@ -1380,7 +1408,7 @@ body.hide-english .verse-card .verse-en { display: none; }
     justify-content: center;
     gap: 6px;
     width: 100%;
-    max-width: 1120px;
+    max-width: var(--shell);
     margin: 0 auto;
     padding: 14px 28px 4px;
     background: none;
@@ -1409,35 +1437,136 @@ body.hide-english .verse-card .verse-en { display: none; }
      Scoped to :not([hidden]) so this never competes with hiding the panel. */
   #panel-today:not([hidden]) {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    gap: 18px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 20px;
     align-items: start;
   }
   #panel-today > .hero { grid-column: 1 / -1; margin-bottom: 0; }
-  #panel-today > .verse-card { grid-column: 1; margin-bottom: 0; }
+  /* The lesson is the tall one, so it is told to stand beside all three of
+     the things on the right. Without this the right-hand column started a
+     fresh row for each of them and left a hole the height of the lesson. */
+  #panel-today > .verse-card { grid-column: 1; grid-row: span 3; margin-bottom: 0; }
   #panel-today > .card:not(.verse-card),
   #panel-today > .quick { grid-column: 2; margin-bottom: 0; }
 
-  .hero { padding: 40px 32px 34px; }
-  .hero-heb { font-size: 3rem; }
-  .hero-greg { font-size: 0.875rem; }
+  /* The date band: the Hebrew date reads left, what the day is reads right,
+     rather than a tall column of air with a little type in the middle. */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px 28px;
+    padding: 30px 34px;
+    text-align: left;
+  }
+  .hero-greg { grid-column: 1; font-size: 0.875rem; margin-bottom: 2px; }
+  .hero-heb  { grid-column: 1; grid-row: 2; font-size: 2.75rem; }
+  .hero .chips { grid-column: 2; grid-row: 1 / span 2; justify-content: flex-end; }
 
   .quick { grid-template-columns: 1fr 1fr; }
 
-  /* Reading panels keep a comfortable measure rather than stretching. */
+  /* Reading panels keep a comfortable measure rather than stretching: long
+     lines of Hebrew are hard to come back from at the end of each one. */
   .panel:not(#panel-today) .card,
   .panel:not(#panel-today) .footnote {
-    max-width: 800px;
+    max-width: 880px;
     margin-left: auto;
     margin-right: auto;
+  }
+
+  /* Times are a table, not prose, so they take the width they are given. */
+  #panel-zmanim .card,
+  #panel-zmanim .footnote,
+  #panel-search .card {
+    max-width: 1100px;
   }
 
   .card { padding: 28px; }
 }
 
+/* Hebrew and English side by side once the screen is wide enough to hold
+   both without squeezing either -- Hebrew on the right, the way a bilingual
+   sefer is printed. It reads better than one under the other and it is what
+   all that empty margin on a desktop is for.
+
+   Only where there is an English to put beside it: `:has` means a passage
+   Sefaria has no translation for keeps the full width instead of being
+   pushed into half of it with nothing alongside. A browser too old for
+   `:has` simply keeps them stacked, which is the layout we had. */
+@media (min-width: 1100px) {
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 42px;
+    align-items: start;
+  }
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .passage-label,
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .source {
+    grid-column: 1 / -1;
+  }
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .en { grid-column: 1; }
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .he { grid-column: 2; }
+
+  /* Side by side, the two of them need the room the single column had. */
+  body:not(.hide-english) #panel-tehillim .card,
+  body:not(.hide-english) #panel-tikkun .card,
+  body:not(.hide-english) #panel-weekly .card,
+  body:not(.hide-english) #panel-daily .card { max-width: 1180px; }
+}
+
+/* Two columns of times once there is room for them, reading down the first
+   and on to the second, the way a luach does. */
+@media (min-width: 1040px) {
+  .zmanim {
+    display: block;
+    columns: 2;
+    column-gap: 46px;
+  }
+  .zman {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+  }
+  /* The rules between the lines have to go. A rule belongs between two
+     things, and CSS cannot tell which line is the last one in a column, so
+     the left-hand column ended on a rule with nothing under it. One rule
+     down the middle and a little more air per line says the same thing. */
+  .zman { border-top: 0; padding: 13px 0; }
+  .zmanim { column-rule: 1px solid var(--line); }
+}
+
 @media (min-width: 1280px) {
-  .bar, .nextzman, .sheet, main, .tabs { max-width: 1200px; }
-  #panel-today { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 20px; }
+  :root { --shell: 1400px; }
+  #panel-today { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 22px; }
+  .hero { padding: 38px 44px; }
+  .hero-heb { font-size: 3.4rem; }
+  /* The tags carry the right-hand end of a wide band, so they need some
+     weight to it rather than sitting there like a footnote. */
+  .hero .chips { gap: 8px; margin-top: 0; }
+  .hero .chip-tag { padding: 9px 18px; font-size: 0.875rem; }
+  .panel:not(#panel-today) .card,
+  .panel:not(#panel-today) .footnote { max-width: 980px; }
+  #panel-zmanim .card, #panel-zmanim .footnote, #panel-search .card { max-width: 1240px; }
+}
+
+/* A big monitor. The page keeps going out to the edges rather than sitting
+   as a column in the middle of it -- but not all the way to the glass, or
+   the header runs off the far corners of your eye. */
+@media (min-width: 1500px) {
+  :root { --shell: min(1800px, 93vw); --reading: 1.1875rem; }
+  #panel-today { gap: 26px; }
+  .hero { padding: 46px 52px; }
+  .hero-heb { font-size: 4rem; }
+  .hero .chip-tag { padding: 11px 22px; font-size: 0.9375rem; }
+  .hero-greg { font-size: 0.9375rem; letter-spacing: 0.1em; }
+  .card { padding: 32px; }
+  .panel:not(#panel-today) .card,
+  .panel:not(#panel-today) .footnote { max-width: 1120px; }
+  body:not(.hide-english) #panel-tehillim .card,
+  body:not(.hide-english) #panel-tikkun .card,
+  body:not(.hide-english) #panel-weekly .card,
+  body:not(.hide-english) #panel-daily .card { max-width: 1420px; }
+  #panel-zmanim .card, #panel-zmanim .footnote, #panel-search .card { max-width: 1420px; }
+  .quick-card { padding: 20px 22px; }
 }
 
 /* A mouse is not a finger: give the hover states somewhere to land, and do
@@ -1614,27 +1743,48 @@ body.hide-english .verse-card .verse-en { display: none; }
 }
 
 /* Pressed, glass settles onto the page: it shrinks, the shadow tightens and
-   the sheen dims, the way a real pane would as it meets the surface. */
-.btn:active,
-.quick-card:active,
-.pill:active,
-.chapters button:active,
-.icon-btn:active,
-.aa:active,
-.stepper button:active,
-.resume button:active {
+   the sheen dims, the way a real pane would as it meets the surface.
+   `.is-pressed` is the class the page sets for itself on pointerdown; see
+   followPresses() in app.js for why :active alone is not enough on a phone. */
+.btn:active, .btn.is-pressed,
+.quick-card:active, .quick-card.is-pressed,
+.pill:active, .pill.is-pressed,
+.chapters button:active, .chapters button.is-pressed,
+.icon-btn:active, .icon-btn.is-pressed,
+.aa:active, .aa.is-pressed,
+.stepper button:active, .stepper button.is-pressed,
+.resume button:active, .resume button.is-pressed {
   transform: scale(0.94);
   box-shadow: 0 1px 1px rgba(74, 59, 82, 0.12);
   transition-duration: var(--fast);
 }
-.btn:active::after,
-.pill:active::after,
-.chapters button:active::after,
-.quick-card:active::after,
-.stepper button:active::after,
-.icon-btn:active::after,
-.aa:active::after,
-.resume button:active::after { opacity: 0.55; }
+.btn:active::after, .btn.is-pressed::after,
+.pill:active::after, .pill.is-pressed::after,
+.chapters button:active::after, .chapters button.is-pressed::after,
+.quick-card:active::after, .quick-card.is-pressed::after,
+.stepper button:active::after, .stepper button.is-pressed::after,
+.icon-btn:active::after, .icon-btn.is-pressed::after,
+.aa:active::after, .aa.is-pressed::after,
+.resume button:active::after, .resume button.is-pressed::after { opacity: 0.55; }
+
+/* On a touchscreen there is no hover to tell you a thing is live, so the
+   press itself has to do all of it: a little deeper, and springing back a
+   little further. Under the finger, where you cannot see it anyway, what
+   you feel is the release. */
+@media (hover: none) {
+  .btn:active, .btn.is-pressed,
+  .quick-card:active, .quick-card.is-pressed,
+  .pill:active, .pill.is-pressed,
+  .chapters button:active, .chapters button.is-pressed,
+  .icon-btn:active, .icon-btn.is-pressed,
+  .aa:active, .aa.is-pressed,
+  .stepper button:active, .stepper button.is-pressed,
+  .resume button:active, .resume button.is-pressed,
+  .tab:active, .tab.is-pressed {
+    transform: scale(0.91);
+  }
+  .tab:active svg, .tab.is-pressed svg { transform: scale(0.88); }
+}
 
 /* The sheen fades in and out with everything else rather than snapping. */
 .btn::after,

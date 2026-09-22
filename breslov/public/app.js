@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '24';
+  var BUILD = '25';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1216,6 +1216,8 @@
     applyFont();
     setUpFontChoice();
     applyReadingPrefs();
+    wakeUpTouchPresses();
+    followPresses();
     syncTopbarHeight();
     watchTopbarHeight();
     window.addEventListener('resize', syncTopbarHeight);
@@ -1329,6 +1331,65 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(function () { /* offline is optional */ });
     }
+  }
+
+  /**
+   * Make a tap feel like a press on an iPhone.
+   *
+   * Safari on iOS only applies :active styles while a finger is down if the
+   * page is listening for touches at all. Without this, every press animation
+   * in the stylesheet fires on a desktop click and does nothing on a phone --
+   * and because the grey tap flash is turned off too, a tap gave back no sign
+   * whatever that it had landed. The listener does nothing; its existence is
+   * the whole point, so it is passive and never blocks a scroll.
+   */
+  function wakeUpTouchPresses() {
+    try {
+      document.addEventListener('touchstart', function () {}, { passive: true });
+    } catch (e) {
+      document.addEventListener('touchstart', function () {});
+    }
+  }
+
+  /** Everything that is meant to squash when you press it. */
+  var PRESSABLE = '.btn, .pill, .chapters button, .quick-card, .stepper button,' +
+                  '.icon-btn, .aa, .resume button, .tab, .chip-tag';
+
+  /**
+   * Mark what is being pressed, rather than leaving it to :active.
+   *
+   * :active is the browser's own idea of "being pressed", and on a phone it
+   * is not a reliable one -- Safari withholds it unless the page happens to
+   * listen for touches, and even then it can be skipped. A class we put on
+   * ourselves behaves the same on every device and under every kind of
+   * pointer, so a tap on a phone feels exactly like a click on a desktop.
+   *
+   * A press is let go when the finger lifts, when the browser takes the
+   * gesture away from us (which is what happens the moment a scroll starts),
+   * or when the window loses focus mid-press.
+   */
+  function followPresses() {
+    var held = null;
+
+    function release() {
+      if (!held) return;
+      held.classList.remove('is-pressed');
+      held = null;
+    }
+
+    document.addEventListener('pointerdown', function (e) {
+      var node = e.target && e.target.closest ? e.target.closest(PRESSABLE) : null;
+      release();
+      if (!node) return;
+      held = node;
+      held.classList.add('is-pressed');
+    }, { passive: true });
+
+    ['pointerup', 'pointercancel', 'dragstart'].forEach(function (name) {
+      document.addEventListener(name, release, { passive: true });
+    });
+    window.addEventListener('scroll', release, { passive: true });
+    window.addEventListener('blur', release);
   }
 
   /** Check the page and this script agree before trusting either. */
