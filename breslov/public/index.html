@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20">
+<html lang="en" data-build="21">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=20" />
+<link rel="stylesheet" href="/styles.css?v=21" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -304,6 +304,72 @@
       <button class="btn ghost" id="aboutLocation" type="button" style="margin-top:14px">Use my current location</button>
     </article>
 
+    <article class="card">
+      <header class="card-head"><h2>Privacy</h2></header>
+      <div class="sources">
+        <p>
+          There are no accounts, no analytics, no advertising and no tracking of
+          any kind. Nothing you do here is recorded against you, because there
+          is no "you" for it to be recorded against.
+        </p>
+
+        <h3>What stays on your device</h3>
+        <p>
+          Your location, chosen minhag, theme, font, text size, reminder time and
+          the psalm you last reached in the Tikkun HaKlali are kept in your
+          browser's own storage. They never leave your device except as described
+          below. Clearing your browser data removes all of it.
+        </p>
+
+        <h3>What the server sees</h3>
+        <p>
+          To work out your zmanim the app sends your coordinates and time zone to
+          its own server with each request. They are used to calculate the times
+          and are not written to any database, because the app has no database.
+          As with any website, the hosting provider keeps ordinary server logs,
+          which include IP addresses for a short period.
+        </p>
+        <p>
+          If you tap "Use my current location", your device asks your permission
+          first, and the coordinates are rounded before being sent.
+        </p>
+
+        <h3>Who else is contacted</h3>
+        <p>
+          The texts come from <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>,
+          but they are fetched by the server rather than by your device, so
+          Sefaria never sees your address or anything about you.
+        </p>
+        <p>
+          The one exception is fonts. If you choose Frank Ruhl, David or Heebo,
+          your device downloads that font from Google Fonts, and Google will see
+          your IP address as it would for any website using them. Choosing
+          <strong>"Your device's font"</strong> in the reading options downloads
+          nothing and avoids this entirely.
+        </p>
+
+        <h3>The daily reminder</h3>
+        <p>
+          If you subscribe to the reminder calendar, your phone's Calendar app
+          fetches it from this server periodically, which the server sees as an
+          ordinary request. You can remove the subscription in Calendar at any
+          time and that stops.
+        </p>
+
+        <h3>Children</h3>
+        <p>
+          Nothing here is collected from anyone, of any age.
+        </p>
+
+        <h3>Changes</h3>
+        <p class="small">
+          If any of this ever changes it will be changed on this page, which is
+          part of the app itself rather than a separate document that can drift
+          out of date.
+        </p>
+      </div>
+    </article>
+
     <!-- ------------------------------------------------ sources -->
     <article class="card">
       <header class="card-head"><h2>Sources</h2></header>
@@ -374,6 +440,6 @@
 
 </main>
 
-<script src="/app.js?v=20"></script>
+<script src="/app.js?v=21"></script>
 </body>
 </html>
