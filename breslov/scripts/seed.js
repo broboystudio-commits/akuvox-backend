@@ -44,12 +44,16 @@ async function main() {
     await step(`Tehillim ${n}`, () => sefaria.getText(`Psalms ${n}`));
   }
 
-  console.log('\nTehillim, the whole monthly cycle:');
-  for (let day = 1; day <= 30; day++) {
-    const portions = library.tehillimForDay(day, 30);
-    for (const portion of portions) {
-      await step(library.tehillimLabel(portion),
-        () => sefaria.getText(library.tehillimRef(portion)));
+  // Each psalm is fetched on its own, which is how the app asks for them.
+  console.log('\nTehillim, all 150 chapters:');
+  for (let n = 1; n <= 150; n++) {
+    await step(`Tehillim ${n}`, () => sefaria.getText(`Psalms ${n}`));
+  }
+
+  console.log('\nThe two halves of Tehillim 119:');
+  for (const portion of [library.TEHILLIM_BY_DAY[25], library.TEHILLIM_BY_DAY[26]]) {
+    for (const piece of library.tehillimChapters(portion)) {
+      await step(piece.label, () => sefaria.getText(piece.ref));
     }
   }
 

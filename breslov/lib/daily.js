@@ -89,12 +89,25 @@ async function dailySpark(date) {
 async function dailyTehillim(hebrew) {
   try {
     const portions = library.tehillimForDay(hebrew.day, hebrew.daysInMonth);
-    const parts = [];
-    for (const portion of portions) {
-      const ref = library.tehillimRef(portion);
-      const text = await sefaria.getText(ref);
-      if (text) parts.push(present(text, { label: library.tehillimLabel(portion) }));
-    }
+
+    // One request per psalm, so each keeps its own heading and verse numbers.
+    // They are fetched together rather than one after another, and every
+    // answer is cached on disk, so this is only slow the very first time.
+    const pieces = portions.flatMap(library.tehillimChapters);
+    const fetched = await Promise.all(pieces.map(async (piece) => {
+      try {
+        const text = await sefaria.getText(piece.ref);
+        return text ? present(text, {
+          label: piece.label,
+          chapter: piece.chapter,
+          startVerse: piece.startVerse,
+        }) : null;
+      } catch {
+        return null;
+      }
+    }));
+
+    const parts = fetched.filter(Boolean);
     if (!parts.length) return unavailable('daily Tehillim');
     return {
       available: true,
@@ -114,7 +127,7 @@ async function tikkunHaklali() {
     const parts = [];
     for (const n of library.TIKKUN_HAKLALI) {
       const text = await sefaria.getText(`Psalms ${n}`);
-      if (text) parts.push(present(text, { label: `Tehillim ${n}`, chapter: n }));
+      if (text) parts.push(present(text, { label: `Tehillim ${n}`, chapter: n, startVerse: 1 }));
     }
     if (parts.length !== library.TIKKUN_HAKLALI.length) {
       return unavailable('Tikkun HaKlali');

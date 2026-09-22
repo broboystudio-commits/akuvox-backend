@@ -7,7 +7,6 @@
    ------------------------------------------------------------------------- */
 
 :root {
-  /* Forced light: this design is the pastel one, on every device. */
   color-scheme: light;
 
   /* ---- surface */
@@ -729,6 +728,297 @@ body.hide-english .en { display: none; }
 
 /* Long words in either language should wrap rather than overflow the card. */
 .he, .en { overflow-wrap: break-word; }
+
+
+/* ---------------------------------------------------------------- dark mode
+   The same pastel idea after sundown: a deep plum ground instead of paper,
+   with the rose and the gold lifted so they still read as rose and gold
+   rather than as brown. The variable names keep their roles -- the "700"
+   shades stay the ones used for accent text, they are simply lighter here.
+
+   A script in the page head sets data-theme before the first paint, from the
+   saved choice or from the phone's own setting, so there is never a flash of
+   the wrong theme. */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #14101a;
+  --white: #1e1826;
+  --veil: rgba(40, 32, 50, 0.72);
+
+  --rose-50:  #241c2b;
+  --rose-100: #2f2436;
+  --rose-200: #423147;
+  --rose-300: #b9818c;
+  --rose-500: #d7a3ac;
+  --rose-700: #f0c2ca;
+
+  --gold-100: #2b2430;
+  --gold-200: #453a2f;
+  --gold-400: #c9a458;
+  --gold-600: #e0bd74;
+  --gold-700: #f0d79b;
+
+  --ink:   #f3eef6;
+  --ink-2: #b6abc2;
+  --ink-3: #877d95;
+
+  --line:   rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 56px -22px rgba(0, 0, 0, 0.8);
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(1100px 620px at 8% -12%,  rgba(150, 92, 104, 0.34), transparent 62%),
+    radial-gradient(880px 520px at 108% -4%,  rgba(140, 112, 60, 0.30), transparent 58%),
+    radial-gradient(900px 760px at 50% 108%,  rgba(108, 74, 98, 0.32), transparent 62%),
+    var(--paper);
+}
+
+:root[data-theme="dark"] .topbar {
+  background: linear-gradient(180deg, rgba(20, 16, 26, 0.94) 0%, rgba(20, 16, 26, 0.78) 100%);
+}
+
+:root[data-theme="dark"] .tabs {
+  background: linear-gradient(0deg, rgba(20, 16, 26, 0.96) 0%, rgba(20, 16, 26, 0.82) 100%);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .hero {
+  background: linear-gradient(168deg,
+    rgba(34, 27, 42, 0.92) 0%,
+    rgba(30, 24, 38, 0.88) 55%,
+    rgba(38, 28, 44, 0.92) 100%);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+:root[data-theme="dark"] .btn {
+  background: linear-gradient(135deg, rgba(185, 129, 140, 0.20), rgba(201, 164, 88, 0.20));
+  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--rose-700);
+}
+
+:root[data-theme="dark"] .chapters button,
+:root[data-theme="dark"] .pill,
+:root[data-theme="dark"] .quick-card,
+:root[data-theme="dark"] .choice,
+:root[data-theme="dark"] .stepper button,
+:root[data-theme="dark"] .icon-btn,
+:root[data-theme="dark"] .aa {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+:root[data-theme="dark"] .chapters button.is-active,
+:root[data-theme="dark"] .pill.is-active {
+  background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
+  color: #1a1420;
+}
+
+:root[data-theme="dark"] .zman.is-next {
+  background: linear-gradient(120deg, rgba(185, 129, 140, 0.20), rgba(201, 164, 88, 0.18));
+}
+
+:root[data-theme="dark"] .switch { background: rgba(255, 255, 255, 0.09); }
+:root[data-theme="dark"] .switch::after { background: #cfc4d6; }
+
+:root[data-theme="dark"] .notice {
+  background: linear-gradient(135deg, rgba(185, 129, 140, 0.14), rgba(201, 164, 88, 0.12));
+}
+
+:root[data-theme="dark"] .choice {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23877d95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------------- home screen */
+
+.bar-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  transition: transform var(--bounce) var(--spring), color var(--base) var(--ease);
+}
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn svg {
+  width: 19px; height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  grid-area: 1 / 1;
+}
+/* Show the moon while it is light (tap for dark), the sun while it is dark. */
+.icon-btn .i-sun { display: none; }
+.icon-btn .i-moon { display: block; }
+:root[data-theme="dark"] .icon-btn .i-sun { display: block; }
+:root[data-theme="dark"] .icon-btn .i-moon { display: none; }
+
+.hero {
+  position: relative;
+  margin-bottom: 14px;
+  padding: 26px 22px 22px;
+  border-radius: var(--radius);
+  background: linear-gradient(168deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(255, 255, 255, 0.86) 55%,
+    rgba(253, 246, 246, 0.94) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--rose-300) 25%, var(--gold-400) 75%, transparent);
+}
+
+.hero-greg {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.hero-heb {
+  margin: 0;
+  font-family: var(--hebrew);
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.12;
+  direction: rtl;
+  unicode-bidi: isolate;
+  background: linear-gradient(100deg, var(--gold-700) 0%, var(--rose-700) 50%, var(--gold-600) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+.chip-tag {
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--rose-100), var(--gold-100));
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  color: var(--rose-700);
+  unicode-bidi: plaintext;
+}
+.chip-tag.is-gold { color: var(--gold-700); }
+
+/* the small verse */
+
+.verse-card .verse-he {
+  margin: 0;
+  font-family: var(--hebrew);
+  font-size: calc(var(--reading) * 1.34);
+  line-height: 1.95;
+  text-align: right;
+  direction: rtl;
+  unicode-bidi: isolate;
+  color: var(--ink);
+}
+.verse-card .verse-en {
+  margin: 12px 0 0;
+  font-family: var(--serif);
+  font-size: calc(var(--reading) * 0.98);
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+body.hide-english .verse-card .verse-en { display: none; }
+
+.verse-card .btn { margin-top: 18px; }
+
+.full { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.full[hidden] { display: none; }
+
+/* coming up */
+
+.upcoming { display: grid; gap: 2px; margin-bottom: 16px; }
+.up-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.up-row:first-child { border-top: 0; padding-top: 0; }
+.up-row .up-name { font-size: 0.9375rem; color: var(--ink); }
+.up-row .up-he {
+  font-family: var(--hebrew);
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  direction: rtl;
+  unicode-bidi: isolate;
+  margin-top: 1px;
+}
+.up-row .up-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+.up-row .up-away { display: block; font-size: 0.72rem; font-weight: 500; color: var(--ink-3); }
+
+.up-row.is-next {
+  margin: 2px -14px;
+  padding: 13px 14px;
+  border-top: 0;
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--rose-100), var(--gold-100));
+}
+.up-row.is-next + .up-row { border-top: 0; }
+.up-row.is-next .up-name { color: var(--rose-700); font-weight: 600; }
+.up-row.is-next .up-time { color: var(--gold-700); }
+
+/* quick links */
+
+.quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.quick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.94), rgba(253,246,246,0.9));
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: transform var(--bounce) var(--spring), box-shadow var(--base) var(--ease);
+}
+.quick-card:hover { box-shadow: var(--shadow-md); }
+.quick-card:active { transform: scale(0.96); }
+.quick-card.wide { grid-column: 1 / -1; }
+.quick-title { font-size: 0.9375rem; font-weight: 600; color: var(--ink); }
+.quick-sub { font-size: 0.78rem; color: var(--ink-3); unicode-bidi: plaintext; }
 
 /* Nothing above is worth making someone motion-sick. */
 @media (prefers-reduced-motion: reduce) {

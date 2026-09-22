@@ -14,7 +14,7 @@
  * anything, and they are the heavy part.
  */
 
-var VERSION = 'breslov-v3';
+var VERSION = 'breslov-v4';
 
 var SHELL = [
   '/', '/index.html', '/styles.css', '/app.js',

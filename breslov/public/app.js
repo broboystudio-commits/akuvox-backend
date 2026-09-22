@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '3';
+  var BUILD = '4';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -53,6 +53,7 @@
     english: 'bd.english',
     fontScale: 'bd.fontScale',
     zmanim: 'bd.zmanim',
+    theme: 'bd.theme',
     lastToday: 'bd.lastToday',
   };
 
@@ -74,12 +75,46 @@
     english: load(STORE.english, true),
     fontScale: load(STORE.fontScale, 1),
     zmanim: load(STORE.zmanim, { minhag: 'standard', showAll: false }),
+    theme: load(STORE.theme, null),   // null means follow the phone's own setting
     today: null,
     tikkunChapter: 0,
     panel: 'today',
   };
 
   var $ = function (id) { return document.getElementById(id); };
+
+  // ------------------------------------------------------------- theme
+
+  function systemTheme() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark' : 'light';
+    } catch (e) { return 'light'; }
+  }
+
+  /** The theme actually in force: the saved choice, else the phone's. */
+  function activeTheme() {
+    return state.theme || systemTheme();
+  }
+
+  function applyTheme() {
+    var theme = activeTheme();
+    document.documentElement.setAttribute('data-theme', theme);
+    // Keep the iPhone status bar and the PWA chrome in step with the page.
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#14101a' : '#fdfbf9');
+    var btn = $('themeBtn');
+    if (btn) {
+      btn.setAttribute('aria-label',
+        theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+  }
+
+  function toggleTheme() {
+    state.theme = activeTheme() === 'dark' ? 'light' : 'dark';
+    save(STORE.theme, state.theme);
+    applyTheme();
+  }
 
   // ------------------------------------------------------------- requests
 
@@ -123,8 +158,15 @@
   }
 
   function fill(node, child) {
+    if (!node) return;
     node.textContent = '';
     if (child) node.appendChild(child);
+  }
+
+  /** Set text on an element that may not exist in this version of the page. */
+  function setText(id, text) {
+    var node = $(id);
+    if (node) node.textContent = text == null ? '' : text;
   }
 
   /**
@@ -144,15 +186,15 @@
     return (total / lines.length) < 190;
   }
 
-  function versesBlock(lines, className) {
+  function versesBlock(lines, className, startVerse) {
+    var first = startVerse || 1;
     var wrap = el('div', className + ' is-verses');
     var para = el('p');
     lines.forEach(function (line, i) {
       var text = String(line).trim();
       if (!text) return;
       if (i > 0) para.appendChild(document.createTextNode(' '));
-      var num = el('span', 'vnum', String(i + 1));
-      para.appendChild(num);
+      para.appendChild(el('span', 'vnum', String(first + i)));
       para.appendChild(document.createTextNode(' ' + text));
     });
     wrap.appendChild(para);
@@ -170,11 +212,13 @@
     return wrap;
   }
 
-  function textBlock(lines, className) {
+  function textBlock(lines, className, startVerse) {
     var clean = (lines || []).map(function (l) { return String(l).trim(); })
                              .filter(function (l) { return l.length > 0; });
     if (!clean.length) return null;
-    return looksLikeVerses(clean) ? versesBlock(clean, className) : paragraphBlock(clean, className);
+    return looksLikeVerses(clean)
+      ? versesBlock(clean, className, startVerse)
+      : paragraphBlock(clean, className);
   }
 
   /** One passage: Hebrew, then English, then the credit line. */
@@ -182,9 +226,9 @@
     var box = el('div', 'passage');
     if (label) box.appendChild(el('div', 'passage-label', label));
 
-    var he = textBlock(data.hebrew, 'he');
+    var he = textBlock(data.hebrew, 'he', data.startVerse);
     if (he) box.appendChild(he);
-    var en = textBlock(data.english, 'en');
+    var en = textBlock(data.english, 'en', data.startVerse);
     if (en) box.appendChild(en);
 
     var bits = [];
@@ -225,10 +269,12 @@
     save(STORE.lastToday, data);
 
     var cal = data.calendar;
-    $('hebDate').textContent = cal.hebrew.gematriya || cal.hebrew.en;
-    $('gregDate').textContent = cal.gregorian.display;
-    $('placeBtn').textContent = cal.place.name;
-    $('aboutPlace').textContent = cal.place.name;
+
+    // ---- the header
+    setText('hebDate', cal.hebrew.gematriya || cal.hebrew.en);
+    setText('gregDate', cal.gregorian.display);
+    setText('placeBtn', cal.place.name);
+    setText('aboutPlace', cal.place.name);
 
     var next = data.zmanim.next;
     var nz = $('nextZman');
@@ -245,29 +291,100 @@
       nz.hidden = true;
     }
 
-    if (data.spark && data.spark.available) {
-      $('sparkRef').textContent = data.spark.heading || data.spark.ref;
-      $('aboutSpark').textContent = data.spark.heading || data.spark.ref;
-      fill($('sparkBody'), passage(data.spark));
+    // ---- the hero
+    setText('heroGreg', cal.gregorian.long || cal.gregorian.display);
+    setText('heroHeb', cal.hebrew.gematriya || cal.hebrew.en);
+
+    // Only what is true of *today*. The calendar hands back a week or so of
+    // upcoming yomim tovim, and showing all of them buried the date under a
+    // wall of chips; the ones still to come belong on the Shabbos card.
+    var today = cal.gregorian.iso;
+    var chips = document.createDocumentFragment();
+    if (cal.parsha) {
+      chips.appendChild(el('span', 'chip-tag', cal.parsha.he || cal.parsha.en));
+    }
+    if (cal.hebrew.isRoshChodesh) {
+      chips.appendChild(el('span', 'chip-tag is-gold', 'Rosh Chodesh'));
+    }
+    (cal.holidays || [])
+      .filter(function (h) {
+        return h.date === today &&
+               h.en.indexOf('Candle') !== 0 &&
+               h.en.indexOf('Havdalah') !== 0;
+      })
+      .slice(0, 2)
+      .forEach(function (h) {
+        chips.appendChild(el('span', 'chip-tag is-gold', h.en));
+      });
+    fill($('heroChips'), null);
+    $('heroChips').appendChild(chips);
+
+    // ---- the small verse, with the full lesson folded away behind a button
+    var spark = data.spark;
+    if (spark && spark.available) {
+      setText('verseRef', spark.heading || spark.ref);
+      var v = document.createDocumentFragment();
+      if (spark.snippetHe) v.appendChild(el('p', 'verse-he', spark.snippetHe));
+      if (spark.snippetEn) v.appendChild(el('p', 'verse-en', spark.snippetEn));
+      fill($('verseBody'), null);
+      $('verseBody').appendChild(v);
+
+      fill($('sparkFull'), passage(spark));
+      $('sparkFull').hidden = true;
+      var btn = $('openFull');
+      btn.hidden = false;
+      btn.textContent = 'Read the whole lesson';
+      setText('aboutSpark', spark.heading || spark.ref);
     } else {
-      $('sparkRef').textContent = '';
-      fill($('sparkBody'), unavailableNotice(data.spark, 'daily teaching'));
+      setText('verseRef', '');
+      fill($('verseBody'), unavailableNotice(spark, 'daily teaching'));
+      $('openFull').hidden = true;
+      $('sparkFull').hidden = true;
     }
 
+    // ---- the next few zmanim
+    setText('upcomingPlace', cal.place.name);
+    var chosen = (data.zmanim.times || []).filter(function (t) { return t.isChosen; });
+    var idx = next ? chosen.findIndex(function (t) { return t.key === next.key; }) : -1;
+    // Show the next one plus the three after it; near the end of the day,
+    // show the last few instead of an empty list.
+    var from = idx >= 0 ? idx : Math.max(0, chosen.length - 4);
+    var soon = chosen.slice(from, from + 4);
+
+    var up = document.createDocumentFragment();
+    soon.forEach(function (t) {
+      var isNext = next && next.key === t.key;
+      var row = el('div', 'up-row' + (isNext ? ' is-next' : ''));
+      var left = el('div');
+      left.appendChild(el('div', 'up-name', t.en));
+      left.appendChild(el('div', 'up-he', t.he));
+      row.appendChild(left);
+      var right = el('div', 'up-time', t.time);
+      if (isNext) right.appendChild(el('span', 'up-away', friendlyMinutes(next.minutesAway)));
+      row.appendChild(right);
+      up.appendChild(row);
+    });
+    fill($('upcoming'), null);
+    $('upcoming').appendChild(up);
+
+    // ---- the quick links
     if (data.tehillim && data.tehillim.available) {
-      $('tehillimTag').textContent = data.tehillim.label;
-      $('tehillimHint').textContent =
-        'Day ' + data.tehillim.day + ' of the Hebrew month — the monthly cycle.';
-    } else {
-      $('tehillimTag').textContent = '';
+      setText('quickTehillim', data.tehillim.label);
+    }
+    if (data.weekly && data.weekly.available) {
+      setText('quickWeekly', data.weekly.parsha
+        ? 'Parashas ' + data.weekly.parsha
+        : data.weekly.ref);
     }
 
-    $('parshaTag').textContent = cal.parsha ? (cal.parsha.he || cal.parsha.en) : '';
+    // ---- Shabbos
+    setText('parshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
     var rows = [];
     if (cal.parsha) rows.push(['Parsha', cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '')]);
     if (cal.candles) rows.push(['Candle lighting', clock(cal.candles.time) + ' · ' + prettyDate(cal.candles.date)]);
     if (cal.havdalah) rows.push(['Havdalah', clock(cal.havdalah.time) + ' · ' + prettyDate(cal.havdalah.date)]);
     (cal.holidays || []).forEach(function (h) {
+      if (h.date === today) return;                      // already a chip above
       if (h.en.indexOf('Candle') === 0 || h.en.indexOf('Havdalah') === 0) return;
       rows.push([prettyDate(h.date), h.en]);
     });
@@ -287,7 +404,7 @@
   }
 
   function renderZmanim(zmanim, cal) {
-    $('zmanimPlace').textContent = cal.place.name;
+    setText('zmanimPlace', cal.place.name);
 
     var list = document.createDocumentFragment();
     (zmanim.times || []).forEach(function (t) {
@@ -368,7 +485,7 @@
   }
 
   function renderTehillim(teh) {
-    $('tehillimDayTag').textContent = teh && teh.available ? teh.label : '';
+    setText('tehillimDayTag', teh && teh.available ? teh.label : '');
     if (!teh || !teh.available) {
       fill($('tehillimBody'), unavailableNotice(teh, "day's Tehillim"));
       return;
@@ -381,12 +498,12 @@
 
   function renderWeekly(weekly) {
     if (!weekly || !weekly.available) {
-      $('weeklyTag').textContent = '';
-      $('weeklyWhy').textContent = '';
+      setText('weeklyTag', '');
+      setText('weeklyWhy', '');
       fill($('weeklyBody'), unavailableNotice(weekly, 'weekly Torah'));
       return;
     }
-    $('weeklyTag').textContent = weekly.parshaHe || weekly.parsha || '';
+    setText('weeklyTag', weekly.parshaHe || weekly.parsha || '');
     $('weeklyWhy').textContent =
       (weekly.mode === 'parsha' ? 'Parashas ' + weekly.parsha + ' — ' + weekly.why : weekly.why) +
       ' It stays the same all week.';
@@ -522,13 +639,23 @@
         if (banner) banner.hidden = false;
         renderToday(saved);
       } else {
-        fill($('sparkBody'), unavailableNotice({ hint: err.message }, "day's learning"));
+        fill($('verseBody'), unavailableNotice({ hint: err.message }, "day's learning"));
       }
     });
   }
 
   function start() {
+    applyTheme();
     applyReadingPrefs();
+
+    // If no theme has been chosen, follow the phone when it changes.
+    try {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onChange = function () { if (!state.theme) applyTheme(); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    } catch (e) { /* older browser: the saved choice still works */ }
+
 
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
       tab.addEventListener('click', function () { showPanel(tab.getAttribute('data-panel')); });
@@ -539,6 +666,15 @@
 
     $('placeBtn').addEventListener('click', askForLocation);
     $('aboutLocation').addEventListener('click', askForLocation);
+    $('themeBtn').addEventListener('click', toggleTheme);
+
+    $('openFull').addEventListener('click', function () {
+      var full = $('sparkFull');
+      var open = full.hidden;
+      full.hidden = !open;
+      setText('openFull', open ? 'Hide the lesson' : 'Read the whole lesson');
+      if (open) replay(full);
+    });
 
     var sheet = $('readerSheet');
     var readerBtn = $('readerBtn');

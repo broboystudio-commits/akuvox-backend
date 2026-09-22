@@ -185,6 +185,39 @@ function tehillimRef(portion) {
   return `Psalms ${portion.from}-${portion.to}`;
 }
 
+/**
+ * One reference per chapter, rather than a single range.
+ *
+ * Asking Sefaria for "Psalms 60-65" returns the six psalms nested inside one
+ * another, and flattening that loses where each psalm begins. The verses then
+ * run 1, 2, 3 ... 25 straight through the six psalms instead of restarting,
+ * and the headings disappear. Fetching each chapter on its own keeps every
+ * psalm labelled and numbered from its own first verse.
+ */
+function tehillimChapters(portion) {
+  // A verse range inside a single chapter stays one piece, but remembers
+  // which verse it starts at so day 26 numbers from 97 rather than from 1.
+  if (portion.verses) {
+    return [{
+      ref: `Psalms ${portion.from}:${portion.verses[0]}-${portion.verses[1]}`,
+      chapter: portion.from,
+      startVerse: portion.verses[0],
+      label: `Tehillim ${portion.from}:${portion.verses[0]}\u2013${portion.verses[1]}`,
+    }];
+  }
+
+  const out = [];
+  for (let n = portion.from; n <= portion.to; n++) {
+    out.push({
+      ref: `Psalms ${n}`,
+      chapter: n,
+      startVerse: 1,
+      label: `Tehillim ${n}`,
+    });
+  }
+  return out;
+}
+
 /** A human label like "Tehillim 90–96" or "Tehillim 119:1–96". */
 function tehillimLabel(portion) {
   if (portion.verses) return `Tehillim ${portion.from}:${portion.verses[0]}–${portion.verses[1]}`;
@@ -195,5 +228,5 @@ function tehillimLabel(portion) {
 module.exports = {
   BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY,
   refsFor, refsFromShape, weeklyBooks, dailyBookPool,
-  tehillimForDay, tehillimRef, tehillimLabel,
+  tehillimForDay, tehillimRef, tehillimLabel, tehillimChapters,
 };

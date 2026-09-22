@@ -60,20 +60,63 @@ function pickForWeek(items, date, salt = 0) {
   return order[week % order.length];
 }
 
+/**
+ * The named HTML entities Sefaria actually uses. Anything not listed is still
+ * handled, because numeric entities are decoded separately below.
+ *
+ * &thinsp; in particular appears throughout Tanach, between a word and what
+ * follows it. Leaving it undecoded put the literal text "&thinsp;" into the
+ * middle of the Hebrew, which in a right-to-left line is reordered by the
+ * browser and looks like the words have been shuffled.
+ */
+const ENTITIES = {
+  nbsp: '\u00a0', thinsp: '\u2009', ensp: '\u2002', emsp: '\u2003',
+  hairsp: '\u200a', zwj: '\u200d', zwnj: '\u200c', shy: '',
+  hellip: '…', mdash: '—', ndash: '–', minus: '−',
+  lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201c', rdquo: '\u201d',
+  sbquo: '\u201a', bdquo: '\u201e', prime: '\u2032', Prime: '\u2033',
+  bull: '•', middot: '·', deg: '°', times: '×', divide: '÷',
+  laquo: '«', raquo: '»', sect: '§', para: '¶',
+  dagger: '†', Dagger: '‡', permil: '‰', trade: '™', copy: '©', reg: '®',
+  quot: '"', apos: "'", lt: '<', gt: '>',
+};
+
+/** Turn every HTML entity into the character it stands for. */
+function decodeEntities(text) {
+  return String(text)
+    // &#8201; and &#x2009;
+    .replace(/&#(\d+);/g, (m, code) => codePoint(Number(code), m))
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, code) => codePoint(parseInt(code, 16), m))
+    .replace(/&([a-zA-Z][a-zA-Z0-9]*);/g, (m, name) =>
+      Object.prototype.hasOwnProperty.call(ENTITIES, name) ? ENTITIES[name] : m)
+    // &amp; goes last, so "&amp;thinsp;" ends up as the literal text "&thinsp;"
+    // rather than being decoded twice into a space.
+    .replace(/&amp;/g, '&');
+}
+
+function codePoint(code, original) {
+  if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return original;
+  try {
+    return String.fromCodePoint(code);
+  } catch {
+    return original;
+  }
+}
+
 /** Strip Sefaria's inline HTML down to readable plain text. */
 function stripHtml(html) {
   if (!html) return '';
-  return String(html)
+  const withoutTags = String(html)
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li)>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    // Footnote markers and their bodies are noise in a reading view.
+    .replace(/<sup[^>]*>[\s\S]*?<\/sup>/gi, '')
+    .replace(/<i\s+class="footnote"[^>]*>[\s\S]*?<\/i>/gi, '')
+    .replace(/<[^>]+>/g, '');
+
+  return decodeEntities(withoutTags)
     .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -116,6 +159,7 @@ function dateFromIso(iso) {
 
 module.exports = {
   DAY_MS,
+  decodeEntities,
   seededRandom,
   seededShuffle,
   dayNumber,
