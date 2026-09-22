@@ -2,11 +2,13 @@ import SwiftUI
 
 @main
 struct BreslovDailyApp: App {
+    @StateObject private var settings = Settings()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .preferredColorScheme(.dark)
-                .ignoresSafeArea(.container, edges: .bottom)
+            RootView()
+                .environmentObject(settings)
+                .preferredColorScheme(settings.colorScheme)
         }
     }
 }
