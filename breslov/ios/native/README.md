@@ -112,6 +112,10 @@ https://akuvox-backend.onrender.com
 
 Change it under **Settings → Server** inside the app if it ever moves.
 
+If the site is locked with a password, put it in the box underneath the address
+on that same Settings screen. The widget reads the same one, so it only has to
+be entered once.
+
 A word of warning for when the app is real: the free hosting plan puts the
 server to sleep after about fifteen quiet minutes, and waking it takes roughly
 half a minute. The app and the widget both wait that out rather than showing an

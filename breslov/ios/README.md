@@ -26,6 +26,16 @@ lets a small script draw a widget. This is the path to use.
 
    Only change it if you rename the service in Render, which changes the URL.
 
+   Just below it is a password line:
+
+   ```js
+   const ACCESS_KEY = '';
+   ```
+
+   Leave it empty unless the site is locked with a password. If it is, put the
+   same password between the quotes — the widget has nobody to ask, so it has
+   to carry it.
+
 5. Tap the settings icon, name it **Breslov Daily**, tap **Done**.
 6. Go to your home screen, long-press an empty spot, tap **+**,
    search for **Scriptable**, pick a widget size, and tap **Add Widget**.

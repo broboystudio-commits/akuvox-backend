@@ -32,6 +32,10 @@ private enum WidgetSettings {
     static var minhag: String {
         UserDefaults.standard.string(forKey: "minhag") ?? "standard"
     }
+    /// Set in the app's own settings. Empty when the site is not locked.
+    static var accessKey: String {
+        UserDefaults.standard.string(forKey: "accessKey") ?? ""
+    }
 
     static var url: URL? {
         guard var parts = URLComponents(string: server) else { return nil }
@@ -42,7 +46,7 @@ private enum WidgetSettings {
             URLQueryItem(name: "tz", value: TimeZone.current.identifier),
             URLQueryItem(name: "name", value: placeName),
             URLQueryItem(name: "minhag", value: minhag),
-        ]
+        ] + (accessKey.isEmpty ? [] : [URLQueryItem(name: "key", value: accessKey)])
         return parts.url
     }
 }

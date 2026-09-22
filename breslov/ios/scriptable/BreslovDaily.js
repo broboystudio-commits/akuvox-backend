@@ -21,6 +21,11 @@
 
 const SERVER = 'https://akuvox-backend.onrender.com'; // change this if the address changes
 
+// If the site is locked with a password, put the same password (or the
+// ACCESS_KEY if you set a separate one) between the quotes below. Leave it
+// empty when the site is open to everyone.
+const ACCESS_KEY = '';
+
 // Which zmanim you hold by. Options:
 //   'standard'             three stars (8.5 degrees)
 //   'rabbeinu-tam'         tzais 72 minutes after sunset
@@ -87,7 +92,8 @@ async function loadData() {
   const place = await resolveLocation();
   const url = `${SERVER}/api/widget?lat=${place.lat}&lng=${place.lng}` +
               `&tz=${encodeURIComponent(place.tz)}&name=${encodeURIComponent(place.name)}` +
-              `&minhag=${encodeURIComponent(MINHAG)}`;
+              `&minhag=${encodeURIComponent(MINHAG)}` +
+              (ACCESS_KEY ? `&key=${encodeURIComponent(ACCESS_KEY)}` : '');
 
   const cachePath = cacheFile();
   try {
@@ -324,7 +330,7 @@ async function main() {
     }
 
     // Tapping the widget opens the full site.
-    widget.url = SERVER;
+    widget.url = ACCESS_KEY ? `${SERVER}/?key=${encodeURIComponent(ACCESS_KEY)}` : SERVER;
   } catch (err) {
     widget = buildError(String(err && err.message ? err.message : err));
   }

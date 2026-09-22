@@ -20,6 +20,7 @@ const zmanimLib = require('./lib/zmanim');
 const daily = require('./lib/daily');
 const library = require('./lib/library');
 const sefaria = require('./lib/sefaria');
+const lock = require('./lib/lock');
 const { isoDateInZone, dateFromIso } = require('./lib/util');
 
 const app = express();
@@ -30,9 +31,17 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '21';
+const BUILD = '22';
 
 app.use(cors());
+
+/**
+ * The password lock, if one is set. Above everything else on purpose: nothing
+ * -- no page, no picture, no /api/... answer -- is served past this line
+ * without the password or the key. See lib/lock.js for the three ways in.
+ */
+app.use(lock.middleware);
+
 app.use(express.json());
 
 /**
@@ -96,9 +105,22 @@ app.get('/api/health', route(async () => ({
   ok: true,
   build: BUILD,
   time: new Date().toISOString(),
+  locked: lock.status().locked,
   cache: sefaria.cacheStats(),
   memoryKeys: cache.size,
 })));
+
+/**
+ * The key a calendar subscription needs, handed only to somebody who is
+ * already past the lock. A calendar app cannot be shown a password box, so the
+ * .ics address has to carry the key on the end of it -- and this is where the
+ * page gets the key to put there. Nothing is given away: whoever can read this
+ * answer can already read every page on the site.
+ */
+app.get('/api/access', route(async () => {
+  const state = lock.status();
+  return { locked: state.locked, key: state.locked ? lock.key() : '' };
+}));
 
 /**
  * A single page that answers "is this thing actually working?".

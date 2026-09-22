@@ -115,6 +115,67 @@ Everything else is identical.
 
 ---
 
+## Keeping the site private
+
+Until you are ready to show it to anybody, the site can be locked behind a
+password. Nothing is served without it — no page, no picture, no answer from
+the server — with one deliberate exception, `/api/health`, which is how Render
+checks the service is alive.
+
+The password is never written down in this repository. It lives only in
+Render's own settings, so it is not on GitHub and nobody reading the code can
+find it.
+
+**To turn the lock on**
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) and open the
+   service.
+2. Click **Environment** in the left-hand menu.
+3. Click **Add Environment Variable** and fill in:
+
+   | Key | Value |
+   |---|---|
+   | `SITE_PASSWORD` | whatever password you want |
+
+4. Optionally add `SITE_USER` as well if you want the name to be something
+   other than `breslov`.
+5. Click **Save Changes**. Render redeploys on its own, which takes a couple of
+   minutes.
+
+Open the site afterwards and the phone or the computer asks for a name and a
+password. The name is `breslov` unless you changed it.
+
+**To turn the lock off again**, delete `SITE_PASSWORD` and save. The site is
+open to everyone the moment the redeploy finishes.
+
+**Checking it worked:** open `/api/health` — that one address stays open — and
+look for `"locked": true`.
+
+### Getting in without typing a password
+
+A widget and a calendar have nobody to ask for a password, so they carry it on
+the end of the address instead:
+
+```
+https://your-address/api/widget?key=YOUR-PASSWORD
+```
+
+- **The site itself.** Open `https://your-address/?key=YOUR-PASSWORD` once on
+  each phone or computer. It remembers for a year, so the password only has to
+  be typed the once.
+- **The Scriptable widget.** Put the password between the quotes on the
+  `ACCESS_KEY` line near the top of `ios/scriptable/BreslovDaily.js`.
+- **The iPhone app.** Settings → Server → the password box under the address.
+  The widget reads the same one.
+- **The daily reminder calendar.** The app adds the key to the subscription
+  address by itself, so nothing to do.
+
+If you would rather the widgets used a different secret from the password you
+type in, add `ACCESS_KEY` in Render alongside `SITE_PASSWORD` and use that one
+for the widgets.
+
+---
+
 ## Running it on your own computer instead
 
 Only needed if you want to change the code. Skip this otherwise.
@@ -199,7 +260,8 @@ Handy if you want to build something else on top of it.
 | `/api/weekly` | This week's Torah |
 | `/api/search?q=…` | Search the seforim. `&scope=all` looks beyond Reb Nachman |
 | `/api/reminders.ics` | The daily reminder calendar. `?hour=7&minute=30&tz=…` |
-| `/api/health` | Is the server alive, and which build is running |
+| `/api/health` | Is the server alive, which build is running, and whether the password lock is on. Stays open even when the site is locked |
+| `/api/access` | The key a calendar subscription needs. Only answers somebody already past the lock |
 | `/api/diagnostics` | A plain-English report: dates, zmanim, and whether the server can reach Sefaria for the texts |
 
 All of them take an optional location:
@@ -221,6 +283,7 @@ different day.
 | Which zmanim are shown, or which opinions are offered | `lib/zmanim.js`, the `ZMANIM_SLOTS` list |
 | The ready-made minhag presets | `lib/zmanim.js`, the `PRESETS` block |
 | The minhag the iPhone widget uses | `ios/scriptable/BreslovDaily.js`, the `MINHAG` line near the top |
+| The password on the Scriptable widget | `ios/scriptable/BreslovDaily.js`, the `ACCESS_KEY` line near the top |
 | Which seforim are in the rotation, or how often each comes up | `lib/library.js`, the `BOOKS` list — `weight` is how often |
 | The Tehillim division | `lib/library.js`, `TEHILLIM_BY_DAY` |
 | Colours and fonts | `public/styles.css`, the `:root` block at the top |

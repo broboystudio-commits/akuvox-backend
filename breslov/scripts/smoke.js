@@ -56,15 +56,90 @@ const ROUTES = [
 
 let failures = 0;
 
-async function call(server, path) {
+async function call(server, path, headers) {
   const { port } = server.address();
-  const res = await fetch(`http://127.0.0.1:${port}${path}`);
+  const res = await fetch(`http://127.0.0.1:${port}${path}`, { headers: headers || {} });
   const text = await res.text();
   let body = text;
   if ((res.headers.get('content-type') || '').indexOf('json') !== -1) {
     body = JSON.parse(text);
   }
-  return { status: res.status, body };
+  return { status: res.status, body, setCookie: res.headers.get('set-cookie') || '' };
+}
+
+/**
+ * The lock, checked from both sides.
+ *
+ * Checking only that the password works would pass on a lock that lets
+ * everybody in, so every check here has a matching one for the door being
+ * shut. The health check must stay open whatever happens: Render polls it,
+ * and a locked-out health check fails every deploy.
+ */
+async function checkTheLock(server, report) {
+  const PASSWORD = 'a-test-password-only';
+  process.env.SITE_PASSWORD = PASSWORD;
+  process.env.SITE_USER = 'breslov';
+
+  const basic = 'Basic ' + Buffer.from('breslov:' + PASSWORD).toString('base64');
+  const wrong = 'Basic ' + Buffer.from('breslov:not-the-password').toString('base64');
+
+  // Get a cookie the way a real visit to ?key=... would.
+  const keyed = await call(server, '/api/today?key=' + encodeURIComponent(PASSWORD));
+  const cookie = (keyed.setCookie || '').split(';')[0];
+
+  const cases = [
+    ['health stays open when locked', '/api/health', {}, 200],
+    ['a page is shut',                '/',           {}, 401],
+    ['an api answer is shut',         '/api/today',  {}, 401],
+    ['the script is shut',            '/app.js',     {}, 401],
+    ['the calendar feed is shut',     '/api/reminders.ics', {}, 401],
+    ['the wrong password is refused', '/api/today',  { Authorization: wrong }, 401],
+    ['a made-up key is refused',      '/api/today?key=guess', {}, 401],
+    ['the password lets you in',      '/api/today',  { Authorization: basic }, 200],
+    ['the key lets a widget in',      '/api/widget?key=' + encodeURIComponent(PASSWORD), {}, 200],
+    ['the key header works too',      '/api/today',  { 'X-Access-Key': PASSWORD }, 200],
+    ['the calendar feed opens with the key', '/api/reminders.ics?key=' + encodeURIComponent(PASSWORD), {}, 200],
+    ['the cookie is remembered',      '/api/today',  { Cookie: cookie }, 200],
+  ];
+
+  console.log('\nWith a password set\n');
+  for (const [name, path, headers, want] of cases) {
+    const line = `  ${name}`.padEnd(42);
+    try {
+      const { status } = await call(server, path, headers);
+      if (status !== want) {
+        console.log(`${line} FAIL  answered ${status}, expected ${want}`);
+        report();
+        continue;
+      }
+      console.log(`${line} ok`);
+    } catch (err) {
+      console.log(`${line} FAIL  ${err.message}`);
+      report();
+    }
+  }
+
+  // ?key= should have handed back a cookie, or the key would have to be on
+  // every address for the rest of the visit.
+  const line = '  ?key= sets a cookie'.padEnd(42);
+  if (cookie.indexOf('bd_access=') === 0) console.log(`${line} ok`);
+  else { console.log(`${line} FAIL  no cookie came back`); report(); }
+
+  // And the health check must still say so.
+  const health = await call(server, '/api/health');
+  const locked = '  health reports the lock is on'.padEnd(42);
+  if (health.body && health.body.locked === true) console.log(`${locked} ok`);
+  else { console.log(`${locked} FAIL  health says locked=${health.body && health.body.locked}`); report(); }
+
+  delete process.env.SITE_PASSWORD;
+  delete process.env.SITE_USER;
+
+  // Back to open: proves the lock really is off when no password is set,
+  // rather than leaving the site shut for anybody running it at home.
+  const open = await call(server, '/api/today');
+  const back = '  no password means no lock'.padEnd(42);
+  if (open.status === 200) console.log(`${back} ok`);
+  else { console.log(`${back} FAIL  still answering ${open.status}`); report(); }
 }
 
 async function main() {
@@ -101,8 +176,10 @@ async function main() {
     }
   }
 
+  await checkTheLock(server, () => { failures++; });
+
   server.close();
-  console.log(`\n${failures === 0 ? 'Every endpoint answered.' : failures + ' endpoint(s) failed.'}\n`);
+  console.log(`\n${failures === 0 ? 'Every endpoint answered.' : failures + ' check(s) failed.'}\n`);
   process.exitCode = failures === 0 ? 0 : 1;
 }
 

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '21';
+  var BUILD = '22';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1028,13 +1028,28 @@
    * relied on. A calendar the phone subscribes to is handled by the Calendar
    * app itself: it fires whether or not this site has been opened in weeks.
    */
+  /**
+   * When the site is locked, the Calendar app cannot be shown a password box,
+   * so the subscription address has to carry the key itself. The key is asked
+   * for once, by a page that is already past the lock.
+   */
+  var accessKey = '';
+
+  function learnAccessKey() {
+    return fetch('/api/access', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (body) { if (body && body.key) accessKey = body.key; })
+      .catch(function () { /* not locked, or offline -- the link still works */ });
+  }
+
   function reminderUrl(scheme) {
     var saved = load(STORE.reminder, { hour: 7, minute: 0 });
     var tz = 'America/New_York';
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) { /* default */ }
     var host = window.location.host;
     return scheme + '//' + host + '/api/reminders.ics' +
-      '?hour=' + saved.hour + '&minute=' + saved.minute + '&tz=' + encodeURIComponent(tz);
+      '?hour=' + saved.hour + '&minute=' + saved.minute + '&tz=' + encodeURIComponent(tz) +
+      (accessKey ? '&key=' + encodeURIComponent(accessKey) : '');
   }
 
   function setUpReminder() {
@@ -1282,6 +1297,8 @@
       save(STORE.fontScale, state.fontScale);
       applyReadingPrefs();
     });
+
+    learnAccessKey();
 
     // Show the saved copy straight away, then bring it up to date.
     var saved = load(STORE.lastToday, null);

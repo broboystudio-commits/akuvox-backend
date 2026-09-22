@@ -79,6 +79,14 @@ struct AboutView: View {
                     Text("Only change this if the app moves to a different address.")
                         .font(.system(size: 12))
                         .foregroundStyle(Palette.inkFaint(dark))
+
+                    SecureField("Password (only if the site is locked)", text: $settings.accessKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.system(size: 14, design: .monospaced))
+                    Text("Leave this empty unless the site asks for a password. The widget uses the same one.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.inkFaint(dark))
                 }
             }
             .padding(.horizontal, 14)

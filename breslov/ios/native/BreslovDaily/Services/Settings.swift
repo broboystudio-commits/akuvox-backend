@@ -11,6 +11,9 @@ final class Settings: ObservableObject {
 
     @AppStorage("server")     var server: String = Settings.defaultServer
     @AppStorage("minhag")     var minhag: String = "standard"
+    /// The password, if the site is locked. Empty means it is open to everyone.
+    /// The widget reads the same stored value, so setting it once covers both.
+    @AppStorage("accessKey")  var accessKey: String = ""
     @AppStorage("theme")      var theme: String = "system"      // system | light | dark
     @AppStorage("showEnglish") var showEnglish: Bool = true
     @AppStorage("textScale")  var textScale: Double = 1.0
@@ -43,7 +46,7 @@ final class Settings: ObservableObject {
             URLQueryItem(name: "tz", value: timeZoneId),
             URLQueryItem(name: "name", value: placeName),
             URLQueryItem(name: "minhag", value: minhag),
-        ]
+        ] + (accessKey.isEmpty ? [] : [URLQueryItem(name: "key", value: accessKey)])
     }
 }
 
