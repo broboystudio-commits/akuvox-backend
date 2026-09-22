@@ -19,6 +19,20 @@
      page behind it -- a bar that is genuinely opaque, which is the whole
      point of it. */
   --card-bg-top: #fdf0eb;
+
+  /* Glass. Four values make the material, and the dark theme redefines all
+     four further down -- glass on a dark page is lit from a dimmer room. */
+  --glass-fill:   rgba(255, 255, 255, 0.30);   /* the pane itself */
+  --glass-fill-2: rgba(255, 255, 255, 0.66);   /* its brighter top corner */
+  --glass-edge:   rgba(255, 255, 255, 0.55);   /* the contour all the way round */
+  --glass-lit:    rgba(255, 255, 255, 0.98);   /* where the light lands, top-left */
+  --glass-shade:  rgba(96, 74, 104, 0.22);     /* and the shaded edge opposite */
+  --glass-sheen:  rgba(255, 255, 255, 0.58);   /* the soft bloom inside the top */
+  --glass-cast:   0 1px 2px rgba(74, 59, 82, 0.10),
+                  0 8px 20px -8px rgba(74, 59, 82, 0.22);
+  --glass-cast-lifted: 0 2px 4px rgba(74, 59, 82, 0.12),
+                       0 16px 30px -10px rgba(74, 59, 82, 0.28);
+  --glass-blur: blur(14px) saturate(185%) brightness(1.04);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -40,6 +54,10 @@
   --ink:   #2b2530;
   --ink-2: #635b6d;
   --ink-3: #938b9d;
+  /* For a label on the rose-gold fill. White looked right and measured 1.7:1
+     against that pastel, which is not readable; this is 7.6:1 on the same
+     fill and still reads as the chosen one, because the fill says that. */
+  --on-accent: #2b2530;
 
   --line:   rgba(43, 37, 48, 0.07);
   --line-2: rgba(43, 37, 48, 0.13);
@@ -504,7 +522,7 @@ body.hide-english .en { display: none; }
 .chapters button.is-active {
   background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
   border-color: transparent;
-  color: var(--white);
+  color: var(--on-accent);
   font-weight: 600;
   box-shadow: var(--shadow-md);
 }
@@ -535,7 +553,7 @@ body.hide-english .en { display: none; }
   gap: 4px;
   padding: 8px 2px 9px;
   border-radius: 13px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 0.6875rem;
   transition: color var(--base) var(--ease), transform var(--fast) var(--ease);
 }
@@ -553,17 +571,31 @@ body.hide-english .en { display: none; }
 .tab.is-active svg { transform: translateY(-1px); }
 
 /* A small pastel dot under whichever tab is open. */
+/* The tab you are on sits on its own pane of glass, the way the controls do
+   on a current iPhone. It replaces the little dot that used to mark it: the
+   pane says the same thing and says it from further away. */
+.tab { isolation: isolate; }
 .tab.is-active::after {
   content: "";
   position: absolute;
-  bottom: 3px;
-  width: 16px; height: 2.5px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--rose-300), var(--gold-400));
-  animation: dot-in var(--base) var(--ease) both;
+  z-index: -1;
+  inset: 0;
+  border-radius: 13px;
+  background:
+    radial-gradient(120% 90% at 30% -10%, var(--glass-sheen) 0%, transparent 60%),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--rose-100) 82%, transparent),
+      color-mix(in srgb, var(--gold-100) 70%, transparent));
+  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--glass-cast);
+  animation: pane-in var(--bounce) var(--spring) both;
 }
-@keyframes dot-in {
-  from { opacity: 0; transform: scaleX(0.3); }
+:root[data-theme="dark"] .tab.is-active::after {
+  background:
+    radial-gradient(120% 90% at 30% -10%, var(--glass-sheen) 0%, transparent 60%),
+    linear-gradient(160deg, rgba(185, 129, 140, 0.26), rgba(201, 164, 88, 0.20));
+}
+@keyframes pane-in {
+  from { opacity: 0; transform: scale(0.86); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -681,7 +713,7 @@ body.hide-english .en { display: none; }
 .pill.is-active {
   background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
   border-color: transparent;
-  color: var(--white);
+  color: var(--on-accent);
   font-weight: 600;
   box-shadow: var(--shadow-md);
   transform: scale(1.04);
@@ -769,6 +801,17 @@ body.hide-english .en { display: none; }
   --paper: #251d31;
   --white: #332942;
   --card-bg-top: #322840;
+
+  --glass-fill:   rgba(255, 255, 255, 0.07);
+  --glass-fill-2: rgba(255, 255, 255, 0.15);
+  --glass-edge:   rgba(255, 255, 255, 0.13);
+  --glass-lit:    rgba(255, 255, 255, 0.55);
+  --glass-shade:  rgba(0, 0, 0, 0.34);
+  --glass-sheen:  rgba(255, 255, 255, 0.20);
+  --glass-cast:   0 1px 2px rgba(0, 0, 0, 0.32),
+                  0 8px 20px -8px rgba(0, 0, 0, 0.55);
+  --glass-cast-lifted: 0 2px 4px rgba(0, 0, 0, 0.38),
+                       0 16px 30px -10px rgba(0, 0, 0, 0.62);
   --veil: rgba(58, 47, 74, 0.74);
 
   --rose-50:  #382c46;
@@ -785,8 +828,11 @@ body.hide-english .en { display: none; }
   --gold-700: #f8e0aa;
 
   --ink:   #f6f1f9;
-  --ink-2: #c6bad2;
+  /* Was #c6bad2, which came to 4.4:1 on a glass pill -- just under the mark. */
+  --ink-2: #d2c8dc;
   --ink-3: #9a8fa8;
+  /* The rose-gold fill stays light in the dark theme, so its label stays dark. */
+  --on-accent: #2b2137;
 
   --line:   rgba(255, 255, 255, 0.10);
   --line-2: rgba(255, 255, 255, 0.18);
@@ -1403,11 +1449,22 @@ body.hide-english .verse-card .verse-en { display: none; }
 }
 
 
-/* ---------------------------------------------------------------- shine
-   A little gloss and a little more give. The highlight along the top edge of
-   anything raised is what reads as "shiny"; the spring on press and the lift
-   on hover are what read as "bouncy". Kept small enough to survive being seen
-   fifty times a day. */
+/* ---------------------------------------------------------------- glass
+   Apple's control material, as close as a web page gets: a pane of glass
+   rather than a painted button. Four layers make it read as glass, and it
+   needs all four -- any one of them missing and it just looks pale and flat.
+
+     1. the material   what is behind is blurred and its colour pushed, so the
+                       button carries the colour of whatever it is lying on
+     2. the contour    a hairline all the way round, so the pane has an edge
+     3. the refraction a second hairline just inside it, bright where the light
+                       lands at the top left and gone by the bottom right.
+                       This is the layer that does most of the work
+     4. the sheen      a soft bloom inside the top edge, and a contact shadow
+                       under the whole thing so it sits above the page
+
+   The two hairlines are drawn as rings rather than borders, because a border
+   cannot be bright on one side and dark on the other. */
 
 .btn,
 .pill,
@@ -1419,52 +1476,123 @@ body.hide-english .verse-card .verse-en { display: none; }
 .resume button {
   position: relative;
   overflow: hidden;
+  /* Keeps the layers below from falling behind the card they sit on. */
+  isolation: isolate;
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-cast);
 }
 
-/* The gloss: a bright edge at the top fading out by the middle. */
+/* The refraction line. A ring, not a border: a gradient one pixel wide,
+   masked so only the pixel at the very edge survives. */
+.btn::before,
+.pill::before,
+.chapters button::before,
+.quick-card::before,
+.stepper button::before,
+.icon-btn::before,
+.aa::before,
+.resume button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  /* Light lands at the top-left, runs out by two-thirds of the way down, and
+     catches again on the far edge -- that last touch is what makes the pane
+     look thick rather than drawn on. */
+  background: linear-gradient(142deg,
+    var(--glass-lit) 0%,
+    var(--glass-sheen) 22%,
+    var(--glass-shade) 62%,
+    var(--glass-lit) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* The sheen: a bloom in the top-left corner and a wash down from the top
+   edge. Sits behind the label -- hence isolate and a negative layer -- so it
+   never greys the words out. */
 .btn::after,
 .pill::after,
 .chapters button::after,
 .quick-card::after,
+.stepper button::after,
 .icon-btn::after,
 .aa::after,
 .resume button::after {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 55%;
+  inset: 0;
+  z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
-  opacity: 0.85;
+  background:
+    radial-gradient(118% 82% at 26% -14%, var(--glass-sheen) 0%, transparent 62%),
+    linear-gradient(180deg, var(--glass-fill-2) 0%, var(--glass-fill) 46%, transparent 100%);
+  opacity: 0.95;
   pointer-events: none;
 }
-:root[data-theme="dark"] .btn::after,
-:root[data-theme="dark"] .pill::after,
-:root[data-theme="dark"] .chapters button::after,
-:root[data-theme="dark"] .quick-card::after,
-:root[data-theme="dark"] .icon-btn::after,
-:root[data-theme="dark"] .aa::after,
-:root[data-theme="dark"] .resume button::after {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+
+/* The psalm numbers are the exception: they lie on a solid bar, so there is
+   nothing behind them to blur. Ten blurred panes in a bar that repaints on
+   every frame of a scroll costs a phone real frames and buys an effect nobody
+   can see. They keep the rim, the sheen and the shadow. */
+.chapters button {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Glass has to have something behind it, so the flat fills go translucent.
+   The blur above then picks up the card's colour through them. */
+.pill,
+.chapters button,
+.icon-btn,
+.stepper button,
+.aa {
+  background: color-mix(in srgb, var(--white) 55%, transparent);
+}
+.btn {
+  background: linear-gradient(142deg,
+    color-mix(in srgb, var(--rose-100) 72%, transparent) 0%,
+    color-mix(in srgb, var(--gold-100) 64%, transparent) 100%);
+}
+.pill.is-active,
+.chapters button.is-active {
+  background: linear-gradient(142deg,
+    color-mix(in srgb, var(--rose-300) 88%, transparent),
+    color-mix(in srgb, var(--gold-400) 88%, transparent));
+}
+
+/* The chosen one is lit from within rather than merely tinted. */
+.pill.is-active::after,
+.chapters button.is-active::after {
+  background:
+    radial-gradient(120% 86% at 28% -16%, rgba(255, 255, 255, 0.62) 0%, transparent 64%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, transparent 62%);
 }
 
 /* A coloured halo on whatever is currently chosen. */
 .pill.is-active,
 .chapters button.is-active {
-  box-shadow: var(--shadow-md),
-              0 0 0 3px color-mix(in srgb, var(--rose-300) 30%, transparent);
+  box-shadow: var(--glass-cast),
+              0 0 0 3px color-mix(in srgb, var(--rose-300) 26%, transparent);
 }
 .tab.is-active svg {
   filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--rose-300) 55%, transparent));
 }
 
-/* Hover lifts, press squashes. */
+/* Hover tilts the light across the glass and lifts it off the page. */
 @media (hover: hover) and (pointer: fine) {
   .btn:hover,
   .quick-card:hover,
   .resume button:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--glass-cast-lifted);
   }
   .pill:hover:not(.is-active),
   .chapters button:hover:not(.is-active),
@@ -1472,11 +1600,21 @@ body.hide-english .verse-card .verse-en { display: none; }
   .aa:hover,
   .stepper button:hover {
     transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--glass-cast-lifted);
   }
+  .btn:hover::after,
+  .pill:hover::after,
+  .chapters button:hover::after,
+  .quick-card:hover::after,
+  .stepper button:hover::after,
+  .icon-btn:hover::after,
+  .aa:hover::after,
+  .resume button:hover::after { opacity: 1; }
   .searchbar input:hover { border-color: var(--rose-300); }
 }
 
+/* Pressed, glass settles onto the page: it shrinks, the shadow tightens and
+   the sheen dims, the way a real pane would as it meets the surface. */
 .btn:active,
 .quick-card:active,
 .pill:active,
@@ -1486,7 +1624,28 @@ body.hide-english .verse-card .verse-en { display: none; }
 .stepper button:active,
 .resume button:active {
   transform: scale(0.94);
+  box-shadow: 0 1px 1px rgba(74, 59, 82, 0.12);
   transition-duration: var(--fast);
+}
+.btn:active::after,
+.pill:active::after,
+.chapters button:active::after,
+.quick-card:active::after,
+.stepper button:active::after,
+.icon-btn:active::after,
+.aa:active::after,
+.resume button:active::after { opacity: 0.55; }
+
+/* The sheen fades in and out with everything else rather than snapping. */
+.btn::after,
+.pill::after,
+.chapters button::after,
+.quick-card::after,
+.stepper button::after,
+.icon-btn::after,
+.aa::after,
+.resume button::after {
+  transition: opacity var(--base) var(--ease);
 }
 
 /* The cards get a gentler version of the same highlight. */
