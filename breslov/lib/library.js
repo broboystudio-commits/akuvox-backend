@@ -9,7 +9,7 @@
  * reference is never guessed.
  */
 
-const { getShape } = require('./sefaria');
+const sefaria = require('./sefaria');
 
 const BOOKS = [
   {
@@ -54,7 +54,9 @@ const BOOKS = [
   },
   {
     key: 'likutei-etzot',
-    title: 'Likutei Etzot',
+    // Sefaria's catalogue spells this with two k's. Both are tried.
+    title: 'Likkutei Etzot',
+    aliases: ['Likutei Etzot'],
     he: 'לִקּוּטֵי עֵצוֹת',
     label: 'Likutei Etzot',
     unit: 'Advice',
@@ -120,7 +122,10 @@ const BOOKS = [
   },
   {
     key: 'likutei-halachot',
-    title: 'Likutei Halachot',
+    // Sefaria's catalogue spells this "Halakhot". Asking for "Halachot"
+    // resolved once and failed later, so both are tried.
+    title: 'Likutei Halakhot',
+    aliases: ['Likutei Halachot'],
     he: 'לִקּוּטֵי הֲלָכוֹת',
     label: 'Likutei Halachot',
     unit: 'Halachah',
@@ -226,7 +231,7 @@ async function refsFor(bookKey) {
   let refs = [];
   for (const title of candidates) {
     try {
-      const shape = await getShape(title);
+      const shape = await sefaria.getShape(title);
       refs = refsFromShape(shape, book);
       if (refs.length) {
         book.resolvedTitle = title;

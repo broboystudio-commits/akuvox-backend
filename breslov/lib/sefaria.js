@@ -85,10 +85,10 @@ function writeCache(key, value) {
 }
 
 /** One HTTP GET against Sefaria, with a timeout. */
-async function request(urlPath) {
+async function request(urlPath, timeoutMs) {
   const url = `${API}${urlPath}`;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs || TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
@@ -106,13 +106,13 @@ async function request(urlPath) {
 }
 
 /** Fetch with caching. Falls back to stale cache if the network is down. */
-async function fetchCached(kind, urlPath) {
+async function fetchCached(kind, urlPath, timeoutMs) {
   const key = `${kind}:${urlPath}`;
   const cached = readCache(key, TTL[kind] ?? TTL.text);
   if (cached !== undefined) return cached;
 
   try {
-    const value = await request(urlPath);
+    const value = await request(urlPath, timeoutMs);
     writeCache(key, value);
     return value;
   } catch (err) {
@@ -131,7 +131,9 @@ async function fetchCached(kind, urlPath) {
  * that does not exist.
  */
 async function getShape(title) {
-  const data = await fetchCached('shape', `/api/shape/${encodeURIComponent(title)}`);
+  // Given a longer allowance than a passage: this describes an entire book,
+  // happens once, and is cached afterwards.
+  const data = await fetchCached('shape', `/api/shape/${encodeURIComponent(title)}`, 30000);
   return Array.isArray(data) ? data[0] : data;
 }
 
