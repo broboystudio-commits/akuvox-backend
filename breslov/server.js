@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '13';
+const BUILD = '14';
 
 app.use(cors());
 app.use(express.json());
@@ -373,8 +373,22 @@ app.get('/api/search', route(async (req) => {
   return cached(key, 6 * 3600 * 1000, async () => {
     try {
       const found = await sefaria.search(query, { size: 40 });
-      const ourTitles = new Set(library.BOOKS.map((b) => b.title));
-      const ours = found.hits.filter((h) => h.book && ourTitles.has(h.book));
+
+      // Sefaria's search does not name the book a hit came from, so it is read
+      // off the front of the reference instead: "Likutei Moharan 24:3" belongs
+      // to "Likutei Moharan". Relying on a book field is what made the Reb
+      // Nachman count come out as zero.
+      const ourTitles = library.BOOKS.map((b) => b.title);
+      const belongsToUs = (hit) => {
+        if (hit.book && ourTitles.indexOf(hit.book) !== -1) return true;
+        if (!hit.ref) return false;
+        return ourTitles.some((title) =>
+          hit.ref === title ||
+          hit.ref.indexOf(title + ' ') === 0 ||
+          hit.ref.indexOf(title + ',') === 0);
+      };
+
+      const ours = found.hits.filter(belongsToUs);
       const hits = scope === 'all' ? found.hits : ours;
 
       return {

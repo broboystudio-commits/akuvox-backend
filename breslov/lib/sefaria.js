@@ -333,6 +333,24 @@ async function search(query, { size = 20 } = {}) {
 }
 
 /**
+ * Sefaria's search returns no _source at all: a hit carries _index, _id,
+ * _score and highlight, and the reference is inside _id, followed by the
+ * edition it came from and sometimes a language tag:
+ *
+ *   "Genesis 1:1 (Miqra according to the Masorah) [he]"
+ *
+ * so everything from the first " (" onwards is stripped off.
+ */
+function refFromId(id) {
+  if (!id) return null;
+  let text = String(id);
+  const bracket = text.indexOf(' (');
+  if (bracket > 0) text = text.slice(0, bracket);
+  text = text.replace(/\s*\[[a-z]{2}\]\s*$/i, '');
+  return text.trim() || null;
+}
+
+/**
  * Find the readable text in a hit, wherever Sefaria happens to put it.
  * Highlights first, since those carry the matched words in context.
  */
@@ -403,14 +421,15 @@ function readHits(raw) {
 
   const hits = list.map((hit) => {
     const src = hit._source || hit.source || hit;
+    const ref = src.ref || hit.ref || refFromId(hit._id || src._id);
     return {
-      ref: src.ref || hit.ref || null,
+      ref: ref,
       heRef: src.heRef || null,
       book: src.index_title || src.book || null,
       lang: src.lang || src.language || null,
       snippet: stripHtml(pickSnippet(hit, src)),
-      url: (src.ref || hit.ref)
-        ? `https://www.sefaria.org/${encodeURIComponent(String(src.ref || hit.ref).replace(/\s+/g, '_'))}`
+      url: ref
+        ? `https://www.sefaria.org/${encodeURIComponent(String(ref).replace(/\s+/g, '_'))}`
         : null,
     };
     // A hit is kept on the strength of its reference alone. Requiring a
@@ -431,3 +450,4 @@ module.exports.search = search;
 module.exports.readHits = readHits;
 module.exports.SEARCH_ATTEMPTS = SEARCH_ATTEMPTS;
 module.exports.pickSnippet = pickSnippet;
+module.exports.refFromId = refFromId;

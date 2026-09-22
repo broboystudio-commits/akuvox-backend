@@ -141,9 +141,23 @@ function refsFromShape(shape, book) {
     if (!node) continue;
     const base = node.title || book.title;
 
-    // Complex books: `chapters` is an array of sub-node objects.
-    if (Array.isArray(node.chapters) && node.chapters.length &&
-        typeof node.chapters[0] === 'object') {
+    // Complex books -- Sefer HaMiddot and the like -- describe themselves with
+    // `chapters` holding sub-node objects, each with its own title.
+    //
+    // A simple book uses the same field for something quite different: a map
+    // of how many segments each chapter holds, as numbers or as nested arrays
+    // of numbers. Because `typeof [] === 'object'`, those were being mistaken
+    // for sub-nodes, and each chapter's array length was read as a count. That
+    // turned Likutei Moharan's 286 lessons into 964 references, nearly all of
+    // them duplicates of the first handful, so the daily rotation could only
+    // ever reach the opening lessons of the book. Requiring a plain object
+    // with a title is what tells the two apart.
+    const first = node.chapters && node.chapters[0];
+    const hasSubNodes = Array.isArray(node.chapters) && node.chapters.length &&
+      first !== null && typeof first === 'object' && !Array.isArray(first) &&
+      typeof first.title === 'string';
+
+    if (hasSubNodes) {
       for (const child of node.chapters) {
         const childBase = child.title || base;
         const count = Number(child.length) || 0;
