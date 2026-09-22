@@ -332,6 +332,45 @@ async function search(query, { size = 20 } = {}) {
   throw failure;
 }
 
+/**
+ * Find the readable text in a hit, wherever Sefaria happens to put it.
+ * Highlights first, since those carry the matched words in context.
+ */
+function pickSnippet(hit, src) {
+  const highlight = hit.highlight || hit.highlights || {};
+  for (const key of Object.keys(highlight)) {
+    const value = highlight[key];
+    if (Array.isArray(value) && value.length) return value.join(' … ');
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+
+  const fields = ['content', 'text', 'exact', 'naive_lemmatizer', 'he', 'en',
+                  'hebrew', 'english', 'snippet', 'body'];
+  for (const key of fields) {
+    const value = src[key];
+    if (typeof value === 'string' && value.trim()) return value;
+    if (Array.isArray(value) && value.length) return value.filter(Boolean).join(' ');
+  }
+  return '';
+}
+
+/** A description of one raw hit -- field names and short values, for diagnosis. */
+function describeHit(hit) {
+  const src = hit._source || hit.source || hit;
+  const shape = {};
+  for (const key of Object.keys(src).slice(0, 14)) {
+    const value = src[key];
+    shape[key] = Array.isArray(value)
+      ? `array(${value.length}): ${String(value[0] || '').slice(0, 40)}`
+      : String(value).slice(0, 40);
+  }
+  return {
+    topLevelKeys: Object.keys(hit).slice(0, 10),
+    highlightKeys: Object.keys(hit.highlight || hit.highlights || {}),
+    source: shape,
+  };
+}
+
 /** Pull results out of whichever answer shape came back. */
 function readHits(raw) {
   if (!raw || typeof raw !== 'object') {
@@ -364,27 +403,31 @@ function readHits(raw) {
 
   const hits = list.map((hit) => {
     const src = hit._source || hit.source || hit;
-    const highlight = hit.highlight || {};
-    const snippetSource =
-      (Array.isArray(highlight.exact) && highlight.exact[0]) ||
-      (Array.isArray(highlight.naive_lemmatizer) && highlight.naive_lemmatizer[0]) ||
-      src.content || src.text || '';
-
     return {
       ref: src.ref || hit.ref || null,
       heRef: src.heRef || null,
       book: src.index_title || src.book || null,
-      lang: src.lang || null,
-      snippet: stripHtml(String(snippetSource)),
-      url: src.ref
-        ? `https://www.sefaria.org/${encodeURIComponent(String(src.ref).replace(/\s+/g, '_'))}`
+      lang: src.lang || src.language || null,
+      snippet: stripHtml(pickSnippet(hit, src)),
+      url: (src.ref || hit.ref)
+        ? `https://www.sefaria.org/${encodeURIComponent(String(src.ref || hit.ref).replace(/\s+/g, '_'))}`
         : null,
     };
-  }).filter((h) => h.ref && h.snippet);
+    // A hit is kept on the strength of its reference alone. Requiring a
+    // snippet as well is what made search look empty: the answer was fine and
+    // every result was thrown away here because the text sat in a field this
+    // code had not been told to look in.
+  }).filter((h) => h.ref);
 
-  return { hits, total };
+  // When nothing survives, describe the answer rather than shrug at it.
+  const sample = (!hits.length && list.length)
+    ? describeHit(list[0])
+    : null;
+
+  return { hits, total, sample };
 }
 
 module.exports.search = search;
 module.exports.readHits = readHits;
 module.exports.SEARCH_ATTEMPTS = SEARCH_ATTEMPTS;
+module.exports.pickSnippet = pickSnippet;

@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '12';
+const BUILD = '13';
 
 app.use(cors());
 app.use(express.json());
@@ -167,14 +167,55 @@ app.get('/api/diagnostics', route(async () => {
   // Search goes through a different endpoint from the texts, so it can fail on
   // its own. Each form it tries is reported, since the reason is the fix.
   let searchAttempts = null;
+  let searchSample = null;
   if (texts.ok) {
     try {
       const found = await sefaria.search('שמחה', { size: 3 });
+      searchSample = found.sample || null;
       record('Search', found.hits.length > 0,
-        `${found.hits.length} results via ${found.via}`);
+        found.hits.length
+          ? `${found.hits.length} results via ${found.via}, first: ${found.hits[0].ref}`
+          : `answered via ${found.via} but no result survived reading — see searchSample`);
     } catch (err) {
       searchAttempts = err.attempts || null;
       record('Search', false, err.message);
+    }
+  }
+
+  // Does the day's teaching actually load? The books resolving is not the same
+  // as a reference in them being real.
+  let teaching = null;
+  if (texts.ok) {
+    try {
+      const spark = await daily.dailySpark(today);
+      teaching = spark.available
+        ? { ref: spark.ref, book: spark.book && spark.book.label }
+        : null;
+      record("Today's teaching", !!spark.available,
+        spark.available ? `${spark.heading} (${spark.ref})` : spark.reason);
+    } catch (err) {
+      record("Today's teaching", false, err.message);
+    }
+  }
+
+  // How many references each book yields, against what it should hold. A book
+  // reporting far more pieces than it has lessons means the references being
+  // built from its structure are going past the end of it.
+  let shapeSample = null;
+  if (texts.ok) {
+    try {
+      const raw = await sefaria.getShape('Likutei Moharan');
+      const nodes = Array.isArray(raw) ? raw : [raw];
+      shapeSample = nodes.slice(0, 3).map((n) => ({
+        title: n && n.title,
+        length: n && n.length,
+        chaptersIsArray: Array.isArray(n && n.chapters),
+        chaptersCount: Array.isArray(n && n.chapters) ? n.chapters.length : null,
+        firstChapterType: Array.isArray(n && n.chapters) ? typeof n.chapters[0] : null,
+        firstChapter: Array.isArray(n && n.chapters) ? JSON.stringify(n.chapters[0]).slice(0, 60) : null,
+      }));
+    } catch (err) {
+      shapeSample = { error: err.message };
     }
   }
 
@@ -191,6 +232,9 @@ app.get('/api/diagnostics', route(async () => {
         'Nothing is shown in place of a text it cannot load.',
     checks,
     searchAttempts,
+    searchSample,
+    teaching,
+    shapeSample,
     books,
     cache: sefaria.cacheStats(),
     note: 'On a free hosting plan the disk is wiped on every deploy, so the ' +

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '12';
+  var BUILD = '13';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -875,9 +875,15 @@
       item.target = '_blank';
       item.rel = 'noopener';
       item.appendChild(el('div', 'r-ref', hit.heRef || hit.ref));
-      // Hebrew results are set right to left, English left to right.
-      var isHebrew = /[\u0590-\u05FF]/.test(hit.snippet);
-      item.appendChild(el('div', 'r-text' + (isHebrew ? ' is-he' : ''), hit.snippet));
+      // A result is worth showing for its reference alone; the passage is
+      // there to read either way.
+      if (hit.snippet) {
+        // Hebrew results are set right to left, English left to right.
+        var isHebrew = /[\u0590-\u05FF]/.test(hit.snippet);
+        item.appendChild(el('div', 'r-text' + (isHebrew ? ' is-he' : ''), hit.snippet));
+      } else {
+        item.appendChild(el('div', 'r-text', 'Open to read this passage.'));
+      }
       list.appendChild(item);
     });
     fillWith('searchResults', list);
