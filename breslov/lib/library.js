@@ -98,13 +98,15 @@ const BOOKS = [
     by: 'Recorded by Reb Noson',
   },
 
-  // ---- Everything below is a candidate rather than a certainty.
+  // ---- Added after checking against Sefaria.
   //
-  // These are the other works of the Breslov canon. Sefaria's exact title for
-  // each could not be checked from where this was written, so none carries a
-  // fallback count: a title Sefaria does not recognise resolves to nothing and
-  // is quietly left out of the rotation, and /api/diagnostics lists which ones
-  // were found. Nothing here can make the app ask for a text that is not real.
+  // Six further works of the Breslov canon were tried here -- Kitzur Likutei
+  // Moharan, Meshivat Nefesh, Alim LiTerufah, Yemei Moharnat, Kochvei Or and
+  // Siach Sarfei Kodesh -- under several spellings each. Sefaria's own name
+  // lookup returned nothing resembling any of them: asked about Alim LiTerufah
+  // it offered people's names, asked about Kochvei Or it offered Or HaChaim.
+  // They are not in its library, so they are not listed here. Every title
+  // below is one the live server confirmed it can actually read.
   {
     key: 'shivchei-haran',
     title: 'Shivchei HaRan',
@@ -126,78 +128,6 @@ const BOOKS = [
     weight: 1,
     weekly: true,
     by: 'Reb Noson, built on Likutei Moharan',
-  },
-  {
-    key: 'kitzur-likutei-moharan',
-    aliases: ['Kitzur Likutei Moharan', 'Kitzur Likkutei Moharan', 'Kitzur Likutey Moharan'],
-    title: 'Kitzur Likutei Moharan',
-    he: 'קִצּוּר לִקּוּטֵי מוֹהֲרַ״ן',
-    label: 'Kitzur Likutei Moharan',
-    unit: 'Torah',
-    fallbackCount: 0,
-    weight: 1,
-    weekly: false,
-    by: 'An abridgement of Likutei Moharan',
-  },
-  {
-    key: 'meshivat-nefesh',
-    aliases: ['Meshivat Nefesh', 'Meshivas Nefesh', 'Meshivat Nefesh (Restore My Soul)'],
-    title: 'Meshivat Nefesh',
-    he: 'מְשִׁיבַת נֶפֶשׁ',
-    label: 'Meshivat Nefesh',
-    unit: 'Passage',
-    fallbackCount: 0,
-    weight: 2,
-    weekly: false,
-    by: 'Compiled from Rebbe Nachman\u2019s teachings',
-  },
-  {
-    key: 'alim-literufah',
-    aliases: ['Alim LiTerufah', 'Alim Literufah', 'Alim LiTerufah (Letters of Reb Noson)'],
-    title: 'Alim LiTerufah',
-    he: 'עֲלִים לִתְרוּפָה',
-    label: 'Alim LiTerufah',
-    unit: 'Letter',
-    fallbackCount: 0,
-    weight: 1,
-    weekly: false,
-    by: 'The letters of Reb Noson',
-  },
-  {
-    key: 'yemei-moharnat',
-    aliases: ['Yemei Moharnat', 'Yemey Moharnat', 'Yemei Maharnat', 'Yemei Moharnat (Days of Reb Noson)'],
-    title: 'Yemei Moharnat',
-    he: 'יְמֵי מוֹהֲרְנַ״ת',
-    label: 'Yemei Moharnat',
-    unit: 'Passage',
-    fallbackCount: 0,
-    weight: 1,
-    weekly: false,
-    by: 'Reb Noson\u2019s own account',
-  },
-  {
-    key: 'kochvei-or',
-    aliases: ['Kochvei Or', 'Kochavei Or', 'Kokhvei Or'],
-    title: 'Kochvei Or',
-    he: 'כּוֹכְבֵי אוֹר',
-    label: 'Kochvei Or',
-    unit: 'Passage',
-    fallbackCount: 0,
-    weight: 1,
-    weekly: false,
-    by: 'Reb Avraham b\u2019Reb Nachman',
-  },
-  {
-    key: 'siach-sarfei-kodesh',
-    aliases: ['Siach Sarfei Kodesh', 'Siach Sarfey Kodesh', 'Sichat Sarfei Kodesh'],
-    title: 'Siach Sarfei Kodesh',
-    he: 'שִׂיחַ שַׂרְפֵי קֹדֶשׁ',
-    label: 'Siach Sarfei Kodesh',
-    unit: 'Passage',
-    fallbackCount: 0,
-    weight: 1,
-    weekly: false,
-    by: 'Collected Breslov traditions',
   },
 ];
 

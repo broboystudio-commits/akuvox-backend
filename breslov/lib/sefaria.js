@@ -531,3 +531,57 @@ function readCompletions(raw, limit) {
 
 module.exports.suggest = suggest;
 module.exports.readCompletions = readCompletions;
+
+/**
+ * Everything Sefaria files under a given category.
+ *
+ * Its table of contents is a tree: a node is either a category with
+ * `contents`, or a book with a `title`. This walks that tree for a named
+ * category and returns the books beneath it, however deeply they are nested.
+ *
+ * Guessing titles one at a time is how six Breslov works were added that
+ * Sefaria does not carry. Reading its own catalogue is the way to know.
+ */
+async function catalogFor(categoryName) {
+  const wanted = String(categoryName || '').trim().toLowerCase();
+  if (!wanted) return [];
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  let tree;
+  try {
+    const res = await fetch(`${API}/api/index`, {
+      headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Sefaria index responded ${res.status}`);
+    tree = await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const found = [];
+
+  /** Collect every book title beneath a node. */
+  function collect(node, depth) {
+    if (!node || depth > 6) return;
+    if (Array.isArray(node)) { node.forEach((n) => collect(n, depth + 1)); return; }
+    if (node.title) found.push(node.title);
+    if (Array.isArray(node.contents)) node.contents.forEach((n) => collect(n, depth + 1));
+  }
+
+  /** Find the category, then collect what is under it. */
+  function search(node, depth) {
+    if (!node || depth > 8) return false;
+    if (Array.isArray(node)) return node.some((n) => search(n, depth + 1));
+    const name = String(node.category || node.heCategory || '').toLowerCase();
+    if (name === wanted) { collect(node.contents, depth); return true; }
+    if (Array.isArray(node.contents)) return node.contents.some((n) => search(n, depth + 1));
+    return false;
+  }
+
+  search(tree, 0);
+  return [...new Set(found)];
+}
+
+module.exports.catalogFor = catalogFor;

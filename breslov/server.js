@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '17';
+const BUILD = '18';
 
 app.use(cors());
 app.use(express.json());
@@ -246,6 +246,25 @@ app.get('/api/diagnostics', route(async () => {
     }
   }
 
+  /**
+   * What Sefaria itself files under Breslov. Guessing titles one at a time is
+   * how six works were added that it does not carry; its own catalogue is the
+   * way to know what is really there and what is still missing here.
+   */
+  let breslovCatalog = null;
+  if (texts.ok && req.query.catalog === '1') {
+    try {
+      const have = new Set(library.BOOKS.map((b) => b.title));
+      const titles = await sefaria.catalogFor('Breslov');
+      breslovCatalog = {
+        onSefaria: titles,
+        notYetInThisApp: titles.filter((t) => !have.has(t)),
+      };
+    } catch (err) {
+      breslovCatalog = { error: err.message };
+    }
+  }
+
   const failed = checks.filter((c) => !c.ok);
 
   return {
@@ -261,6 +280,7 @@ app.get('/api/diagnostics', route(async () => {
     searchAttempts,
     searchSample,
     titleHelp,
+    breslovCatalog,
     teaching,
     shapeSample,
     books,
