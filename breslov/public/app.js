@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '22';
+  var BUILD = '23';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -768,6 +768,22 @@
     document.documentElement.style.setProperty('--topbar-h', topbarHeight() + 'px');
   }
 
+  /**
+   * Keep that measurement honest.
+   *
+   * It used to be taken once at startup and again on resize. But the header
+   * grows after startup -- the next zman appears in it as soon as the times
+   * arrive -- so the figure was about 50px short for the whole visit, and the
+   * psalm numbers, which park themselves just below the header, parked
+   * underneath it instead and were half hidden. Watching the header itself
+   * catches every reason it changes size, not just the one we thought of.
+   */
+  function watchTopbarHeight() {
+    var bar = document.querySelector('.topbar');
+    if (!bar || typeof ResizeObserver === 'undefined') return;
+    new ResizeObserver(syncTopbarHeight).observe(bar);
+  }
+
   // ------------------------------------------------------------- helpers
 
   function clock(hhmm) {
@@ -1201,6 +1217,7 @@
     setUpFontChoice();
     applyReadingPrefs();
     syncTopbarHeight();
+    watchTopbarHeight();
     window.addEventListener('resize', syncTopbarHeight);
 
     // If no theme has been chosen, follow the phone when it changes.

@@ -14,6 +14,11 @@
      so they still lift off it, but nothing here is pure #fff any more. */
   --paper: #fbf1ec;
   --white: #fffaf7;
+  /* What the card looks like where the sticky psalm numbers sit. The card is a
+     see-through gradient, so this is that gradient already blended with the
+     page behind it -- a bar that is genuinely opaque, which is the whole
+     point of it. */
+  --card-bg-top: #fdf0eb;
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -466,24 +471,34 @@ body.hide-english .en { display: none; }
 .zman.is-next .t { color: var(--gold-700); }
 .zman.is-next .note { margin-top: 3px; font-size: 0.75rem; color: var(--rose-500); }
 
+/* Ten numbers, always on one line.
+   Two rows of five looked roomier, but this bar stays put while you read, and
+   on a phone two rows plus the header ate a third of the screen. Smaller
+   numbers on one line cost less of the page than the words are worth. */
 .chapters {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 7px;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
   margin-bottom: 22px;
 }
+@media (min-width: 560px) {
+  .chapters { gap: 7px; }
+}
 .chapters button {
-  padding: 11px 0;
-  border-radius: 11px;
+  padding: 8px 1px;
+  border-radius: 9px;
+  font-size: 0.75rem;
   background: var(--white);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
   color: var(--ink-2);
-  font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
   transition: transform var(--fast) var(--ease),
               background var(--base) var(--ease),
               color var(--base) var(--ease);
+}
+@media (min-width: 560px) {
+  .chapters button { padding: 11px 0; border-radius: 11px; font-size: 0.875rem; }
 }
 .chapters button:active { transform: scale(0.94); }
 .chapters button.is-active {
@@ -753,6 +768,7 @@ body.hide-english .en { display: none; }
      page feeling like a hole. The cards sit lighter again on top of it. */
   --paper: #251d31;
   --white: #332942;
+  --card-bg-top: #322840;
   --veil: rgba(58, 47, 74, 0.74);
 
   --rose-50:  #382c46;
@@ -1193,14 +1209,36 @@ body.hide-english .verse-card .verse-en { display: none; }
    as one continuous reading rather than ten things to tap. The numbers stay
    above the text to jump between them, and follow along as you scroll. */
 
-.chapters {
+/* Named `.card > .chapters`, not `.chapters`, and this matters.
+   `.card > *` further down sets `position: relative` on every direct child of
+   a card. At equal specificity the later rule wins, so this bar was never
+   sticky at all -- but it kept the `top` value, and on a relative box `top`
+   means "shove me down by that much". It was being drawn 90px below where it
+   belonged, straight over the psalm heading underneath it. That is what the
+   overlap in the screenshot was: not a sticky bar failing to cover its
+   background, but a bar that had been pushed down on top of the words.
+   Naming it more specifically is the same fix the search dropdown needed. */
+.card > .chapters {
   position: sticky;
   top: calc(var(--topbar-h, 96px) + 6px);
   z-index: 6;
-  padding: 8px 0;
-  background: linear-gradient(180deg,
-    var(--card-bg-top, rgba(255,255,255,0.97)) 70%,
-    transparent 100%);
+  padding: 8px 0 10px;
+  /* Solid, not a fade. The fade used to run out before the bar did, so on a
+     phone -- where the ten numbers need two rows -- the psalm heading scrolled
+     up into the see-through part and sat on top of the numbers. */
+  background: var(--card-bg-top);
+}
+
+/* The fade now lives just below the bar, where there is nothing to hide. */
+.card > .chapters::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  background: linear-gradient(180deg, var(--card-bg-top), transparent);
+  pointer-events: none;
 }
 
 .resume {
@@ -1233,7 +1271,7 @@ body.hide-english .verse-card .verse-en { display: none; }
 .resume button:active { transform: scale(0.94); }
 
 /* Each psalm in the continuous reading. */
-.tikkun-chapter { scroll-margin-top: calc(var(--topbar-h, 96px) + 64px); }
+.tikkun-chapter { scroll-margin-top: calc(var(--topbar-h, 96px) + 76px); }
 .tikkun-chapter + .tikkun-chapter {
   margin-top: 30px;
   padding-top: 26px;
@@ -1259,9 +1297,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   font-variant-numeric: tabular-nums;
 }
 
-:root[data-theme="dark"] .chapters {
-  background: linear-gradient(180deg, rgba(34, 27, 42, 0.97) 70%, transparent 100%);
-}
+:root[data-theme="dark"] .card > .chapters { background: var(--card-bg-top); }
 :root[data-theme="dark"] .resume {
   background: linear-gradient(135deg, rgba(185,129,140,0.16), rgba(201,164,88,0.14));
 }
