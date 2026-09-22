@@ -99,6 +99,71 @@ app.get('/api/health', route(async () => ({
   memoryKeys: cache.size,
 })));
 
+/**
+ * A single page that answers "is this thing actually working?".
+ *
+ * The calendar and the zmanim are worked out on this machine, so they should
+ * always pass. The texts need to reach sefaria.org, and that is the part worth
+ * checking from outside -- it is the difference between a server that is
+ * broken and one that simply cannot get out to the internet.
+ *
+ * Deliberately separate from /api/health, which Render polls: this one makes
+ * an outside request and must never be able to fail a health check.
+ */
+app.get('/api/diagnostics', route(async () => {
+  const place = dates.normalisePlace({});
+  const today = new Date();
+  const checks = [];
+
+  function record(name, ok, detail) {
+    checks.push({ name, ok, detail });
+  }
+
+  // --- things that need no internet
+  try {
+    const calendar = dates.calendarFor(today, place);
+    record('Hebrew date', !!calendar.hebrew.gematriya, calendar.hebrew.gematriya);
+    record('Parsha', !!calendar.parsha, calendar.parsha ? calendar.parsha.en : 'none found');
+    const z = zmanimLib.zmanimFor(today, place);
+    record('Zmanim', z.times.length >= 12, `${z.times.length} times calculated`);
+  } catch (err) {
+    record('Calendar and zmanim', false, err.message);
+  }
+
+  // --- the part that needs the internet
+  const startedAt = Date.now();
+  let texts = { ok: false, detail: '' };
+  try {
+    const sample = await sefaria.getText('Psalms 16');
+    texts = {
+      ok: !!(sample && sample.hebrew.length),
+      detail: sample
+        ? `Tehillim 16 loaded, ${sample.hebrew.length} Hebrew lines, ${Date.now() - startedAt}ms`
+        : 'no text came back',
+    };
+  } catch (err) {
+    texts = { ok: false, detail: err.message };
+  }
+  record('Sefaria reachable', texts.ok, texts.detail);
+
+  const failed = checks.filter((c) => !c.ok);
+
+  return {
+    build: BUILD,
+    ok: failed.length === 0,
+    summary: failed.length === 0
+      ? 'Everything is working.'
+      : `${failed.length} check(s) failing: ${failed.map((c) => c.name).join(', ')}`,
+    advice: texts.ok ? undefined
+      : 'The dates and times work, but this server cannot fetch the texts from sefaria.org. ' +
+        'Nothing is shown in place of a text it cannot load.',
+    checks,
+    cache: sefaria.cacheStats(),
+    note: 'On a free hosting plan the disk is wiped on every deploy, so the ' +
+          'text cache starting empty is normal, not a fault.',
+  };
+}));
+
 // ---------------------------------------------------------------- calendar & zmanim
 
 app.get('/api/zmanim', route(async (req) => {

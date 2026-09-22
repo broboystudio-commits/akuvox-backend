@@ -131,6 +131,10 @@ To check everything is working:
 npm run check
 ```
 
+Once it is online, the same report is available in a browser at
+**`/api/diagnostics`** — open it if something looks wrong and it will say
+which part is failing.
+
 That prints `ok` or `FAIL` next to each part. The calendar and zmanim should
 always pass. The last line tells you whether the computer can reach Sefaria
 for the texts.
@@ -188,7 +192,8 @@ Handy if you want to build something else on top of it.
 | `/api/tehillim` | Today's Tehillim |
 | `/api/tikkun` | All ten psalms of the Tikkun HaKlali |
 | `/api/weekly` | This week's Torah |
-| `/api/health` | Is the server alive |
+| `/api/health` | Is the server alive, and which build is running |
+| `/api/diagnostics` | A plain-English report: dates, zmanim, and whether the server can reach Sefaria for the texts |
 
 All of them take an optional location:
 
