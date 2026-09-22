@@ -809,7 +809,6 @@ body.hide-english .en { display: none; }
 :root[data-theme="dark"] .chapters button,
 :root[data-theme="dark"] .pill,
 :root[data-theme="dark"] .quick-card,
-:root[data-theme="dark"] .choice,
 :root[data-theme="dark"] .stepper button,
 :root[data-theme="dark"] .icon-btn,
 :root[data-theme="dark"] .aa {
@@ -834,8 +833,15 @@ body.hide-english .en { display: none; }
   background: linear-gradient(135deg, rgba(185, 129, 140, 0.14), rgba(201, 164, 88, 0.12));
 }
 
+/* Every background property is named here rather than using the shorthand,
+   so the arrow keeps its size and its place at the right-hand end. */
 :root[data-theme="dark"] .choice {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23877d95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a0b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 15px;
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* ---------------------------------------------------------------- home screen */
