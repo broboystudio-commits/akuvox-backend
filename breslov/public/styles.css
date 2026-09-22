@@ -221,21 +221,72 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ------------------------------------------------------------- reading options */
 
-.sheet {
+/* ------------------------------------------------- the search bar up top
+
+   It drops out of the header rather than living down inside the search page,
+   so a search is something you open over what you were reading. Centred, and
+   it springs in: the same overshoot everything else here has. */
+
+.searchdrop {
   max-width: 720px;
   margin: 0 auto;
   padding: 0 20px 14px;
-  display: grid;
-  gap: 2px;
-  overflow: hidden;
 }
-.sheet[hidden] { display: none; }
-.sheet.is-opening { animation: sheet-in var(--base) var(--ease) both; }
+.searchdrop[hidden] { display: none; }
+.searchdrop.is-dropping { animation: drop-in var(--bounce) var(--spring) both; }
+@media (min-width: 900px) {
+  .searchdrop { max-width: 760px; padding-bottom: 18px; }
+}
 
-@keyframes sheet-in {
-  from { opacity: 0; transform: translateY(-8px); }
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
   to   { opacity: 1; transform: none; }
 }
+
+/* ------------------------------------------------------------- sidebar
+   One button for everything that is not reading. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(40, 30, 50, 0.32);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity var(--base) var(--ease);
+}
+.scrim.is-open { opacity: 1; }
+.scrim[hidden] { display: none; }
+
+.sidebar {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 50;
+  width: min(340px, 86vw);
+  padding: 18px 20px calc(20px + var(--safe-bottom));
+  overflow-y: auto;
+  background: var(--card-bg-top);
+  border-left: 1px solid var(--glass-edge);
+  box-shadow: -18px 0 46px -18px rgba(40, 30, 50, 0.4);
+  transform: translateX(102%);
+  transition: transform var(--bounce) var(--spring);
+}
+.sidebar.is-open { transform: none; }
+.sidebar[hidden] { display: none; }
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.side-head h2 { font-size: 1.0625rem; font-weight: 600; color: var(--ink); }
+
+/* While the drawer is open the page behind it stays put. A drawer over a
+   page that keeps moving underneath is horrible on a phone. */
+body.no-scroll { overflow: hidden; }
 
 .sheet-row {
   display: flex;
@@ -1412,6 +1463,16 @@ body.hide-english .verse-card .verse-en { display: none; }
    overlap in the screenshot was: not a sticky bar failing to cover its
    background, but a bar that had been pushed down on top of the words.
    Naming it more specifically is the same fix the search dropdown needed. */
+@media (min-width: 1100px) {
+  /* Ten numbers stretched the whole width of a wide card looked like a
+     dashboard. They keep a readable size and stay at the left, under the
+     heading they belong to. */
+  .card > .chapters {
+    grid-template-columns: repeat(10, minmax(0, 76px));
+    justify-content: start;
+  }
+}
+
 .card > .chapters {
   position: sticky;
   top: calc(var(--topbar-h, 96px) + 6px);
@@ -1520,7 +1581,7 @@ body.hide-english .verse-card .verse-en { display: none; }
      the tab row and the panels all line up at the same two edges. */
   :root { --shell: 1240px; }
 
-  .bar, .nextzman, .sheet { max-width: var(--shell); padding-left: 28px; padding-right: 28px; }
+  .bar, .nextzman { max-width: var(--shell); padding-left: 28px; padding-right: 28px; }
   main { max-width: var(--shell); margin: 0 auto; padding: 24px 28px 0; }
 
   .hebdate { font-size: 1.75rem; }
@@ -1649,15 +1710,40 @@ body.hide-english .verse-card .verse-en { display: none; }
   body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 42px;
+    column-gap: 0;
     align-items: start;
   }
-  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .passage-label,
+  /* Rows given by hand, all three of them. The text is pinned to row two, and
+     anything left to place itself starts looking from row one -- which is how
+     the credit line, which belongs underneath, ended up above the passage. */
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .passage-label {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
   body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .source {
     grid-column: 1 / -1;
+    grid-row: 3;
   }
-  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .en { grid-column: 1; }
-  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .he { grid-column: 2; }
+  /* Both on row two, said explicitly.
+     Giving them only a column was not enough: the Hebrew comes first in the
+     markup and sits in the right-hand column, so when the English asked for
+     the left-hand one the grid had already gone past it and started a new
+     row. They were not side by side at all -- the English was underneath,
+     with the whole top-left of every passage left empty. */
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .en {
+    grid-column: 1;
+    grid-row: 2;
+    /* The gap between them is the column gap now, not a margin above. */
+    margin-top: 0;
+    /* A hairline between the two, like the gutter of an open sefer. */
+    padding-right: 42px;
+    border-right: 1px solid var(--line);
+  }
+  body:not(.hide-english) .panel:not(#panel-today) .passage:has(> .en) > .he {
+    grid-column: 2;
+    grid-row: 2;
+    padding-left: 42px;
+  }
 
   /* Side by side, the two of them need the room the single column had. */
   body:not(.hide-english) #panel-tehillim .card,

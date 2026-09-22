@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '26';
+  var BUILD = '27';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -193,6 +193,7 @@
     if (btn) {
       btn.setAttribute('aria-label',
         theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      btn.setAttribute('aria-checked', String(theme === 'dark'));
     }
   }
 
@@ -1189,6 +1190,125 @@
     });
   }
 
+  // ------------------------------------------------------- the search bar
+
+  /**
+   * The search bar lives in the header now, not down inside the search page.
+   *
+   * It drops out from under the date, centred, and springs into place; the
+   * results appear on the page below. Closing it puts the page back where it
+   * was, so a search is something you open over what you were reading rather
+   * than somewhere you have to go.
+   */
+  function searchBarOpen() {
+    var drop = $('searchDrop');
+    return !!(drop && !drop.hidden);
+  }
+
+  function openSearchBar() {
+    var drop = $('searchDrop');
+    var btn = $('searchBtn');
+    if (!drop) return;
+    drop.hidden = false;
+    // Restart the animation even if it was opened a moment ago.
+    drop.classList.remove('is-dropping');
+    void drop.offsetWidth;
+    drop.classList.add('is-dropping');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    syncTopbarHeight();
+    var input = $('searchInput');
+    if (input) { input.focus(); input.select(); }
+    if (state.panel !== 'search') showPanel('search');
+  }
+
+  function closeSearchBar() {
+    var drop = $('searchDrop');
+    var btn = $('searchBtn');
+    if (!drop || drop.hidden) return;
+    closeSuggest();
+    drop.hidden = true;
+    drop.classList.remove('is-dropping');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    syncTopbarHeight();
+  }
+
+  function wireSearchBar() {
+    on('searchBtn', 'click', function (e) {
+      e.stopPropagation();
+      if (searchBarOpen()) closeSearchBar(); else openSearchBar();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && searchBarOpen()) {
+        closeSearchBar();
+        var btn = $('searchBtn');
+        if (btn) btn.focus();
+      }
+    });
+  }
+
+  // ---------------------------------------------------------- the sidebar
+
+  /**
+   * One button for everything that is not reading: the theme, the English,
+   * the font, the text size and the way to the about page. It used to be
+   * three buttons in the corner and a popover hanging off one of them.
+   *
+   * While it is open the page behind it does not scroll -- on a phone a
+   * drawer over a page that keeps moving underneath is horrible.
+   */
+  function sidebarOpen() {
+    var menu = $('sideMenu');
+    return !!(menu && !menu.hidden);
+  }
+
+  function openSidebar() {
+    var menu = $('sideMenu');
+    var scrim = $('menuScrim');
+    var btn = $('menuBtn');
+    if (!menu) return;
+    menu.hidden = false;
+    if (scrim) scrim.hidden = false;
+    // Two frames: hidden is dropped first, then the class that slides it in,
+    // or the browser has nothing to animate from.
+    requestAnimationFrame(function () {
+      menu.classList.add('is-open');
+      if (scrim) scrim.classList.add('is-open');
+    });
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('no-scroll');
+    var first = $('menuClose');
+    if (first) first.focus();
+  }
+
+  function closeSidebar(giveBackFocus) {
+    var menu = $('sideMenu');
+    var scrim = $('menuScrim');
+    var btn = $('menuBtn');
+    if (!menu || menu.hidden) return;
+    menu.classList.remove('is-open');
+    if (scrim) scrim.classList.remove('is-open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('no-scroll');
+    // Let it slide out before it is taken away.
+    setTimeout(function () {
+      menu.hidden = true;
+      if (scrim) scrim.hidden = true;
+    }, 220);
+    if (giveBackFocus && btn) btn.focus();
+  }
+
+  function wireSidebar() {
+    on('menuBtn', 'click', function (e) {
+      e.stopPropagation();
+      if (sidebarOpen()) closeSidebar(true); else openSidebar();
+    });
+    on('menuClose', 'click', function () { closeSidebar(true); });
+    on('menuScrim', 'click', function () { closeSidebar(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sidebarOpen()) closeSidebar(true);
+    });
+  }
+
   // ------------------------------------------------------------- navigation
 
   var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
@@ -1197,14 +1317,17 @@
   function showPanel(name) {
     state.panel = name;
 
-    // Moving to another page dismisses the reading-options popover. Without
-    // this, tapping "Open" inside it left it hanging over the page you asked
-    // for.
-    var sheet = $('readerSheet');
-    if (sheet && !sheet.hidden) {
-      sheet.hidden = true;
-      var btn = $('readerBtn');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
+    // Moving to another page closes the sidebar. Without this, tapping
+    // "Open" inside it left it hanging over the page you asked for.
+    closeSidebar(false);
+
+    // The search bar belongs to the search page. Going somewhere else puts it
+    // away; coming back to search brings it out, since an empty search page
+    // with no box on it is a dead end.
+    if (name === 'search') {
+      if (!searchBarOpen()) openSearchBar();
+    } else if (searchBarOpen()) {
+      closeSearchBar();
     }
 
     PANELS.forEach(function (p) {
@@ -1333,11 +1456,8 @@
     on('themeBtn', 'click', toggleTheme);
     setUpReminder();
 
-    on('searchBtn', 'click', function () {
-      showPanel('search');
-      var input = $('searchInput');
-      if (input) input.focus();
-    });
+    wireSearchBar();
+    wireSidebar();
 
     var form = $('searchForm');
     if (form) {
@@ -1366,30 +1486,6 @@
       setText('openFull', open ? 'Hide the lesson' : 'Read the whole lesson');
       if (open) replay(full);
     });
-
-    // Wire the reading-options popover, but only if both pieces are present.
-    // Skipping it must not stop the rest of the buttons being wired below.
-    var sheet = $('readerSheet');
-    var readerBtn = $('readerBtn');
-    if (sheet && readerBtn) {
-      readerBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var open = sheet.hidden;
-        sheet.hidden = !open;
-        readerBtn.setAttribute('aria-expanded', String(open));
-        if (open) {
-          sheet.classList.remove('is-opening');
-          void sheet.offsetWidth;
-          sheet.classList.add('is-opening');
-        }
-      });
-      document.addEventListener('click', function (e) {
-        if (!sheet.hidden && !sheet.contains(e.target) && e.target !== readerBtn) {
-          sheet.hidden = true;
-          readerBtn.setAttribute('aria-expanded', 'false');
-        }
-      });
-    }
 
     on('toggleEnglish', 'click', function () {
       state.english = !state.english;
