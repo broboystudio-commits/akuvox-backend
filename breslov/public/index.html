@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="9">
+<html lang="en" data-build="10">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=9" />
+<link rel="stylesheet" href="/styles.css?v=10" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -65,7 +65,7 @@
       </div>
     </div>
     <div class="sheet-row">
-      <span>About &amp; sources</span>
+      <span>Reminders &amp; about</span>
       <button class="pill small" data-goto="about" type="button">Open</button>
     </div>
   </div>
@@ -193,6 +193,24 @@
 
   <!-- ---------------------------------------------------------- ABOUT -->
   <section class="panel" id="panel-about" hidden>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Daily reminder</h2>
+      </header>
+      <p class="hint">
+        Subscribe in your phone's Calendar app and it will remind you every day,
+        with the day's Tehillim on the reminder. It keeps working whether or not
+        you open this site, and you can turn it off in Calendar whenever you like.
+      </p>
+      <div class="choice-row">
+        <span class="choice-name">Remind me at</span>
+        <select class="choice" id="reminderTime"></select>
+      </div>
+      <button class="btn" id="reminderAdd" type="button">Add to my calendar</button>
+      <p class="hint" id="reminderNote" style="margin-top:12px"></p>
+    </article>
+
     <article class="card">
       <header class="card-head"><h2>About</h2></header>
       <p class="hint">
@@ -239,6 +257,6 @@
   </button>
 </nav>
 
-<script src="/app.js?v=9"></script>
+<script src="/app.js?v=10"></script>
 </body>
 </html>

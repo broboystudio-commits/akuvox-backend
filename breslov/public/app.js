@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '9';
+  var BUILD = '10';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -57,6 +57,7 @@
     zmanim: 'bd.zmanim',
     theme: 'bd.theme',
     tikkunPlace: 'bd.tikkunPlace',
+    reminder: 'bd.reminder',
     lastToday: 'bd.lastToday',
   };
 
@@ -726,6 +727,55 @@
       (1.0625 * state.fontScale).toFixed(3) + 'rem');
   }
 
+  // ------------------------------------------------------------- daily reminder
+
+  /**
+   * The reminder is a calendar subscription rather than a push notification.
+   * On an iPhone web push only works for a site added to the home screen, needs
+   * a permission prompt, and stops arriving often enough that it cannot be
+   * relied on. A calendar the phone subscribes to is handled by the Calendar
+   * app itself: it fires whether or not this site has been opened in weeks.
+   */
+  function reminderUrl(scheme) {
+    var saved = load(STORE.reminder, { hour: 7, minute: 0 });
+    var tz = 'America/New_York';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) { /* default */ }
+    var host = window.location.host;
+    return scheme + '//' + host + '/api/reminders.ics' +
+      '?hour=' + saved.hour + '&minute=' + saved.minute + '&tz=' + encodeURIComponent(tz);
+  }
+
+  function setUpReminder() {
+    var select = $('reminderTime');
+    if (!select) return;
+    var saved = load(STORE.reminder, { hour: 7, minute: 0 });
+
+    select.textContent = '';
+    for (var h = 0; h < 24; h++) {
+      for (var m = 0; m < 60; m += 30) {
+        var option = el('option', null, clock(h + ':' + (m === 0 ? '00' : '30')));
+        option.value = h + ':' + m;
+        if (h === saved.hour && m === saved.minute) option.selected = true;
+        select.appendChild(option);
+      }
+    }
+
+    select.addEventListener('change', function () {
+      var bits = select.value.split(':');
+      save(STORE.reminder, { hour: Number(bits[0]), minute: Number(bits[1]) });
+      setText('reminderNote', '');
+    });
+
+    on('reminderAdd', 'click', function () {
+      // webcal: asks the phone to subscribe rather than download a one-off file.
+      window.location.href = reminderUrl('webcal:');
+      setText('reminderNote',
+        'Your Calendar app should offer to subscribe. If nothing happened, ' +
+        'copy this address into Calendar → Add Subscription Calendar: ' +
+        reminderUrl(window.location.protocol));
+    });
+  }
+
   // ------------------------------------------------------------- navigation
 
   var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'about'];
@@ -821,6 +871,7 @@
     on('placeBtn', 'click', askForLocation);
     on('aboutLocation', 'click', askForLocation);
     on('themeBtn', 'click', toggleTheme);
+    setUpReminder();
 
     on('openFull', 'click', function () {
       var full = $('sparkFull');

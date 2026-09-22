@@ -15,6 +15,7 @@ const express = require('express');
 const cors = require('cors');
 
 const dates = require('./lib/dates');
+const ics = require('./lib/ics');
 const zmanimLib = require('./lib/zmanim');
 const daily = require('./lib/daily');
 const library = require('./lib/library');
@@ -29,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '9';
+const BUILD = '10';
 
 app.use(cors());
 app.use(express.json());
@@ -292,6 +293,39 @@ app.get('/api/widget', route(async (req) => {
     place: place.name,
   };
 }));
+
+// ---------------------------------------------------------------- reminders
+
+/** The address this server is reached on, for links inside the calendar. */
+function siteUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return host ? `${proto}://${host}` : '';
+}
+
+/**
+ * A calendar of daily reminders, for subscribing to in the phone's Calendar
+ * app. Served as a file rather than as JSON, so opening it in a browser or a
+ * calendar client does the right thing.
+ */
+app.get('/api/reminders.ics', (req, res) => {
+  try {
+    const feed = ics.buildFeed({
+      hour: req.query.hour,
+      minute: req.query.minute,
+      timeZone: dates.normalisePlace({ tz: req.query.tz }).timeZone,
+      days: req.query.days,
+      site: siteUrl(req),
+    });
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="breslov-daily.ics"');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(feed);
+  } catch (err) {
+    console.error('reminders.ics failed:', err.message);
+    res.status(500).type('text/plain').send('Could not build the calendar.');
+  }
+});
 
 // ---------------------------------------------------------------- the website
 
