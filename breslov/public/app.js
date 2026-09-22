@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '11';
+  var BUILD = '12';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -54,6 +54,7 @@
     place: 'bd.place',
     english: 'bd.english',
     fontScale: 'bd.fontScale',
+    font: 'bd.font',
     zmanim: 'bd.zmanim',
     theme: 'bd.theme',
     tikkunPlace: 'bd.tikkunPlace',
@@ -78,6 +79,7 @@
     place: load(STORE.place, DEFAULT_PLACE),
     english: load(STORE.english, true),
     fontScale: load(STORE.fontScale, 1),
+    font: load(STORE.font, 'frank'),
     zmanim: load(STORE.zmanim, { minhag: 'standard', showAll: false }),
     theme: load(STORE.theme, null),   // null means follow the phone's own setting
     today: null,
@@ -86,6 +88,86 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
+
+  // ------------------------------------------------------------- fonts
+
+  /**
+   * Hebrew typefaces to read in.
+   *
+   * Three are fetched from Google Fonts and only when chosen, so nothing is
+   * downloaded for a setting nobody touched. Each falls back to whatever the
+   * device already has, so a slow connection, a blocked request or no signal
+   * at all still leaves readable Hebrew rather than empty boxes. "Your
+   * device's font" downloads nothing and is the one to pick to stay wholly
+   * offline.
+   */
+  var FONTS = {
+    frank: {
+      label: 'Frank Ruhl — traditional',
+      google: 'Frank+Ruhl+Libre:wght@400;500;700',
+      hebrew: "'Frank Ruhl Libre', 'Taamey Frank CLM', 'Frank Ruehl CLM', 'SBL Hebrew', David, 'Times New Roman', serif",
+      english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
+    },
+    david: {
+      label: 'David — classic',
+      google: 'David+Libre:wght@400;500;700',
+      hebrew: "'David Libre', David, 'Taamey Frank CLM', 'Times New Roman', serif",
+      english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
+    },
+    modern: {
+      label: 'Heebo — modern',
+      google: 'Heebo:wght@400;500;700',
+      hebrew: "'Heebo', 'Arial Hebrew', 'Noto Sans Hebrew', system-ui, sans-serif",
+      english: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif",
+    },
+    system: {
+      label: "Your device's font",
+      google: null,
+      hebrew: "'SBL Hebrew', 'Taamey Frank CLM', 'Arial Hebrew', David, 'Times New Roman', serif",
+      english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
+    },
+  };
+
+  var fontsAsked = {};
+
+  /** Fetch a Google font once, and only because someone chose it. */
+  function requestFont(key) {
+    var font = FONTS[key];
+    if (!font || !font.google || fontsAsked[key]) return;
+    fontsAsked[key] = true;
+
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    // display=swap: show the fallback immediately and swap when it arrives,
+    // rather than leaving the page blank while waiting.
+    link.href = 'https://fonts.googleapis.com/css2?family=' + font.google + '&display=swap';
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+  }
+
+  function applyFont() {
+    var font = FONTS[state.font] || FONTS.frank;
+    requestFont(state.font);
+    document.documentElement.style.setProperty('--hebrew', font.hebrew);
+    document.documentElement.style.setProperty('--serif', font.english);
+  }
+
+  function setUpFontChoice() {
+    var select = $('fontChoice');
+    if (!select) return;
+    select.textContent = '';
+    Object.keys(FONTS).forEach(function (key) {
+      var option = el('option', null, FONTS[key].label);
+      option.value = key;
+      if (key === state.font) option.selected = true;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', function () {
+      state.font = select.value;
+      save(STORE.font, state.font);
+      applyFont();
+    });
+  }
 
   // ------------------------------------------------------------- theme
 
@@ -758,7 +840,16 @@
   function renderSearch(data) {
     if (!data.available) {
       setText('searchCount', '');
-      fillWith('searchResults', unavailableNotice(data, 'search'));
+      var box = el('div', 'notice');
+      box.appendChild(el('strong', null, 'Search is not working.'));
+      box.appendChild(document.createTextNode(
+        'The rest of the app is fine — this is the part that asks Sefaria to ' +
+        'search, and it answered in a way it did not used to. '));
+      if (data.reason) {
+        box.appendChild(document.createElement('br'));
+        box.appendChild(el('small', null, data.reason));
+      }
+      fillWith('searchResults', box);
       return;
     }
 
@@ -868,6 +959,17 @@
 
   function showPanel(name) {
     state.panel = name;
+
+    // Moving to another page dismisses the reading-options popover. Without
+    // this, tapping "Open" inside it left it hanging over the page you asked
+    // for.
+    var sheet = $('readerSheet');
+    if (sheet && !sheet.hidden) {
+      sheet.hidden = true;
+      var btn = $('readerBtn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
     PANELS.forEach(function (p) {
       var node = $('panel-' + p);
       if (node) node.hidden = p !== name;
@@ -881,6 +983,15 @@
     window.scrollTo({ top: 0, behavior: 'auto' });
 
     if (name === 'search' && !searchState.query) runSearch('');
+
+    // Which version is actually running, so it can be read without hunting
+    // for a web address.
+    if (name === 'about') {
+      fetch('/api/health', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (h) { setText('aboutBuild', 'Version ' + h.build); })
+        .catch(function () { setText('aboutBuild', ''); });
+    }
 
     if (name === 'tikkun' && !loaded.tikkun) {
       loaded.tikkun = true;
@@ -935,6 +1046,8 @@
 
   function start() {
     applyTheme();
+    applyFont();
+    setUpFontChoice();
     applyReadingPrefs();
     syncTopbarHeight();
     window.addEventListener('resize', syncTopbarHeight);

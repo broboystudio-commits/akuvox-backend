@@ -1032,6 +1032,23 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 
 
+/* ---------------------------------------------------------------- sources */
+
+.sources { font-size: 0.875rem; line-height: 1.65; color: var(--ink-2); }
+.sources h3 {
+  margin: 22px 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rose-700);
+}
+.sources h3:first-child { margin-top: 0; }
+.sources p { margin: 0 0 10px; }
+.sources ul { margin: 0 0 10px; padding-left: 20px; }
+.sources li { margin-bottom: 3px; }
+.sources .small { font-size: 0.8125rem; color: var(--ink-3); }
+
 /* ---------------------------------------------------------------- search */
 
 .searchbar {

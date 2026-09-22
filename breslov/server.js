@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '11';
+const BUILD = '12';
 
 app.use(cors());
 app.use(express.json());
@@ -164,6 +164,20 @@ app.get('/api/diagnostics', route(async () => {
     }
   }
 
+  // Search goes through a different endpoint from the texts, so it can fail on
+  // its own. Each form it tries is reported, since the reason is the fix.
+  let searchAttempts = null;
+  if (texts.ok) {
+    try {
+      const found = await sefaria.search('שמחה', { size: 3 });
+      record('Search', found.hits.length > 0,
+        `${found.hits.length} results via ${found.via}`);
+    } catch (err) {
+      searchAttempts = err.attempts || null;
+      record('Search', false, err.message);
+    }
+  }
+
   const failed = checks.filter((c) => !c.ok);
 
   return {
@@ -176,6 +190,7 @@ app.get('/api/diagnostics', route(async () => {
       : 'The dates and times work, but this server cannot fetch the texts from sefaria.org. ' +
         'Nothing is shown in place of a text it cannot load.',
     checks,
+    searchAttempts,
     books,
     cache: sefaria.cacheStats(),
     note: 'On a free hosting plan the disk is wiped on every deploy, so the ' +
@@ -333,7 +348,8 @@ app.get('/api/search', route(async (req) => {
         scope,
         available: false,
         reason: err.message,
-        hint: 'Search is done by sefaria.org. The rest of the app still works.',
+        attempts: err.attempts || null,
+        hint: 'Search is done by sefaria.org. Everything else in the app still works.',
         hits: [],
       };
     }

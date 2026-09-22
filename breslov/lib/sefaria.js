@@ -222,57 +222,122 @@ module.exports = {
 /**
  * Search Sefaria's text index.
  *
- * Sefaria's search endpoint is Elasticsearch-shaped, and the exact shape of
- * the answer has changed across versions. Rather than depend on one layout,
- * readHits() below accepts any of the shapes it has used and gives up
- * honestly if it recognises none of them -- a search that says it failed is
- * far better than one that silently returns nothing and looks like "no
- * results".
+ * Sefaria's search endpoint has moved and changed shape across versions, and
+ * it cannot be reached from the machine this was written on, so rather than
+ * commit to one guess this tries the known forms in turn and remembers
+ * whichever answers. Every attempt records what came back -- status and the
+ * beginning of the body -- so a failure can be read rather than guessed at.
  */
-async function search(query, { filters = [], size = 20 } = {}) {
-  const body = {
-    query: String(query || '').trim(),
-    type: 'text',
-    field: 'naive_lemmatizer',
-    size,
-    filters,
-    filter_fields: filters.length ? filters.map(() => 'path') : [],
-    sort_type: 'relevance',
-  };
-  if (!body.query) return { hits: [], total: 0 };
 
-  const url = `${API}/api/search-wrapper`;
+const SEARCH_ATTEMPTS = [
+  {
+    name: 'search-wrapper (POST, lemmatizer)',
+    method: 'POST',
+    path: '/api/search-wrapper',
+    body: (q, size) => ({
+      query: q, type: 'text', field: 'naive_lemmatizer',
+      size, filters: [], filter_fields: [], sort_type: 'relevance',
+    }),
+  },
+  {
+    name: 'search-wrapper/es8 (POST)',
+    method: 'POST',
+    path: '/api/search-wrapper/es8',
+    body: (q, size) => ({
+      query: q, type: 'text', field: 'naive_lemmatizer',
+      size, filters: [], filter_fields: [], sort_type: 'relevance',
+    }),
+  },
+  {
+    name: 'search-wrapper (POST, minimal)',
+    method: 'POST',
+    path: '/api/search-wrapper',
+    body: (q, size) => ({ query: q, type: 'text', size }),
+  },
+  {
+    name: 'search-wrapper (GET)',
+    method: 'GET',
+    path: (q, size) => `/api/search-wrapper?q=${encodeURIComponent(q)}&type=text&size=${size}`,
+  },
+];
+
+/** The attempt that last worked, so we do not retry the failures every time. */
+let workingSearch = null;
+
+async function attemptSearch(attempt, query, size) {
+  const path = typeof attempt.path === 'function'
+    ? attempt.path(query, size)
+    : attempt.path;
+  const url = `${API}${path}`;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      body: JSON.stringify(body),
+    const init = {
+      method: attempt.method,
+      headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
       signal: controller.signal,
-    });
-    if (!res.ok) {
-      const err = new Error(`Sefaria search responded ${res.status}`);
-      err.status = res.status;
-      throw err;
+    };
+    if (attempt.method === 'POST') {
+      init.headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(attempt.body(query, size));
     }
-    return readHits(await res.json());
+
+    const res = await fetch(url, init);
+    const raw = await res.text();
+
+    if (!res.ok) {
+      throw new Error(`${res.status} ${res.statusText} — ${raw.slice(0, 160).replace(/\s+/g, ' ')}`);
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new Error(`answered with something that is not JSON — ${raw.slice(0, 120).replace(/\s+/g, ' ')}`);
+    }
+
+    return readHits(parsed);
   } finally {
     clearTimeout(timer);
   }
 }
 
+/**
+ * @returns {Promise<{hits: Array, total: number, via: string}>}
+ * @throws  an Error whose `attempts` lists what each form answered
+ */
+async function search(query, { size = 20 } = {}) {
+  const q = String(query || '').trim();
+  if (!q) return { hits: [], total: 0, via: null };
+
+  // Put the one that worked last time first.
+  const order = workingSearch
+    ? [workingSearch].concat(SEARCH_ATTEMPTS.filter((a) => a !== workingSearch))
+    : SEARCH_ATTEMPTS;
+
+  const attempts = [];
+  for (const attempt of order) {
+    try {
+      const result = await attemptSearch(attempt, q, size);
+      workingSearch = attempt;
+      return { ...result, via: attempt.name };
+    } catch (err) {
+      attempts.push({ form: attempt.name, said: err.message });
+    }
+  }
+
+  const failure = new Error('No form of Sefaria search answered');
+  failure.attempts = attempts;
+  throw failure;
+}
+
 /** Pull results out of whichever answer shape came back. */
 function readHits(raw) {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('Sefaria search returned something unreadable');
+    throw new Error('returned something unreadable');
   }
 
-  // The usual Elasticsearch shape: { hits: { hits: [...], total } }
   let list = null;
   let total = 0;
 
@@ -287,9 +352,15 @@ function readHits(raw) {
   } else if (Array.isArray(raw.results)) {
     list = raw.results;
     total = raw.total || list.length;
+  } else if (Array.isArray(raw.texts)) {
+    list = raw.texts;
+    total = raw.total || list.length;
   }
 
-  if (!list) throw new Error('Sefaria search returned an unfamiliar answer');
+  if (!list) {
+    // Naming the keys makes an unfamiliar answer fixable instead of mysterious.
+    throw new Error(`answered with keys [${Object.keys(raw).slice(0, 8).join(', ')}] and no recognisable list of results`);
+  }
 
   const hits = list.map((hit) => {
     const src = hit._source || hit.source || hit;
@@ -316,3 +387,4 @@ function readHits(raw) {
 
 module.exports.search = search;
 module.exports.readHits = readHits;
+module.exports.SEARCH_ATTEMPTS = SEARCH_ATTEMPTS;
