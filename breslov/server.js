@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '10';
+const BUILD = '11';
 
 app.use(cors());
 app.use(express.json());
@@ -292,6 +292,52 @@ app.get('/api/widget', route(async (req) => {
       .map(library.tehillimLabel).join(' • '),
     place: place.name,
   };
+}));
+
+// ---------------------------------------------------------------- search
+
+/**
+ * Search the seforim.
+ *
+ * Sefaria can narrow a search by category, but that means sending the exact
+ * category path it files each book under, and a path that is even slightly
+ * wrong returns nothing at all -- indistinguishable from "no results". So we
+ * search everything and keep the hits whose book is one of ours, which cannot
+ * silently fail. `scope=all` returns the rest as well.
+ */
+app.get('/api/search', route(async (req) => {
+  const query = String(req.query.q || '').trim();
+  const scope = req.query.scope === 'all' ? 'all' : 'breslov';
+  if (!query) return { query: '', scope, available: true, hits: [], total: 0 };
+
+  const key = `search:${scope}:${query.toLowerCase()}`;
+  return cached(key, 6 * 3600 * 1000, async () => {
+    try {
+      const found = await sefaria.search(query, { size: 40 });
+      const ourTitles = new Set(library.BOOKS.map((b) => b.title));
+      const ours = found.hits.filter((h) => h.book && ourTitles.has(h.book));
+      const hits = scope === 'all' ? found.hits : ours;
+
+      return {
+        query,
+        scope,
+        available: true,
+        hits: hits.slice(0, 25),
+        total: found.total,
+        inBreslov: ours.length,
+        everywhere: found.hits.length,
+      };
+    } catch (err) {
+      return {
+        query,
+        scope,
+        available: false,
+        reason: err.message,
+        hint: 'Search is done by sefaria.org. The rest of the app still works.',
+        hits: [],
+      };
+    }
+  });
 }));
 
 // ---------------------------------------------------------------- reminders

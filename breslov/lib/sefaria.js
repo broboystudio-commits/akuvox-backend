@@ -218,3 +218,101 @@ function cacheStats() {
 module.exports = {
   API, getShape, getText, getLinks, getCalendars, normaliseText, cacheStats, request,
 };
+
+/**
+ * Search Sefaria's text index.
+ *
+ * Sefaria's search endpoint is Elasticsearch-shaped, and the exact shape of
+ * the answer has changed across versions. Rather than depend on one layout,
+ * readHits() below accepts any of the shapes it has used and gives up
+ * honestly if it recognises none of them -- a search that says it failed is
+ * far better than one that silently returns nothing and looks like "no
+ * results".
+ */
+async function search(query, { filters = [], size = 20 } = {}) {
+  const body = {
+    query: String(query || '').trim(),
+    type: 'text',
+    field: 'naive_lemmatizer',
+    size,
+    filters,
+    filter_fields: filters.length ? filters.map(() => 'path') : [],
+    sort_type: 'relevance',
+  };
+  if (!body.query) return { hits: [], total: 0 };
+
+  const url = `${API}/api/search-wrapper`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': USER_AGENT,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = new Error(`Sefaria search responded ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return readHits(await res.json());
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Pull results out of whichever answer shape came back. */
+function readHits(raw) {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Sefaria search returned something unreadable');
+  }
+
+  // The usual Elasticsearch shape: { hits: { hits: [...], total } }
+  let list = null;
+  let total = 0;
+
+  if (raw.hits && Array.isArray(raw.hits.hits)) {
+    list = raw.hits.hits;
+    total = typeof raw.hits.total === 'number'
+      ? raw.hits.total
+      : (raw.hits.total && raw.hits.total.value) || list.length;
+  } else if (Array.isArray(raw.hits)) {
+    list = raw.hits;
+    total = raw.total || list.length;
+  } else if (Array.isArray(raw.results)) {
+    list = raw.results;
+    total = raw.total || list.length;
+  }
+
+  if (!list) throw new Error('Sefaria search returned an unfamiliar answer');
+
+  const hits = list.map((hit) => {
+    const src = hit._source || hit.source || hit;
+    const highlight = hit.highlight || {};
+    const snippetSource =
+      (Array.isArray(highlight.exact) && highlight.exact[0]) ||
+      (Array.isArray(highlight.naive_lemmatizer) && highlight.naive_lemmatizer[0]) ||
+      src.content || src.text || '';
+
+    return {
+      ref: src.ref || hit.ref || null,
+      heRef: src.heRef || null,
+      book: src.index_title || src.book || null,
+      lang: src.lang || null,
+      snippet: stripHtml(String(snippetSource)),
+      url: src.ref
+        ? `https://www.sefaria.org/${encodeURIComponent(String(src.ref).replace(/\s+/g, '_'))}`
+        : null,
+    };
+  }).filter((h) => h.ref && h.snippet);
+
+  return { hits, total };
+}
+
+module.exports.search = search;
+module.exports.readHits = readHits;

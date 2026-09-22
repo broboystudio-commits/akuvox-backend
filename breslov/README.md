@@ -18,6 +18,8 @@ copy-and-paste.
 | **Zmanim** | Every time for wherever you are: alos, misheyakir, netz, sof zman shema and tefilla (GRA and MGA), chatzos, mincha gedola and ketana, plag, shkia, tzais |
 | **Your minhag** | Pick how you hold — Standard, **Rabbeinu Tam (72 minutes)**, Rabbeinu Tam zmaniyos, Magen Avraham (16.1°) or Geonim — or set any single line yourself. The whole app follows, including the countdown and the phone widget. "Show every opinion" lists them all side by side |
 | **Shabbos** | The parsha, candle lighting and havdalah for your location |
+| **Search** | Find any teaching by word or idea, across all the seforim, with the option to widen it to the whole of Sefaria |
+| **Daily reminder** | Subscribe in your phone's Calendar app and it reminds you each day, carrying that day's Tehillim. Set the time in Reminders & about |
 | **Torah of the week** | One lesson, the same all week. It looks for a lesson where Reb Nachman darshans a verse from that week's parsha, and if there isn't one it gives a featured lesson instead |
 
 Hebrew and English side by side. You can turn English off and make the text
@@ -192,6 +194,8 @@ Handy if you want to build something else on top of it.
 | `/api/tehillim` | Today's Tehillim |
 | `/api/tikkun` | All ten psalms of the Tikkun HaKlali |
 | `/api/weekly` | This week's Torah |
+| `/api/search?q=…` | Search the seforim. `&scope=all` looks beyond Reb Nachman |
+| `/api/reminders.ics` | The daily reminder calendar. `?hour=7&minute=30&tz=…` |
 | `/api/health` | Is the server alive, and which build is running |
 | `/api/diagnostics` | A plain-English report: dates, zmanim, and whether the server can reach Sefaria for the texts |
 

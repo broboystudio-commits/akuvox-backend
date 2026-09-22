@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '10';
+  var BUILD = '11';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -727,6 +727,91 @@
       (1.0625 * state.fontScale).toFixed(3) + 'rem');
   }
 
+  // ------------------------------------------------------------- search
+
+  var searchState = { query: '', scope: 'breslov', last: null };
+
+  function runSearch(query) {
+    var q = String(query || '').trim();
+    searchState.query = q;
+    if (!q) {
+      fillWith('searchResults', el('p', 'search-empty',
+        'Type a word and search. It looks through all of Reb Nachman\'s seforim.'));
+      setText('searchCount', '');
+      return;
+    }
+
+    fillWith('searchResults', el('div', 'skeleton'));
+    setText('searchCount', 'searching…');
+
+    api('search?q=' + encodeURIComponent(q) + '&scope=' + searchState.scope)
+      .then(function (data) {
+        searchState.last = data;
+        renderSearch(data);
+      })
+      .catch(function (err) {
+        fillWith('searchResults', unavailableNotice({ hint: err.message }, 'search'));
+        setText('searchCount', '');
+      });
+  }
+
+  function renderSearch(data) {
+    if (!data.available) {
+      setText('searchCount', '');
+      fillWith('searchResults', unavailableNotice(data, 'search'));
+      return;
+    }
+
+    setText('searchCount', data.hits.length
+      ? data.hits.length + (data.hits.length === 1 ? ' result' : ' results')
+      : 'nothing found');
+
+    renderScopePills(data);
+
+    if (!data.hits.length) {
+      var message = data.scope === 'breslov' && data.everywhere
+        ? 'Nothing in Reb Nachman\'s seforim. There are ' + data.everywhere +
+          ' results elsewhere on Sefaria — tap "Everywhere" above to see them.'
+        : 'Nothing found for “' + data.query + '”.';
+      fillWith('searchResults', el('p', 'search-empty', message));
+      return;
+    }
+
+    var list = document.createDocumentFragment();
+    data.hits.forEach(function (hit) {
+      var item = el('a', 'result');
+      item.href = hit.url || '#';
+      item.target = '_blank';
+      item.rel = 'noopener';
+      item.appendChild(el('div', 'r-ref', hit.heRef || hit.ref));
+      // Hebrew results are set right to left, English left to right.
+      var isHebrew = /[\u0590-\u05FF]/.test(hit.snippet);
+      item.appendChild(el('div', 'r-text' + (isHebrew ? ' is-he' : ''), hit.snippet));
+      list.appendChild(item);
+    });
+    fillWith('searchResults', list);
+  }
+
+  /** Let the reader widen the search past Reb Nachman if nothing turns up. */
+  function renderScopePills(data) {
+    var wrap = document.createDocumentFragment();
+    [
+      { id: 'breslov', label: 'Reb Nachman', count: data.inBreslov },
+      { id: 'all', label: 'Everywhere', count: data.everywhere },
+    ].forEach(function (opt) {
+      var b = el('button', 'pill' + (searchState.scope === opt.id ? ' is-active' : ''),
+        opt.label + (opt.count == null ? '' : ' (' + opt.count + ')'));
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        if (searchState.scope === opt.id) return;
+        searchState.scope = opt.id;
+        runSearch(searchState.query);
+      });
+      wrap.appendChild(b);
+    });
+    fillWith('searchScope', wrap);
+  }
+
   // ------------------------------------------------------------- daily reminder
 
   /**
@@ -778,7 +863,7 @@
 
   // ------------------------------------------------------------- navigation
 
-  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'about'];
+  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
   var loaded = { tikkun: false };
 
   function showPanel(name) {
@@ -794,6 +879,8 @@
     var panel = $('panel-' + name);
     if (panel) replay(panel);
     window.scrollTo({ top: 0, behavior: 'auto' });
+
+    if (name === 'search' && !searchState.query) runSearch('');
 
     if (name === 'tikkun' && !loaded.tikkun) {
       loaded.tikkun = true;
@@ -872,6 +959,22 @@
     on('aboutLocation', 'click', askForLocation);
     on('themeBtn', 'click', toggleTheme);
     setUpReminder();
+
+    on('searchBtn', 'click', function () {
+      showPanel('search');
+      var input = $('searchInput');
+      if (input) input.focus();
+    });
+
+    var form = $('searchForm');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var input = $('searchInput');
+        runSearch(input ? input.value : '');
+        if (input) input.blur();   // let the phone keyboard get out of the way
+      });
+    }
 
     on('openFull', 'click', function () {
       var full = $('sparkFull');

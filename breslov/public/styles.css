@@ -1031,6 +1031,77 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 
 
+
+/* ---------------------------------------------------------------- search */
+
+.searchbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.searchbar input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.searchbar input::placeholder { color: var(--ink-3); }
+.searchbar input:focus-visible { outline: 2px solid var(--rose-300); outline-offset: 2px; }
+.searchbar .btn { width: auto; flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }
+
+:root[data-theme="dark"] .searchbar input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+.result {
+  display: block;
+  width: 100%;
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+}
+.result:first-child { border-top: 0; }
+.result .r-ref {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--rose-700);
+  margin-bottom: 5px;
+}
+.result .r-text {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  unicode-bidi: plaintext;
+}
+.result .r-text.is-he {
+  font-family: var(--hebrew);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+@media (hover: hover) and (pointer: fine) {
+  .result:hover .r-ref { text-decoration: underline; }
+}
+
+.search-empty {
+  padding: 22px 4px;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+}
+
 /* ---------------------------------------------------------------- tikkun reader
    The ten psalms are meant to be said straight through, so they are laid out
    as one continuous reading rather than ten things to tap. The numbers stay
