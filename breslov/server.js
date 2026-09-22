@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '15';
+const BUILD = '16';
 
 app.use(cors());
 app.use(express.json());
@@ -372,7 +372,23 @@ app.get('/api/search', route(async (req) => {
   const key = `search:${scope}:${query.toLowerCase()}`;
   return cached(key, 6 * 3600 * 1000, async () => {
     try {
-      const found = await sefaria.search(query, { size: 40 });
+      const found = await sefaria.search(query, { size: 60 });
+
+      // This app reads Hebrew and English. Sefaria carries translations in many
+      // more, and a search that does not say which it wants gets all of them --
+      // which is how a search came back in Portuguese. A hit with no language
+      // tag at all is kept, on the grounds that a missing label is a worse
+      // reason to discard a good result than a stray one is to show it.
+      const READABLE = ['he', 'en'];
+      const readable = found.hits.filter((h) => !h.lang || READABLE.indexOf(h.lang) !== -1);
+
+      // The same passage often comes back once per language. Keep the
+      // best-scoring of each, which is the first, since they arrive in order.
+      const byRef = new Map();
+      for (const hit of readable) {
+        if (!byRef.has(hit.ref)) byRef.set(hit.ref, hit);
+      }
+      found.hits = [...byRef.values()];
 
       // Sefaria's search does not name the book a hit came from, so it is read
       // off the front of the reference instead: "Likutei Moharan 24:3" belongs

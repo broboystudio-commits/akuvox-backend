@@ -351,6 +351,23 @@ function refFromId(id) {
 }
 
 /**
+ * The language tag on the end of a search hit's _id.
+ *
+ * Sefaria carries translations in many languages, and a search with no
+ * language named returns all of them -- which is how a search for a Hebrew
+ * idea came back in Portuguese. This app reads Hebrew and English, so the tag
+ * is what lets everything else be left out.
+ *
+ * Returns null when there is no tag, which is treated as "keep it": better an
+ * occasional stray than dropping good results over a missing label.
+ */
+function langFromId(id) {
+  if (!id) return null;
+  const match = String(id).match(/\[([a-z]{2})\]\s*$/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
  * Find the readable text in a hit, wherever Sefaria happens to put it.
  * Highlights first, since those carry the matched words in context.
  */
@@ -426,7 +443,7 @@ function readHits(raw) {
       ref: ref,
       heRef: src.heRef || null,
       book: src.index_title || src.book || null,
-      lang: src.lang || src.language || null,
+      lang: src.lang || src.language || langFromId(hit._id || src._id),
       snippet: stripHtml(pickSnippet(hit, src)),
       url: ref
         ? `https://www.sefaria.org/${encodeURIComponent(String(ref).replace(/\s+/g, '_'))}`
@@ -451,6 +468,7 @@ module.exports.readHits = readHits;
 module.exports.SEARCH_ATTEMPTS = SEARCH_ATTEMPTS;
 module.exports.pickSnippet = pickSnippet;
 module.exports.refFromId = refFromId;
+module.exports.langFromId = langFromId;
 
 /**
  * What Sefaria thinks you might be typing.
