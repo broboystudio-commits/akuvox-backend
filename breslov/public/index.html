@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="14">
+<html lang="en" data-build="15">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=14" />
+<link rel="stylesheet" href="/styles.css?v=15" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -230,9 +230,14 @@
         <h2>Search</h2>
         <span class="ref" id="searchCount"></span>
       </header>
-      <form class="searchbar" id="searchForm">
-        <input type="search" id="searchInput" placeholder="A word or an idea…"
-               autocomplete="off" autocorrect="off" spellcheck="false" />
+      <form class="searchbar" id="searchForm" role="search">
+        <div class="search-field">
+          <input type="search" id="searchInput" placeholder="A word, an idea, or a sefer…"
+                 autocomplete="off" autocorrect="off" spellcheck="false"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                 aria-controls="searchSuggest" />
+          <div class="suggest" id="searchSuggest" role="listbox" hidden></div>
+        </div>
         <button class="btn" type="submit">Search</button>
       </form>
       <div class="pills" id="searchScope"></div>
@@ -316,16 +321,13 @@
           <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>
           — a free library of Jewish texts. Everything read in this app comes from there:
         </p>
-        <ul>
-          <li>Likutei Moharan, and Likutei Moharan Tinyana</li>
-          <li>Sichot HaRan</li>
-          <li>Sefer HaMiddot</li>
-          <li>Likutei Etzot</li>
-          <li>Likutei Tefilot</li>
-          <li>Sippurei Maasiyot</li>
-          <li>Chayei Moharan</li>
-          <li>Tehillim</li>
-        </ul>
+        <ul id="sourceBooks"><li>Tehillim</li></ul>
+        <p class="small">
+          Some of these were written by Rebbe Nachman and some were recorded or
+          compiled by his students, chiefly Reb Noson; where that is so it is
+          noted beside the name. A sefer that Sefaria does not carry is left out
+          of the app rather than guessed at.
+        </p>
         <p class="small">
           Licences differ from one edition and translation to another. Each
           passage shows its own, underneath the text.
@@ -372,6 +374,6 @@
 
 </main>
 
-<script src="/app.js?v=14"></script>
+<script src="/app.js?v=15"></script>
 </body>
 </html>

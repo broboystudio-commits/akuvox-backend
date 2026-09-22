@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '14';
+  var BUILD = '15';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -812,6 +812,116 @@
   // ------------------------------------------------------------- search
 
   var searchState = { query: '', scope: 'breslov', last: null };
+  var suggestState = { items: [], active: -1, timer: null, seq: 0 };
+
+  /**
+   * Suggestions as you type.
+   *
+   * Each keystroke does not fetch: the request waits until typing pauses, and
+   * a reply that arrives after a newer one has gone out is discarded, so a
+   * slow answer for "lik" cannot overwrite the list for "likutei".
+   */
+  function onSearchTyping() {
+    var input = $('searchInput');
+    if (!input) return;
+    var q = input.value.trim();
+
+    clearTimeout(suggestState.timer);
+    if (q.length < 2) { closeSuggest(); return; }
+
+    suggestState.timer = setTimeout(function () {
+      var mine = ++suggestState.seq;
+      fetch('/api/suggest?q=' + encodeURIComponent(q), { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (mine !== suggestState.seq) return;      // a newer request has overtaken this one
+          renderSuggest(data.suggestions || []);
+        })
+        .catch(function () { closeSuggest(); });
+    }, 180);
+  }
+
+  function renderSuggest(items) {
+    var box = $('searchSuggest');
+    var input = $('searchInput');
+    if (!box) return;
+
+    suggestState.items = items;
+    suggestState.active = -1;
+
+    if (!items.length) { closeSuggest(); return; }
+
+    var list = document.createDocumentFragment();
+    items.forEach(function (item, i) {
+      var b = el('button', 'suggest-item');
+      b.type = 'button';
+      b.id = 'suggest-' + i;
+      b.setAttribute('role', 'option');
+      b.setAttribute('aria-selected', 'false');
+      b.appendChild(el('span', null, item.text));
+      if (item.note || item.kind === 'book' || item.kind === 'topic') {
+        b.appendChild(el('span', 's-note', item.note || item.kind));
+      }
+      // mousedown, not click: the input blurs before a click would land.
+      b.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        chooseSuggestion(i);
+      });
+      list.appendChild(b);
+    });
+    fillWith('searchSuggest', list);
+    box.hidden = false;
+    if (input) input.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSuggest() {
+    var box = $('searchSuggest');
+    var input = $('searchInput');
+    if (box) { box.hidden = true; box.textContent = ''; }
+    if (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+    }
+    suggestState.items = [];
+    suggestState.active = -1;
+  }
+
+  function highlightSuggestion(index) {
+    var box = $('searchSuggest');
+    var input = $('searchInput');
+    if (!box) return;
+    var count = suggestState.items.length;
+    if (!count) return;
+    // Wrap around at either end.
+    suggestState.active = ((index % count) + count) % count;
+    Array.prototype.forEach.call(box.children, function (node, i) {
+      var on = i === suggestState.active;
+      node.classList.toggle('is-active', on);
+      node.setAttribute('aria-selected', String(on));
+      if (on) {
+        node.scrollIntoView({ block: 'nearest' });
+        if (input) input.setAttribute('aria-activedescendant', node.id);
+      }
+    });
+  }
+
+  function chooseSuggestion(index) {
+    var item = suggestState.items[index];
+    if (!item) return;
+    var input = $('searchInput');
+    if (input) input.value = item.text;
+    closeSuggest();
+    runSearch(item.text);
+    if (input) input.blur();
+  }
+
+  function onSearchKeys(e) {
+    if ($('searchSuggest') && $('searchSuggest').hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlightSuggestion(suggestState.active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlightSuggestion(suggestState.active - 1); }
+    else if (e.key === 'Enter' && suggestState.active >= 0) { e.preventDefault(); chooseSuggestion(suggestState.active); }
+    else if (e.key === 'Escape') { closeSuggest(); }
+  }
 
   function runSearch(query) {
     var q = String(query || '').trim();
@@ -961,7 +1071,7 @@
   // ------------------------------------------------------------- navigation
 
   var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
-  var loaded = { tikkun: false };
+  var loaded = { tikkun: false, library: false };
 
   function showPanel(name) {
     state.panel = name;
@@ -989,6 +1099,26 @@
     window.scrollTo({ top: 0, behavior: 'auto' });
 
     if (name === 'search' && !searchState.query) runSearch('');
+
+    // The list of seforim comes from the app itself, so the page cannot drift
+    // out of step with what is actually being read.
+    if (name === 'about' && !loaded.library) {
+      loaded.library = true;
+      fetch('/api/library', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var list = document.createDocumentFragment();
+          (data.books || []).forEach(function (book) {
+            var li = el('li');
+            li.appendChild(document.createTextNode(book.label));
+            if (book.by) li.appendChild(el('span', 'small', ' — ' + book.by));
+            list.appendChild(li);
+          });
+          list.appendChild(el('li', null, 'Tehillim'));
+          fillWith('sourceBooks', list);
+        })
+        .catch(function () { loaded.library = false; });
+    }
 
     // Which version is actually running, so it can be read without hunting
     // for a web address.
@@ -1090,10 +1220,19 @@
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         var input = $('searchInput');
+        closeSuggest();
         runSearch(input ? input.value : '');
         if (input) input.blur();   // let the phone keyboard get out of the way
       });
     }
+
+    on('searchInput', 'input', onSearchTyping);
+    on('searchInput', 'keydown', onSearchKeys);
+    on('searchInput', 'blur', function () { setTimeout(closeSuggest, 120); });
+    document.addEventListener('click', function (e) {
+      var field = document.querySelector('.search-field');
+      if (field && !field.contains(e.target)) closeSuggest();
+    });
 
     on('openFull', 'click', function () {
       var full = $('sparkFull');

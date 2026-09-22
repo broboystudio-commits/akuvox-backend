@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '14';
+const BUILD = '15';
 
 app.use(cors());
 app.use(express.json());
@@ -413,6 +413,57 @@ app.get('/api/search', route(async (req) => {
     }
   });
 }));
+
+/**
+ * Suggestions for the search box.
+ *
+ * The seforim in this app are matched locally, so the box is useful the moment
+ * you type "lik" whether or not Sefaria answers. Its own suggestions -- topics
+ * and references across the whole library -- are added underneath when they
+ * arrive. A failure there costs the extra suggestions and nothing else.
+ */
+app.get('/api/suggest', route(async (req) => {
+  const query = String(req.query.q || '').trim();
+  if (query.length < 2) return { query, suggestions: [] };
+
+  return cached(`suggest:${query.toLowerCase()}`, 12 * 3600 * 1000, async () => {
+    const lower = query.toLowerCase();
+    const suggestions = [];
+    const seen = new Set();
+
+    const add = (text, kind, ref, note) => {
+      const key = String(text).toLowerCase();
+      if (!text || seen.has(key)) return;
+      seen.add(key);
+      suggestions.push({ text, kind, ref: ref || null, note: note || null });
+    };
+
+    // Our own seforim first: a name that starts with what you typed beats one
+    // that merely contains it.
+    const books = library.BOOKS.slice();
+    const starts = books.filter((b) => b.label.toLowerCase().indexOf(lower) === 0);
+    const contains = books.filter((b) =>
+      b.label.toLowerCase().indexOf(lower) > 0 && starts.indexOf(b) === -1);
+    for (const book of starts.concat(contains).slice(0, 5)) {
+      add(book.label, 'book', null, book.by || null);
+    }
+
+    try {
+      for (const item of await sefaria.suggest(query, { limit: 8 })) {
+        add(item.text, item.kind, item.ref, null);
+      }
+    } catch {
+      // Sefaria's suggestions are a bonus; ours are already in the list.
+    }
+
+    return { query, suggestions: suggestions.slice(0, 10) };
+  });
+}));
+
+/** The seforim the app draws on, so the About page never has to be kept in step by hand. */
+app.get('/api/library', route(async () => ({
+  books: library.BOOKS.map((b) => ({ label: b.label, he: b.he, by: b.by || null })),
+})));
 
 // ---------------------------------------------------------------- reminders
 

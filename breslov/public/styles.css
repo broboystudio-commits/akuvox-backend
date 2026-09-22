@@ -1038,6 +1038,67 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 
 
+/* ---------------------------------------------------------------- suggestions */
+
+.search-field { flex: 1 1 auto; min-width: 0; }
+
+.suggest {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  padding: 6px;
+  border-radius: 16px;
+  background: linear-gradient(168deg, #fffbf8 0%, #fbeee9 100%);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-lg);
+  max-height: 340px;
+  overflow-y: auto;
+  animation: rise 200ms var(--ease) both;
+}
+.suggest[hidden] { display: none; }
+
+:root[data-theme="dark"] .suggest {
+  background: linear-gradient(168deg, #3d3150 0%, #332942 100%);
+}
+
+.suggest-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 11px;
+  text-align: left;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  transition: background var(--fast) var(--ease);
+}
+.suggest-item > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.suggest-item .s-note {
+  flex: 0 1 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+.suggest-item:hover,
+.suggest-item.is-active {
+  background: linear-gradient(120deg, var(--rose-100), var(--gold-100));
+  color: var(--rose-700);
+}
+.suggest-item.is-active { font-weight: 600; }
+
 /* ---------------------------------------------------------------- sources */
 
 .sources { font-size: 0.875rem; line-height: 1.65; color: var(--ink-2); }
@@ -1058,6 +1119,8 @@ body.hide-english .verse-card .verse-en { display: none; }
 /* ---------------------------------------------------------------- search */
 
 .searchbar {
+  position: relative;
+  z-index: 30;
   display: flex;
   gap: 8px;
   margin-bottom: 14px;
@@ -1409,6 +1472,13 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 /* Keep the content above the gloss. */
 .card > *, .hero > *, .btn > *, .quick-card > * { position: relative; z-index: 1; }
+
+/* The rule above gives every direct child of a card the same z-index, so at
+   equal footing the later element in the markup wins -- and the results come
+   after the search bar. That is what painted them over the suggestions and
+   made the dropdown look transparent. Named more specifically than `.card > *`
+   so it cannot be flattened again. */
+.card > .searchbar { z-index: 30; }
 
 /* Nothing above is worth making someone motion-sick. */
 @media (prefers-reduced-motion: reduce) {

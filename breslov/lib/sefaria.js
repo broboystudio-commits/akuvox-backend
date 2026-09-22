@@ -451,3 +451,65 @@ module.exports.readHits = readHits;
 module.exports.SEARCH_ATTEMPTS = SEARCH_ATTEMPTS;
 module.exports.pickSnippet = pickSnippet;
 module.exports.refFromId = refFromId;
+
+/**
+ * What Sefaria thinks you might be typing.
+ *
+ * Its name endpoint answers with a `completions` list of plain strings and,
+ * usually, a richer `completion_objects` list. Either is accepted, and an
+ * answer in neither form is treated as "no suggestions" rather than an error:
+ * a suggestion box is a convenience, and it should never be the reason a
+ * search box stops working.
+ */
+async function suggest(query, { limit = 8 } = {}) {
+  const q = String(query || '').trim();
+  if (q.length < 2) return [];
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const res = await fetch(
+      `${API}/api/name/${encodeURIComponent(q)}?limit=${limit}`,
+      { headers: { Accept: 'application/json', 'User-Agent': USER_AGENT }, signal: controller.signal }
+    );
+    if (!res.ok) return [];
+    const raw = await res.json();
+    return readCompletions(raw, limit);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function readCompletions(raw, limit) {
+  if (!raw || typeof raw !== 'object') return [];
+  const out = [];
+  const seen = new Set();
+
+  const add = (text, kind, ref) => {
+    const clean = stripHtml(String(text || '')).trim();
+    if (!clean || seen.has(clean.toLowerCase())) return;
+    seen.add(clean.toLowerCase());
+    out.push({ text: clean, kind: kind || 'text', ref: ref || null });
+  };
+
+  if (Array.isArray(raw.completion_objects)) {
+    for (const item of raw.completion_objects) {
+      if (!item) continue;
+      const type = String(item.type || '').toLowerCase();
+      add(item.title || item.key, type.indexOf('topic') !== -1 ? 'topic' : 'book',
+          item.is_ref ? (item.key || item.title) : null);
+    }
+  }
+  if (Array.isArray(raw.completions)) {
+    for (const item of raw.completions) add(item, 'text');
+  }
+  // A query that is itself a reference, such as "Likutei Moharan 24".
+  if (raw.is_ref && raw.ref) add(raw.ref, 'ref', raw.ref);
+
+  return out.slice(0, limit);
+}
+
+module.exports.suggest = suggest;
+module.exports.readCompletions = readCompletions;
