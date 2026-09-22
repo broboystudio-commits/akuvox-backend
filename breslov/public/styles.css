@@ -115,6 +115,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .hebdate {
   margin: 0;
+  text-align: left;
   font-family: var(--hebrew);
   font-size: 1.625rem;
   font-weight: 500;
@@ -1019,6 +1020,108 @@ body.hide-english .verse-card .verse-en { display: none; }
 .quick-card.wide { grid-column: 1 / -1; }
 .quick-title { font-size: 0.9375rem; font-weight: 600; color: var(--ink); }
 .quick-sub { font-size: 0.78rem; color: var(--ink-3); unicode-bidi: plaintext; }
+
+
+/* ---------------------------------------------------------------- desktop
+   Below 900px this is a phone app: one column, tabs along the bottom under
+   the thumb. Above it that shape stops making sense -- a bottom tab bar on a
+   laptop is odd, and a 720px column stranded in the middle of a 2000px screen
+   is worse. So on a wide screen the tabs move up under the header as a row of
+   pills, and the home screen becomes two columns: the reading on the left,
+   the times and the shortcuts on the right. */
+
+@media (min-width: 900px) {
+  :root { --reading: 1.125rem; }
+
+  /* Reorder: header, then the nav, then the content. */
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+  .topbar { order: 0; }
+  .tabs   { order: 1; }
+  main    { order: 2; width: 100%; }
+
+  .bar, .nextzman, .sheet { max-width: 1120px; padding-left: 28px; padding-right: 28px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 28px 0; }
+
+  .hebdate { font-size: 1.75rem; }
+
+  /* The tab bar becomes a centred row of pills, in the flow of the page. */
+  .tabs {
+    position: static;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 14px 28px 4px;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top: 0;
+  }
+  .tab {
+    flex-direction: row;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+  }
+  .tab:hover { color: var(--ink-2); background: var(--veil); }
+  .tab.is-active {
+    background: linear-gradient(135deg, var(--rose-100), var(--gold-100));
+    border-color: var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .tab.is-active::after { display: none; }
+  .tab svg { width: 18px; height: 18px; }
+
+  /* Home screen: hero across the top, then two columns. */
+  #panel-today {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 18px;
+    align-items: start;
+  }
+  #panel-today > .hero { grid-column: 1 / -1; margin-bottom: 0; }
+  #panel-today > .verse-card { grid-column: 1; margin-bottom: 0; }
+  #panel-today > .card:not(.verse-card),
+  #panel-today > .quick { grid-column: 2; margin-bottom: 0; }
+
+  .hero { padding: 40px 32px 34px; }
+  .hero-heb { font-size: 3rem; }
+  .hero-greg { font-size: 0.875rem; }
+
+  .quick { grid-template-columns: 1fr 1fr; }
+
+  /* Reading panels keep a comfortable measure rather than stretching. */
+  .panel:not(#panel-today) .card,
+  .panel:not(#panel-today) .footnote {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .card { padding: 28px; }
+}
+
+@media (min-width: 1280px) {
+  .bar, .nextzman, .sheet, main, .tabs { max-width: 1200px; }
+  #panel-today { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 20px; }
+}
+
+/* A mouse is not a finger: give the hover states somewhere to land, and do
+   not let the tap-shrink fire on a click. */
+@media (hover: hover) and (pointer: fine) {
+  .quick-card:hover { transform: translateY(-2px); }
+  .pill:hover, .chapters button:hover { border-color: var(--line-2); }
+  .up-row:hover .up-name { color: var(--rose-700); }
+}
 
 /* Nothing above is worth making someone motion-sick. */
 @media (prefers-reduced-motion: reduce) {

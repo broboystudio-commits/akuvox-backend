@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '4';
+  var BUILD = '5';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -170,6 +170,34 @@
   }
 
   /**
+   * Replace an element's contents by id.
+   *
+   * Every one of these used to be written as a bare
+   * document.getElementById(...).appendChild(...). If the markup and this
+   * script ever drift apart -- which happens for a few seconds during a
+   * deploy, while the browser still holds the previous page -- the first one
+   * to hit a missing element threw, and everything below it never rendered.
+   * That is the half-drawn page with empty cards. Guarded, the worst case is
+   * one missing section instead of the whole screen.
+   */
+  function fillWith(id, child) {
+    var node = $(id);
+    if (!node) return;
+    node.textContent = '';
+    if (child) node.appendChild(child);
+  }
+
+  function setHidden(id, hidden) {
+    var node = $(id);
+    if (node) node.hidden = !!hidden;
+  }
+
+  function on(id, event, handler) {
+    var node = $(id);
+    if (node) node.addEventListener(event, handler);
+  }
+
+  /**
    * Sefaria hands back an array of lines. What that array *means* depends on
    * the text: Tehillim comes one verse per entry, a lesson in Likutei Moharan
    * comes one paragraph per entry.
@@ -278,7 +306,7 @@
 
     var next = data.zmanim.next;
     var nz = $('nextZman');
-    if (next) {
+    if (next && nz) {
       nz.hidden = false;
       nz.textContent = '';
       nz.appendChild(document.createTextNode('Next · '));
@@ -287,7 +315,7 @@
       nz.appendChild(el('span', 'he', next.he));
       nz.appendChild(document.createTextNode(' · ' + next.time + ' '));
       nz.appendChild(el('span', 'away', friendlyMinutes(next.minutesAway)));
-    } else {
+    } else if (nz) {
       nz.hidden = true;
     }
 
@@ -316,8 +344,7 @@
       .forEach(function (h) {
         chips.appendChild(el('span', 'chip-tag is-gold', h.en));
       });
-    fill($('heroChips'), null);
-    $('heroChips').appendChild(chips);
+    fillWith('heroChips', chips);
 
     // ---- the small verse, with the full lesson folded away behind a button
     var spark = data.spark;
@@ -326,11 +353,10 @@
       var v = document.createDocumentFragment();
       if (spark.snippetHe) v.appendChild(el('p', 'verse-he', spark.snippetHe));
       if (spark.snippetEn) v.appendChild(el('p', 'verse-en', spark.snippetEn));
-      fill($('verseBody'), null);
-      $('verseBody').appendChild(v);
+      fillWith('verseBody', v);
 
       fill($('sparkFull'), passage(spark));
-      $('sparkFull').hidden = true;
+      setHidden('sparkFull', true);
       var btn = $('openFull');
       btn.hidden = false;
       btn.textContent = 'Read the whole lesson';
@@ -338,8 +364,8 @@
     } else {
       setText('verseRef', '');
       fill($('verseBody'), unavailableNotice(spark, 'daily teaching'));
-      $('openFull').hidden = true;
-      $('sparkFull').hidden = true;
+      setHidden('openFull', true);
+      setHidden('sparkFull', true);
     }
 
     // ---- the next few zmanim
@@ -364,8 +390,7 @@
       row.appendChild(right);
       up.appendChild(row);
     });
-    fill($('upcoming'), null);
-    $('upcoming').appendChild(up);
+    fillWith('upcoming', up);
 
     // ---- the quick links
     if (data.tehillim && data.tehillim.available) {
@@ -395,8 +420,7 @@
       row.appendChild(el('span', 'v', r[1]));
       kv.appendChild(row);
     });
-    fill($('shabbosTimes'), null);
-    $('shabbosTimes').appendChild(kv);
+    fillWith('shabbosTimes', kv);
 
     renderZmanim(data.zmanim, cal);
     renderWeekly(data.weekly);
@@ -419,8 +443,7 @@
       row.appendChild(el('div', 't', t.time));
       list.appendChild(row);
     });
-    fill($('zmanimList'), null);
-    $('zmanimList').appendChild(list);
+    fillWith('zmanimList', list);
 
     renderMinhag(zmanim);
   }
@@ -480,8 +503,7 @@
     showAll.appendChild(sw);
     wrap.appendChild(showAll);
 
-    fill($('minhagPicker'), null);
-    $('minhagPicker').appendChild(wrap);
+    fillWith('minhagPicker', wrap);
   }
 
   function renderTehillim(teh) {
@@ -492,8 +514,7 @@
     }
     var wrap = document.createDocumentFragment();
     teh.parts.forEach(function (part) { wrap.appendChild(passage(part, part.label)); });
-    fill($('tehillimBody'), null);
-    $('tehillimBody').appendChild(wrap);
+    fillWith('tehillimBody', wrap);
   }
 
   function renderWeekly(weekly) {
@@ -525,8 +546,7 @@
       });
       nav.appendChild(b);
     });
-    fill($('tikkunNav'), null);
-    $('tikkunNav').appendChild(nav);
+    fillWith('tikkunNav', nav);
 
     var body = $('tikkunBody');
     fill(body, passage(tikkun.parts[state.tikkunChapter], tikkun.parts[state.tikkunChapter].label));
@@ -664,45 +684,54 @@
       b.addEventListener('click', function () { showPanel(b.getAttribute('data-goto')); });
     });
 
-    $('placeBtn').addEventListener('click', askForLocation);
-    $('aboutLocation').addEventListener('click', askForLocation);
-    $('themeBtn').addEventListener('click', toggleTheme);
+    on('placeBtn', 'click', askForLocation);
+    on('aboutLocation', 'click', askForLocation);
+    on('themeBtn', 'click', toggleTheme);
 
-    $('openFull').addEventListener('click', function () {
+    on('openFull', 'click', function () {
       var full = $('sparkFull');
+      if (!full) return;
       var open = full.hidden;
       full.hidden = !open;
       setText('openFull', open ? 'Hide the lesson' : 'Read the whole lesson');
       if (open) replay(full);
     });
 
+    // Wire the reading-options popover, but only if both pieces are present.
+    // Skipping it must not stop the rest of the buttons being wired below.
     var sheet = $('readerSheet');
     var readerBtn = $('readerBtn');
-    readerBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var open = sheet.hidden;
-      sheet.hidden = !open;
-      readerBtn.setAttribute('aria-expanded', String(open));
-      if (open) { sheet.classList.remove('is-opening'); void sheet.offsetWidth; sheet.classList.add('is-opening'); }
-    });
-    document.addEventListener('click', function (e) {
-      if (!sheet.hidden && !sheet.contains(e.target) && e.target !== readerBtn) {
-        sheet.hidden = true;
-        readerBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
+    if (sheet && readerBtn) {
+      readerBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = sheet.hidden;
+        sheet.hidden = !open;
+        readerBtn.setAttribute('aria-expanded', String(open));
+        if (open) {
+          sheet.classList.remove('is-opening');
+          void sheet.offsetWidth;
+          sheet.classList.add('is-opening');
+        }
+      });
+      document.addEventListener('click', function (e) {
+        if (!sheet.hidden && !sheet.contains(e.target) && e.target !== readerBtn) {
+          sheet.hidden = true;
+          readerBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
 
-    $('toggleEnglish').addEventListener('click', function () {
+    on('toggleEnglish', 'click', function () {
       state.english = !state.english;
       save(STORE.english, state.english);
       applyReadingPrefs();
     });
-    $('fontLarger').addEventListener('click', function () {
+    on('fontLarger', 'click', function () {
       state.fontScale = Math.min(1.9, state.fontScale + 0.12);
       save(STORE.fontScale, state.fontScale);
       applyReadingPrefs();
     });
-    $('fontSmaller').addEventListener('click', function () {
+    on('fontSmaller', 'click', function () {
       state.fontScale = Math.max(0.8, state.fontScale - 0.12);
       save(STORE.fontScale, state.fontScale);
       applyReadingPrefs();
