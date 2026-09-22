@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '8';
+  var BUILD = '9';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -56,6 +56,7 @@
     fontScale: 'bd.fontScale',
     zmanim: 'bd.zmanim',
     theme: 'bd.theme',
+    tikkunPlace: 'bd.tikkunPlace',
     lastToday: 'bd.lastToday',
   };
 
@@ -533,26 +534,155 @@
     fill($('weeklyBody'), passage(weekly, weekly.ref));
   }
 
+  /**
+   * The Tikkun HaKlali, laid out as one continuous reading.
+   *
+   * It is said from beginning to end, so all ten psalms are on the page at
+   * once and you simply keep scrolling. The numbers along the top jump
+   * between them and highlight whichever you are in, and where you stopped is
+   * remembered -- being interrupted partway through is the normal case, not
+   * an unusual one.
+   */
   function renderTikkun(tikkun) {
     if (!tikkun || !tikkun.available) {
       fill($('tikkunBody'), unavailableNotice(tikkun, 'Tikkun HaKlali'));
       return;
     }
+
+    var total = tikkun.parts.length;
+
+    // ---- the psalms themselves, one after another
+    var body = document.createDocumentFragment();
+    tikkun.parts.forEach(function (part, i) {
+      var section = el('section', 'tikkun-chapter');
+      section.id = 'tikkun-ch-' + i;
+      section.setAttribute('data-index', String(i));
+
+      var head = el('div', 'tikkun-heading');
+      head.appendChild(el('span', 'n', 'Tehillim ' + part.chapter));
+      head.appendChild(el('span', 'of', (i + 1) + ' of ' + total));
+      section.appendChild(head);
+      section.appendChild(passage(part));
+      body.appendChild(section);
+    });
+    fillWith('tikkunBody', body);
+
+    // ---- the numbers along the top
     var nav = document.createDocumentFragment();
     tikkun.parts.forEach(function (part, i) {
-      var b = el('button', i === state.tikkunChapter ? 'is-active' : null, String(part.chapter));
+      var b = el('button', null, String(part.chapter));
       b.type = 'button';
-      b.addEventListener('click', function () {
-        state.tikkunChapter = i;
-        renderTikkun(tikkun);
-      });
+      b.setAttribute('data-index', String(i));
+      b.addEventListener('click', function () { goToChapter(i); });
       nav.appendChild(b);
     });
     fillWith('tikkunNav', nav);
 
-    var body = $('tikkunBody');
-    fill(body, passage(tikkun.parts[state.tikkunChapter], tikkun.parts[state.tikkunChapter].label));
-    replay(body);
+    markChapter(state.tikkunChapter || 0, total);
+    offerResume(tikkun, total);
+    watchScroll(total);
+  }
+
+  /** Highlight a number and update the "3 of 10" counter. */
+  function markChapter(index, total) {
+    state.tikkunChapter = index;
+    var nav = $('tikkunNav');
+    if (nav) {
+      Array.prototype.forEach.call(nav.children, function (b) {
+        b.classList.toggle('is-active', Number(b.getAttribute('data-index')) === index);
+      });
+    }
+    setText('tikkunProgress', (index + 1) + ' of ' + total);
+  }
+
+  function goToChapter(index) {
+    var node = $('tikkun-ch-' + index);
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    rememberPlace(index);
+  }
+
+  function rememberPlace(index) {
+    save(STORE.tikkunPlace, { index: index, at: Date.now() });
+  }
+
+  /**
+   * If the last reading was recent and not finished, say so and offer to carry
+   * on. Anything older than a day is treated as a fresh start.
+   */
+  function offerResume(tikkun, total) {
+    var bar = $('tikkunResume');
+    if (!bar) return;
+    var saved = load(STORE.tikkunPlace, null);
+    var fresh = saved && (Date.now() - saved.at) < 24 * 3600 * 1000;
+
+    if (!fresh || !saved.index || saved.index >= total) {
+      bar.hidden = true;
+      return;
+    }
+
+    var chapter = tikkun.parts[saved.index];
+    bar.textContent = '';
+    bar.appendChild(el('span', null,
+      'You stopped at Tehillim ' + chapter.chapter + '.'));
+    var carry = el('button', null, 'Carry on');
+    carry.type = 'button';
+    carry.addEventListener('click', function () {
+      goToChapter(saved.index);
+      bar.hidden = true;
+    });
+    var restart = el('button', null, 'Start again');
+    restart.type = 'button';
+    restart.addEventListener('click', function () {
+      goToChapter(0);
+      rememberPlace(0);
+      bar.hidden = true;
+    });
+    var actions = el('span');
+    actions.style.display = 'flex';
+    actions.style.gap = '6px';
+    actions.appendChild(carry);
+    actions.appendChild(restart);
+    bar.appendChild(actions);
+    bar.hidden = false;
+  }
+
+  /** Follow the reading as it scrolls, so the numbers and the place keep up. */
+  var tikkunWatcher = null;
+  function watchScroll(total) {
+    if (tikkunWatcher) { tikkunWatcher.disconnect(); tikkunWatcher = null; }
+    if (!('IntersectionObserver' in window)) return;
+
+    var top = topbarHeight() + 70;
+    tikkunWatcher = new IntersectionObserver(function (entries) {
+      // The psalm nearest the top of the screen is the one being said.
+      var best = null;
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        if (!best || entry.boundingClientRect.top < best.boundingClientRect.top) best = entry;
+      });
+      if (!best) return;
+      var index = Number(best.target.getAttribute('data-index'));
+      if (index !== state.tikkunChapter) {
+        markChapter(index, total);
+        rememberPlace(index);
+      }
+    }, { rootMargin: '-' + top + 'px 0px -55% 0px', threshold: 0 });
+
+    for (var i = 0; i < total; i++) {
+      var node = $('tikkun-ch-' + i);
+      if (node) tikkunWatcher.observe(node);
+    }
+  }
+
+  /** The sticky header's height, so things can sit just below it. */
+  function topbarHeight() {
+    var bar = document.querySelector('.topbar');
+    return bar ? Math.round(bar.getBoundingClientRect().height) : 96;
+  }
+
+  function syncTopbarHeight() {
+    document.documentElement.style.setProperty('--topbar-h', topbarHeight() + 'px');
   }
 
   // ------------------------------------------------------------- helpers
@@ -669,6 +799,8 @@
   function start() {
     applyTheme();
     applyReadingPrefs();
+    syncTopbarHeight();
+    window.addEventListener('resize', syncTopbarHeight);
 
     // If no theme has been chosen, follow the phone when it changes.
     try {

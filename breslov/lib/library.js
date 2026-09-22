@@ -62,6 +62,40 @@ const BOOKS = [
     weight: 2,
     weekly: false,
   },
+  // The three below carry no fallback count on purpose. If Sefaria does not
+  // recognise the title, refsFor() returns nothing and the book is simply left
+  // out of the rotation -- far better than guessing at a reference and asking
+  // for a text that does not exist. /api/diagnostics reports which resolved.
+  {
+    key: 'likutei-tefilot',
+    title: 'Likutei Tefilot',
+    he: 'לִקּוּטֵי תְּפִלּוֹת',
+    label: 'Likutei Tefilot',
+    unit: 'Tefillah',
+    fallbackCount: 0,
+    weight: 2,
+    weekly: false,
+  },
+  {
+    key: 'sippurei-maasiyot',
+    title: 'Sippurei Maasiyot',
+    he: 'סִפּוּרֵי מַעֲשִׂיּוֹת',
+    label: 'Sippurei Maasiyot',
+    unit: 'Story',
+    fallbackCount: 0,
+    weight: 1,   // the stories are long, so they come up less often
+    weekly: false,
+  },
+  {
+    key: 'chayei-moharan',
+    title: 'Chayei Moharan',
+    he: 'חַיֵּי מוֹהֲרַ״ן',
+    label: 'Chayei Moharan',
+    unit: 'Passage',
+    fallbackCount: 0,
+    weight: 1,
+    weekly: false,
+  },
 ];
 
 const BY_KEY = new Map(BOOKS.map((b) => [b.key, b]));
@@ -225,8 +259,34 @@ function tehillimLabel(portion) {
   return `Tehillim ${portion.from}–${portion.to}`;
 }
 
+/**
+ * Which books resolved against Sefaria and how many pieces each has.
+ * Used by /api/diagnostics so a title that Sefaria does not recognise shows up
+ * as a plain "not found" rather than a book that quietly never appears.
+ */
+async function bookStatus() {
+  const out = [];
+  for (const book of BOOKS) {
+    let refs = [];
+    let error = null;
+    try {
+      refs = await refsFor(book.key);
+    } catch (err) {
+      error = err.message;
+    }
+    out.push({
+      label: book.label,
+      title: book.title,
+      ok: refs.length > 0,
+      pieces: refs.length,
+      detail: error || (refs.length ? `${refs.length} pieces` : 'Sefaria did not recognise this title'),
+    });
+  }
+  return out;
+}
+
 module.exports = {
-  BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY,
+  BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY, bookStatus,
   refsFor, refsFromShape, weeklyBooks, dailyBookPool,
   tehillimForDay, tehillimRef, tehillimLabel, tehillimChapters,
 };

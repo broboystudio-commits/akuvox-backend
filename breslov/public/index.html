@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="8">
+<html lang="en" data-build="9">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=8" />
+<link rel="stylesheet" href="/styles.css?v=9" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -144,9 +144,10 @@
     <article class="card">
       <header class="card-head">
         <h2>Tikkun HaKlali</h2>
-        <span class="ref he">תִּקּוּן הַכְּלָלִי</span>
+        <span class="ref" id="tikkunProgress"></span>
       </header>
-      <p class="hint">The ten psalms Rebbe Nachman designated as the general remedy, in order.</p>
+      <p class="hint">The ten psalms Rebbe Nachman designated as the general remedy, said in order.</p>
+      <div class="resume" id="tikkunResume" hidden></div>
       <nav class="chapters" id="tikkunNav"></nav>
       <div class="body" id="tikkunBody"><div class="skeleton"></div></div>
     </article>
@@ -238,6 +239,6 @@
   </button>
 </nav>
 
-<script src="/app.js?v=8"></script>
+<script src="/app.js?v=9"></script>
 </body>
 </html>

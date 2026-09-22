@@ -1030,6 +1030,89 @@ body.hide-english .verse-card .verse-en { display: none; }
 .quick-sub { font-size: 0.78rem; color: var(--ink-3); unicode-bidi: plaintext; }
 
 
+
+/* ---------------------------------------------------------------- tikkun reader
+   The ten psalms are meant to be said straight through, so they are laid out
+   as one continuous reading rather than ten things to tap. The numbers stay
+   above the text to jump between them, and follow along as you scroll. */
+
+.chapters {
+  position: sticky;
+  top: calc(var(--topbar-h, 96px) + 6px);
+  z-index: 6;
+  padding: 8px 0;
+  background: linear-gradient(180deg,
+    var(--card-bg-top, rgba(255,255,255,0.97)) 70%,
+    transparent 100%);
+}
+
+.resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;   /* the two buttons drop below the text on a narrow phone */
+  gap: 10px 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--rose-100), var(--gold-100));
+  border: 1px solid var(--line);
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+.resume[hidden] { display: none; }
+.resume button {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--white);
+  border: 1px solid var(--line-2);
+  color: var(--rose-700);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: transform var(--bounce) var(--spring);
+}
+.resume button:active { transform: scale(0.94); }
+
+/* Each psalm in the continuous reading. */
+.tikkun-chapter { scroll-margin-top: calc(var(--topbar-h, 96px) + 64px); }
+.tikkun-chapter + .tikkun-chapter {
+  margin-top: 30px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+.tikkun-chapter .passage + .passage { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.tikkun-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tikkun-heading .n {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--rose-700);
+}
+.tikkun-heading .of {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-theme="dark"] .chapters {
+  background: linear-gradient(180deg, rgba(34, 27, 42, 0.97) 70%, transparent 100%);
+}
+:root[data-theme="dark"] .resume {
+  background: linear-gradient(135deg, rgba(185,129,140,0.16), rgba(201,164,88,0.14));
+}
+:root[data-theme="dark"] .resume button {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+
 /* ---------------------------------------------------------------- desktop
    Below 900px this is a phone app: one column, tabs along the bottom under
    the thumb. Above it that shape stops making sense -- a bottom tab bar on a

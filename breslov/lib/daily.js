@@ -61,25 +61,56 @@ async function firstThatLoads(refs, attempts = 3) {
   throw lastErr || new Error('No text available');
 }
 
-/** Today's short piece of Reb Nachman, rotating through his seforim. */
+/**
+ * Today's short piece of Reb Nachman, rotating through his seforim.
+ *
+ * Some books are only included if Sefaria recognises the title, so the book
+ * the rotation lands on may turn out to have nothing in it. Rather than leave
+ * the day blank, we move along the rotation to the next book that does.
+ */
 async function dailySpark(date) {
   try {
     const pool = library.dailyBookPool();
-    const bookKey = pickForDay(pool, date, 11);
-    const book = library.BY_KEY.get(bookKey);
-    const refs = await library.refsFor(bookKey);
-    if (!refs.length) return unavailable('daily teaching');
+    const chosenBook = pickForDay(pool, date, 11);
 
-    // Rotate the whole book, then try the next few if one fails to load.
-    const chosen = pickForDay(refs, date, 11);
-    const start = refs.indexOf(chosen);
-    const ordered = refs.slice(start).concat(refs.slice(0, start));
+    // The rotation order for today, starting at the chosen book, with each
+    // book appearing once so we never try the same one twice.
+    const seen = new Set();
+    const order = [];
+    const startAt = pool.indexOf(chosenBook);
+    for (let i = 0; i < pool.length; i++) {
+      const key = pool[(startAt + i) % pool.length];
+      if (!seen.has(key)) { seen.add(key); order.push(key); }
+    }
 
-    const { text, ref } = await firstThatLoads(ordered);
-    return present(text, {
-      book: { key: book.key, label: book.label, he: book.he, unit: book.unit },
-      heading: `${book.label} ${ref.replace(`${book.title} `, '').replace(`${book.title}, `, '')}`,
-    });
+    let lastErr = null;
+    for (const bookKey of order) {
+      const book = library.BY_KEY.get(bookKey);
+      let refs = [];
+      try {
+        refs = await library.refsFor(bookKey);
+      } catch (err) {
+        lastErr = err;
+        continue;
+      }
+      if (!refs.length) continue;   // Sefaria does not know this book; try the next
+
+      const chosen = pickForDay(refs, date, 11);
+      const start = refs.indexOf(chosen);
+      const ordered = refs.slice(start).concat(refs.slice(0, start));
+
+      try {
+        const { text, ref } = await firstThatLoads(ordered);
+        return present(text, {
+          book: { key: book.key, label: book.label, he: book.he, unit: book.unit },
+          heading: `${book.label} ${ref.replace(`${book.title}, `, '').replace(`${book.title} `, '')}`,
+        });
+      } catch (err) {
+        lastErr = err;   // this book would not load today; fall through to the next
+      }
+    }
+
+    return unavailable('daily teaching', lastErr);
   } catch (err) {
     return unavailable('daily teaching', err);
   }

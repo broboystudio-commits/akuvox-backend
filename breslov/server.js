@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '8';
+const BUILD = '9';
 
 app.use(cors());
 app.use(express.json());
@@ -146,6 +146,23 @@ app.get('/api/diagnostics', route(async () => {
   }
   record('Sefaria reachable', texts.ok, texts.detail);
 
+  // Which seforim Sefaria actually recognises. A book it does not know is
+  // left out of the rotation rather than guessed at, so this is the only
+  // place that would show it.
+  let books = [];
+  if (texts.ok) {
+    try {
+      books = await library.bookStatus();
+      const missing = books.filter((b) => !b.ok);
+      record('Seforim resolved', missing.length === 0,
+        missing.length === 0
+          ? `all ${books.length} books found`
+          : `${books.length - missing.length} of ${books.length} found; not recognised: ${missing.map((b) => b.title).join(', ')}`);
+    } catch (err) {
+      record('Seforim resolved', false, err.message);
+    }
+  }
+
   const failed = checks.filter((c) => !c.ok);
 
   return {
@@ -158,6 +175,7 @@ app.get('/api/diagnostics', route(async () => {
       : 'The dates and times work, but this server cannot fetch the texts from sefaria.org. ' +
         'Nothing is shown in place of a text it cannot load.',
     checks,
+    books,
     cache: sefaria.cacheStats(),
     note: 'On a free hosting plan the disk is wiped on every deploy, so the ' +
           'text cache starting empty is normal, not a fault.',
