@@ -18,11 +18,13 @@ lets a small script draw a widget. This is the path to use.
 1. Install **Scriptable** from the App Store (free).
 2. Open `scriptable/BreslovDaily.js` in this folder and copy the whole thing.
 3. In Scriptable tap **+** (top right), paste it in.
-4. Near the top of the script, change this line to your own web address:
+4. The address is already filled in:
 
    ```js
-   const SERVER = 'https://breslov-daily.onrender.com';
+   const SERVER = 'https://akuvox-backend.onrender.com';
    ```
+
+   Only change it if you rename the service in Render, which changes the URL.
 
 5. Tap the settings icon, name it **Breslov Daily**, tap **Done**.
 6. Go to your home screen, long-press an empty spot, tap **+**,

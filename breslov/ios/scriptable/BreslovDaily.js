@@ -8,7 +8,7 @@
 //   1. Install Scriptable from the App Store.
 //   2. Open Scriptable, tap +, and paste this whole file in.
 //   3. Tap the settings icon, name it "Breslov Daily", and tap Done.
-//   4. Change SERVER on the next line to your own web address.
+//   4. SERVER below is already set. Only change it if your address changes.
 //   5. Long-press your home screen, tap +, choose Scriptable, pick a size.
 //   6. Long-press the new widget, tap "Edit Widget", and set Script to
 //      "Breslov Daily".
@@ -19,7 +19,7 @@
 //   - "40.65,-73.95"     -> uses those coordinates
 // ---------------------------------------------------------------------------
 
-const SERVER = 'https://breslov-daily.onrender.com'; // <-- change to your address
+const SERVER = 'https://akuvox-backend.onrender.com'; // change this if the address changes
 
 // Which zmanim you hold by. Options:
 //   'standard'             three stars (8.5 degrees)
