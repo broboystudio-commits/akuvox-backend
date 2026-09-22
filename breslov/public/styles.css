@@ -62,6 +62,8 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -1081,8 +1083,9 @@ body.hide-english .verse-card .verse-en { display: none; }
   .tab.is-active::after { display: none; }
   .tab svg { width: 18px; height: 18px; }
 
-  /* Home screen: hero across the top, then two columns. */
-  #panel-today {
+  /* Home screen: hero across the top, then two columns.
+     Scoped to :not([hidden]) so this never competes with hiding the panel. */
+  #panel-today:not([hidden]) {
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     gap: 18px;
