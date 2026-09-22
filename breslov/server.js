@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '16';
+const BUILD = '17';
 
 app.use(cors());
 app.use(express.json());
@@ -164,6 +164,33 @@ app.get('/api/diagnostics', route(async () => {
     }
   }
 
+  /**
+   * For any sefer Sefaria did not recognise, ask it what it does have under
+   * that name. The answers are reported, never adopted: a loose match for
+   * "Kitzur Likutei Moharan" could easily come back "Likutei Moharan", and
+   * silently filing one book under another's name would be worse than leaving
+   * it out. A person reads these and picks the right one.
+   */
+  let titleHelp = null;
+  const missing = books.filter((b) => !b.ok);
+  if (missing.length) {
+    titleHelp = [];
+    for (const book of missing) {
+      let options = [];
+      try {
+        options = (await sefaria.suggest(book.title, { limit: 6 })).map((s) => s.text);
+      } catch { /* the hint is a bonus, not a requirement */ }
+      // Also try just the distinctive first word, which matches more loosely.
+      if (!options.length) {
+        const firstWord = String(book.title).split(' ')[0];
+        try {
+          options = (await sefaria.suggest(firstWord, { limit: 6 })).map((s) => s.text);
+        } catch { /* ignore */ }
+      }
+      titleHelp.push({ wanted: book.title, sefariaSuggests: options });
+    }
+  }
+
   // Search goes through a different endpoint from the texts, so it can fail on
   // its own. Each form it tries is reported, since the reason is the fix.
   let searchAttempts = null;
@@ -233,6 +260,7 @@ app.get('/api/diagnostics', route(async () => {
     checks,
     searchAttempts,
     searchSample,
+    titleHelp,
     teaching,
     shapeSample,
     books,
@@ -476,10 +504,28 @@ app.get('/api/suggest', route(async (req) => {
   });
 }));
 
-/** The seforim the app draws on, so the About page never has to be kept in step by hand. */
-app.get('/api/library', route(async () => ({
-  books: library.BOOKS.map((b) => ({ label: b.label, he: b.he, by: b.by || null })),
-})));
+/**
+ * The seforim the app draws on, so the About page is never kept in step by
+ * hand. Only the ones Sefaria actually carries are listed: naming a sefer as a
+ * source when no word of it can be read would be a claim the app cannot meet.
+ * If the check itself cannot run, everything is listed rather than nothing.
+ */
+app.get('/api/library', route(async () => {
+  let available = null;
+  try {
+    available = new Set(
+      (await library.bookStatus()).filter((b) => b.ok).map((b) => b.title)
+    );
+  } catch {
+    available = null;
+  }
+
+  const books = library.BOOKS
+    .filter((b) => !available || available.has(b.title))
+    .map((b) => ({ label: b.label, he: b.he, by: b.by || null }));
+
+  return { books, verified: available !== null };
+}));
 
 // ---------------------------------------------------------------- reminders
 

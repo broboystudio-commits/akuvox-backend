@@ -129,6 +129,7 @@ const BOOKS = [
   },
   {
     key: 'kitzur-likutei-moharan',
+    aliases: ['Kitzur Likutei Moharan', 'Kitzur Likkutei Moharan', 'Kitzur Likutey Moharan'],
     title: 'Kitzur Likutei Moharan',
     he: 'קִצּוּר לִקּוּטֵי מוֹהֲרַ״ן',
     label: 'Kitzur Likutei Moharan',
@@ -140,6 +141,7 @@ const BOOKS = [
   },
   {
     key: 'meshivat-nefesh',
+    aliases: ['Meshivat Nefesh', 'Meshivas Nefesh', 'Meshivat Nefesh (Restore My Soul)'],
     title: 'Meshivat Nefesh',
     he: 'מְשִׁיבַת נֶפֶשׁ',
     label: 'Meshivat Nefesh',
@@ -151,6 +153,7 @@ const BOOKS = [
   },
   {
     key: 'alim-literufah',
+    aliases: ['Alim LiTerufah', 'Alim Literufah', 'Alim LiTerufah (Letters of Reb Noson)'],
     title: 'Alim LiTerufah',
     he: 'עֲלִים לִתְרוּפָה',
     label: 'Alim LiTerufah',
@@ -162,6 +165,7 @@ const BOOKS = [
   },
   {
     key: 'yemei-moharnat',
+    aliases: ['Yemei Moharnat', 'Yemey Moharnat', 'Yemei Maharnat', 'Yemei Moharnat (Days of Reb Noson)'],
     title: 'Yemei Moharnat',
     he: 'יְמֵי מוֹהֲרְנַ״ת',
     label: 'Yemei Moharnat',
@@ -173,6 +177,7 @@ const BOOKS = [
   },
   {
     key: 'kochvei-or',
+    aliases: ['Kochvei Or', 'Kochavei Or', 'Kokhvei Or'],
     title: 'Kochvei Or',
     he: 'כּוֹכְבֵי אוֹר',
     label: 'Kochvei Or',
@@ -184,6 +189,7 @@ const BOOKS = [
   },
   {
     key: 'siach-sarfei-kodesh',
+    aliases: ['Siach Sarfei Kodesh', 'Siach Sarfey Kodesh', 'Sichat Sarfei Kodesh'],
     title: 'Siach Sarfei Kodesh',
     he: 'שִׂיחַ שַׂרְפֵי קֹדֶשׁ',
     label: 'Siach Sarfei Kodesh',
@@ -280,12 +286,25 @@ async function refsFor(bookKey) {
   const book = BY_KEY.get(bookKey);
   if (!book) return [];
 
+  // Transliteration from Hebrew has no single right answer, so a book may be
+  // filed under a spelling other than the one written here. Each is tried in
+  // turn. The references themselves are built from the title Sefaria returns,
+  // not the one asked for, so whichever spelling matched, the refs are right.
+  const candidates = [book.title].concat(book.aliases || [])
+    .filter((t, i, all) => t && all.indexOf(t) === i);
+
   let refs = [];
-  try {
-    const shape = await getShape(book.title);
-    refs = refsFromShape(shape, book);
-  } catch (err) {
-    if (process.env.DEBUG) console.warn(`shape lookup failed for ${book.title}: ${err.message}`);
+  for (const title of candidates) {
+    try {
+      const shape = await getShape(title);
+      refs = refsFromShape(shape, book);
+      if (refs.length) {
+        book.resolvedTitle = title;
+        break;
+      }
+    } catch (err) {
+      if (process.env.DEBUG) console.warn(`shape lookup failed for ${title}: ${err.message}`);
+    }
   }
 
   if (!refs.length && book.fallbackCount > 0) {
@@ -388,6 +407,7 @@ async function bookStatus() {
     out.push({
       label: book.label,
       title: book.title,
+      foundAs: book.resolvedTitle && book.resolvedTitle !== book.title ? book.resolvedTitle : null,
       by: book.by || null,
       ok: refs.length > 0,
       pieces: refs.length,
