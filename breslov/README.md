@@ -132,7 +132,8 @@ Then open **http://localhost:3000**.
 To check everything is working:
 
 ```bash
-npm run check
+npm run check    # dates, zmanim, and whether Sefaria can be reached
+npm run smoke    # calls every web address and checks what comes back
 ```
 
 Once it is online, the same report is available in a browser at

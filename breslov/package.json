@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node scripts/seed.js",
-    "check": "node scripts/selftest.js"
+    "check": "node scripts/selftest.js",
+    "smoke": "node scripts/smoke.js"
   },
   "dependencies": {
     "@hebcal/core": "^5.4.11",

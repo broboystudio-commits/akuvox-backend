@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '18';
+const BUILD = '19';
 
 app.use(cors());
 app.use(express.json());
@@ -111,7 +111,8 @@ app.get('/api/health', route(async () => ({
  * Deliberately separate from /api/health, which Render polls: this one makes
  * an outside request and must never be able to fail a health check.
  */
-app.get('/api/diagnostics', route(async () => {
+app.get('/api/diagnostics', route(async (req) => {
+  const wantsCatalog = String(req.query.catalog || '') === '1';
   const place = dates.normalisePlace({});
   const today = new Date();
   const checks = [];
@@ -252,7 +253,7 @@ app.get('/api/diagnostics', route(async () => {
    * way to know what is really there and what is still missing here.
    */
   let breslovCatalog = null;
-  if (texts.ok && req.query.catalog === '1') {
+  if (texts.ok && wantsCatalog) {
     try {
       const have = new Set(library.BOOKS.map((b) => b.title));
       const titles = await sefaria.catalogFor('Breslov');
