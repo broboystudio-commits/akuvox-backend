@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '25';
+  var BUILD = '26';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -939,12 +939,84 @@
     else if (e.key === 'Escape') { closeSuggest(); }
   }
 
+  /**
+   * Words worth starting from.
+   *
+   * An empty search page used to be one grey sentence on a page of nothing.
+   * These are the things people actually come looking for, and one tap runs
+   * the search, so the page teaches what it can do instead of describing it.
+   */
+  var SEARCH_IDEAS = [
+    'simcha', 'hisbodedus', 'emunah', 'hakaras hatov', 'niggun',
+    'tefillah', 'teshuvah', 'shalom bayis', 'parnassah', 'azamra',
+  ];
+
+  function searchFor(word) {
+    var input = $('searchInput');
+    if (input) input.value = word;
+    closeSuggest();
+    runSearch(word);
+  }
+
+  /** What the search page shows before anything has been asked of it. */
+  function searchStartPage() {
+    var box = el('div', 'search-start');
+
+    box.appendChild(el('p', 'search-lead',
+      'Every sefer of Rebbe Nachman at once. A word, an idea, or the name of ' +
+      'a sefer — in English or in Hebrew.'));
+
+    var ideas = el('div', 'search-ideas');
+    SEARCH_IDEAS.forEach(function (word) {
+      var b = el('button', 'pill small', word);
+      b.type = 'button';
+      b.addEventListener('click', function () { searchFor(word); });
+      ideas.appendChild(b);
+    });
+    box.appendChild(ideas);
+
+    var shelf = el('div', 'search-shelf');
+    shelf.appendChild(el('h3', 'shelf-title', 'What it looks through'));
+    var list = el('div', 'shelf-list');
+    shelf.appendChild(list);
+    box.appendChild(shelf);
+
+    fillWith('searchResults', box);
+    fillShelf(list);
+  }
+
+  /**
+   * The seforim on the shelf, from the app itself rather than typed in here,
+   * so this page cannot drift out of step with what is really being searched.
+   */
+  var shelfBooks = null;
+  function fillShelf(into) {
+    function draw(books) {
+      var frag = document.createDocumentFragment();
+      books.forEach(function (book) {
+        var b = el('button', 'shelf-book', book.label);
+        b.type = 'button';
+        if (book.he) b.appendChild(el('span', 'shelf-he', book.he));
+        b.addEventListener('click', function () { searchFor(book.label); });
+        frag.appendChild(b);
+      });
+      fill(into, frag);
+    }
+    if (shelfBooks) { draw(shelfBooks); return; }
+    fetch('/api/library', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        shelfBooks = data.books || [];
+        draw(shelfBooks);
+      })
+      .catch(function () { /* the ideas above still work without it */ });
+  }
+
   function runSearch(query) {
     var q = String(query || '').trim();
     searchState.query = q;
     if (!q) {
-      fillWith('searchResults', el('p', 'search-empty',
-        'Type a word and search. It looks through all of Reb Nachman\'s seforim.'));
+      searchStartPage();
       setText('searchCount', '');
       return;
     }
@@ -994,13 +1066,23 @@
       return;
     }
 
-    var list = document.createDocumentFragment();
+    var list = el('div', 'results');
     data.hits.forEach(function (hit) {
       var item = el('a', 'result');
       item.href = hit.url || '#';
       item.target = '_blank';
       item.rel = 'noopener';
-      item.appendChild(el('div', 'r-ref', hit.heRef || hit.ref));
+      var head = el('div', 'r-head');
+      var shown = hit.heRef || hit.ref;
+      head.appendChild(el('span', 'r-ref', shown));
+      // Which sefer it came from -- but only when the reference does not
+      // already say. A Sefaria reference almost always opens with the name of
+      // the sefer, and a tag repeating the words next to them is noise.
+      var book = hit.book || bookOf(hit.ref);
+      if (book && String(shown).indexOf(book) !== 0) {
+        head.appendChild(el('span', 'r-book', book));
+      }
+      item.appendChild(head);
       // A result is worth showing for its reference alone; the passage is
       // there to read either way.
       if (hit.snippet) {
@@ -1013,6 +1095,14 @@
       list.appendChild(item);
     });
     fillWith('searchResults', list);
+  }
+
+  /** The sefer a reference belongs to: everything before the last number. */
+  function bookOf(ref) {
+    var text = String(ref || '').trim();
+    if (!text) return '';
+    var cut = text.replace(/[\s,:]*[\d.:\-]+\s*$/, '').trim();
+    return cut && cut !== text ? cut : '';
   }
 
   /** Let the reader widen the search past Reb Nachman if nothing turns up. */

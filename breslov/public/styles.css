@@ -559,6 +559,14 @@ body.hide-english .en { display: none; }
   font-size: 0.6875rem;
   transition: color var(--base) var(--ease), transform var(--fast) var(--ease);
 }
+/* Hidden on a phone, where the tab bar has five places and the header
+   carries these two. `!important` because the bar is a grid of five and a
+   sixth would squash the rest. */
+.tab.wide-only { display: none !important; }
+@media (min-width: 900px) {
+  .tab.wide-only { display: flex !important; }
+}
+
 .tab svg {
   width: 21px; height: 21px;
   fill: none;
@@ -1212,9 +1220,12 @@ body.hide-english .verse-card .verse-en { display: none; }
   margin-bottom: 14px;
 }
 .searchbar input {
-  flex: 1 1 auto;
+  /* `.search-field` is a plain block, so the flex here never applied and the
+     box stayed at its default twenty characters -- a stub of an input on a
+     wide screen, however much room the card had. */
+  width: 100%;
   min-width: 0;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 999px;
   border: 1px solid var(--line-2);
   background: linear-gradient(180deg, rgba(255, 252, 250, 0.96), rgba(252, 240, 238, 0.94));
@@ -1226,6 +1237,10 @@ body.hide-english .verse-card .verse-en { display: none; }
   appearance: none;
 }
 .searchbar input::placeholder { color: var(--ink-3); }
+@media (min-width: 900px) {
+  .searchbar input { padding: 16px 22px; font-size: 1.0625rem; }
+  .searchbar .btn { padding-left: 30px; padding-right: 30px; }
+}
 .searchbar input:focus-visible { outline: 2px solid var(--rose-300); outline-offset: 2px; }
 .searchbar .btn { width: auto; flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }
 
@@ -1237,18 +1252,43 @@ body.hide-english .verse-card .verse-en { display: none; }
 .result {
   display: block;
   width: 100%;
-  padding: 15px 0;
-  border-top: 1px solid var(--line);
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-edge);
+  background: color-mix(in srgb, var(--white) 42%, transparent);
+  box-shadow: var(--glass-cast);
   text-align: left;
   text-decoration: none;
   color: inherit;
+  transition: transform var(--bounce) var(--spring), box-shadow var(--base) var(--ease);
 }
-.result:first-child { border-top: 0; }
+.result:active, .result.is-pressed { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) {
+  .result:hover { transform: translateY(-2px); box-shadow: var(--glass-cast-lifted); }
+}
+.r-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
 .result .r-ref {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--rose-700);
-  margin-bottom: 5px;
+}
+/* Which sefer it came from. Over results drawn from ten of them, the
+   reference on its own does not say. */
+.r-book {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--rose-100) 70%, transparent);
+  border: 1px solid var(--line);
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+  white-space: nowrap;
 }
 .result .r-text {
   font-size: 0.9375rem;
@@ -1273,6 +1313,90 @@ body.hide-english .verse-card .verse-en { display: none; }
   font-size: 0.9375rem;
   color: var(--ink-3);
 }
+
+/* ------------------------------------------------- the search page at rest
+
+   Before anything has been asked of it: what this searches, ten things worth
+   asking for, and the shelf it looks through. One tap on any of them runs the
+   search, so the page shows what it does rather than describing it. */
+
+.search-start { padding-top: 4px; }
+
+.search-lead {
+  margin-bottom: 16px;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+  max-width: 46ch;
+}
+
+.search-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+.search-shelf { padding-top: 22px; border-top: 1px solid var(--line); }
+
+.shelf-title {
+  margin-bottom: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--rose-500);
+}
+
+.shelf-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 620px)  { .shelf-list { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1100px) { .shelf-list { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1600px) { .shelf-list { grid-template-columns: repeat(4, 1fr); } }
+
+.shelf-book {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: color-mix(in srgb, var(--white) 48%, transparent);
+  box-shadow: var(--glass-cast);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  text-align: left;
+  transition: transform var(--bounce) var(--spring), box-shadow var(--base) var(--ease);
+}
+.shelf-he {
+  font-family: var(--hebrew);
+  direction: rtl;
+  unicode-bidi: isolate;
+  font-size: 0.9375rem;
+  color: var(--rose-500);
+}
+.shelf-book:active, .shelf-book.is-pressed { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .shelf-book:hover { transform: translateY(-1px); box-shadow: var(--glass-cast-lifted); }
+}
+
+/* ------------------------------------------------------------- results
+   A result is a card of its own rather than a line in a list, so a page of
+   them can sit two or three across instead of one long ribbon down the
+   middle of a wide screen. */
+
+.results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 900px)  { .results { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1500px) { .results { grid-template-columns: repeat(3, 1fr); } }
 
 /* ---------------------------------------------------------------- tikkun reader
    The ten psalms are meant to be said straight through, so they are laid out
@@ -1432,6 +1556,8 @@ body.hide-english .verse-card .verse-en { display: none; }
   }
   .tab.is-active::after { display: none; }
   .tab svg { width: 18px; height: 18px; }
+  /* Search and About join the row once there is room for them. */
+  .tab.wide-only { display: flex; }
 
   /* Home screen: hero across the top, then two columns.
      Scoped to :not([hidden]) so this never competes with hiding the panel. */
@@ -1482,6 +1608,32 @@ body.hide-english .verse-card .verse-en { display: none; }
   }
 
   .card { padding: 28px; }
+}
+
+/* ---------------------------------------------------------------- about
+   Eleven cards, one under another, is a long scroll on a phone and a ribbon
+   down the middle of a monitor. On a wide screen they flow into columns,
+   each card kept whole. */
+@media (min-width: 1100px) {
+  #panel-about:not([hidden]) {
+    columns: 2;
+    column-gap: 20px;
+  }
+  #panel-about .card,
+  #panel-about .footnote {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 20px;
+  }
+  /* The entrance animation staggers by child, and a card sliding up inside a
+     column reflows the column as it goes. It arrives with the rest instead. */
+  #panel-about.is-entering > * { animation: none; }
+}
+@media (min-width: 1600px) {
+  #panel-about:not([hidden]) { columns: 3; }
 }
 
 /* Hebrew and English side by side once the screen is wide enough to hold

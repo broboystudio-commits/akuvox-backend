@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="25">
+<html lang="en" data-build="26">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=25" />
+<link rel="stylesheet" href="/styles.css?v=26" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -100,6 +100,17 @@
   <button class="tab" data-panel="zmanim" type="button">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
     <span>Zmanim</span>
+  </button>
+  <!-- On a phone these two live in the header: the magnifying glass, and
+       "Reminders & about" under Aa. On a desktop the row has room, and a
+       page nobody can find may as well not be there. -->
+  <button class="tab wide-only" data-panel="search" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+    <span>Search</span>
+  </button>
+  <button class="tab wide-only" data-panel="about" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.6"/></svg>
+    <span>About</span>
   </button>
 </nav>
 
@@ -440,6 +451,6 @@
 
 </main>
 
-<script src="/app.js?v=25"></script>
+<script src="/app.js?v=26"></script>
 </body>
 </html>
