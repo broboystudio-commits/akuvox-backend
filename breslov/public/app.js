@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '27';
+  var BUILD = '28';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -500,14 +500,21 @@
       if (h.en.indexOf('Candle') === 0 || h.en.indexOf('Havdalah') === 0) return;
       rows.push([prettyDate(h.date), h.en]);
     });
-    var kv = document.createDocumentFragment();
-    rows.forEach(function (r) {
-      var row = el('div', 'kv-row');
-      row.appendChild(el('span', 'k', r[0]));
-      row.appendChild(el('span', 'v', r[1]));
-      kv.appendChild(row);
-    });
-    fillWith('shabbosTimes', kv);
+    // Built fresh for each place it goes: a fragment can only be put into the
+    // page once, and the same Shabbos belongs on the weekly page too.
+    function shabbosRows() {
+      var kv = document.createDocumentFragment();
+      rows.forEach(function (r) {
+        var row = el('div', 'kv-row');
+        row.appendChild(el('span', 'k', r[0]));
+        row.appendChild(el('span', 'v', r[1]));
+        kv.appendChild(row);
+      });
+      return kv;
+    }
+    fillWith('shabbosTimes', shabbosRows());
+    fillWith('weeklyShabbos', shabbosRows());
+    setText('weeklyParshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
 
     renderZmanim(data.zmanim, cal);
     renderWeekly(data.weekly);
@@ -599,9 +606,32 @@
       fill($('tehillimBody'), unavailableNotice(teh, "day's Tehillim"));
       return;
     }
+    // Each psalm gets somewhere to jump to, and a number to jump from. On a
+    // six-psalm day the last one was a long scroll away.
     var wrap = document.createDocumentFragment();
-    teh.parts.forEach(function (part) { wrap.appendChild(passage(part, part.label)); });
+    teh.parts.forEach(function (part, i) {
+      var section = el('section', 'teh-chapter');
+      section.id = 'teh-ch-' + i;
+      section.setAttribute('data-index', String(i));
+      section.appendChild(passage(part, part.label));
+      wrap.appendChild(section);
+    });
     fillWith('tehillimBody', wrap);
+
+    var track = el('div', 'chapter-track');
+    teh.parts.forEach(function (part, i) {
+      var b = el('button', null, String(part.chapter || (i + 1)));
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        var node = $('teh-ch-' + i);
+        if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      track.appendChild(b);
+    });
+    // One psalm is not a list to choose from.
+    if (teh.parts.length > 1) fillWith('tehillimNav', track);
+    else fillWith('tehillimNav', document.createDocumentFragment());
+    watchTehillim(teh.parts.length);
   }
 
   function renderWeekly(weekly) {
@@ -652,15 +682,19 @@
     fillWith('tikkunBody', body);
 
     // ---- the numbers along the top
-    var nav = document.createDocumentFragment();
+    // The numbers sit on a track of their own inside the sticky band, so the
+    // band can run the full width of the card -- covering the words as they
+    // pass behind it -- while the numbers themselves stay a sensible size
+    // together on the left, the way a segmented control does.
+    var track = el('div', 'chapter-track');
     tikkun.parts.forEach(function (part, i) {
       var b = el('button', null, String(part.chapter));
       b.type = 'button';
       b.setAttribute('data-index', String(i));
       b.addEventListener('click', function () { goToChapter(i); });
-      nav.appendChild(b);
+      track.appendChild(b);
     });
-    fillWith('tikkunNav', nav);
+    fillWith('tikkunNav', track);
 
     markChapter(state.tikkunChapter || 0, total);
     offerResume(tikkun, total);
@@ -672,8 +706,15 @@
     state.tikkunChapter = index;
     var nav = $('tikkunNav');
     if (nav) {
-      Array.prototype.forEach.call(nav.children, function (b) {
-        b.classList.toggle('is-active', Number(b.getAttribute('data-index')) === index);
+      Array.prototype.forEach.call(nav.querySelectorAll('button'), function (b) {
+        var on = Number(b.getAttribute('data-index')) === index;
+        b.classList.toggle('is-active', on);
+        // A number that has scrolled out of the track is no use; bring it
+        // back into view on the narrow screens where the track can scroll.
+        if (on && b.parentElement && b.parentElement.scrollWidth > b.parentElement.clientWidth) {
+          var left = b.offsetLeft - (b.parentElement.clientWidth - b.offsetWidth) / 2;
+          b.parentElement.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+        }
       });
     }
     setText('tikkunProgress', (index + 1) + ' of ' + total);
@@ -756,6 +797,42 @@
     for (var i = 0; i < total; i++) {
       var node = $('tikkun-ch-' + i);
       if (node) tikkunWatcher.observe(node);
+    }
+  }
+
+  /**
+   * The same following-along for the Tehillim of the day: the number of the
+   * psalm you are in lights up as you scroll past it.
+   */
+  var tehillimWatcher = null;
+  function watchTehillim(total) {
+    if (tehillimWatcher) { tehillimWatcher.disconnect(); tehillimWatcher = null; }
+    if (!('IntersectionObserver' in window) || total < 2) return;
+
+    var nav = $('tehillimNav');
+    if (!nav) return;
+    var top = topbarHeight() + 70;
+
+    function light(index) {
+      Array.prototype.forEach.call(nav.querySelectorAll('button'), function (b, i) {
+        b.classList.toggle('is-active', i === index);
+      });
+    }
+    light(0);
+
+    tehillimWatcher = new IntersectionObserver(function (entries) {
+      var best = null;
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        if (!best || entry.boundingClientRect.top < best.boundingClientRect.top) best = entry;
+      });
+      if (!best) return;
+      light(Number(best.target.getAttribute('data-index')));
+    }, { rootMargin: '-' + top + 'px 0px -55% 0px', threshold: 0 });
+
+    for (var i = 0; i < total; i++) {
+      var node = $('teh-ch-' + i);
+      if (node) tehillimWatcher.observe(node);
     }
   }
 

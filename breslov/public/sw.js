@@ -14,10 +14,10 @@
  * anything, and they are the heavy part.
  */
 
-var VERSION = 'breslov-v27';
+var VERSION = 'breslov-v28';
 
 var SHELL = [
-  '/', '/index.html', '/styles.css?v=27', '/app.js?v=27',
+  '/', '/index.html', '/styles.css?v=28', '/app.js?v=28',
   '/manifest.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-180.png',
 ];

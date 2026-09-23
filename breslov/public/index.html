@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="27">
+<html lang="en" data-build="28">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=27" />
+<link rel="stylesheet" href="/styles.css?v=28" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -207,6 +207,7 @@
         <h2>Tehillim for today</h2>
         <span class="ref" id="tehillimDayTag"></span>
       </header>
+      <nav class="chapters" id="tehillimNav"></nav>
       <div class="body" id="tehillimBody"><div class="skeleton"></div></div>
     </article>
   </section>
@@ -234,6 +235,16 @@
       </header>
       <p class="hint" id="weeklyWhy"></p>
       <div class="body" id="weeklyBody"><div class="skeleton"></div></div>
+    </article>
+
+    <!-- The lesson is for the parsha, so the week it belongs to is worth
+         having on the same page as it. -->
+    <article class="card">
+      <header class="card-head">
+        <h2>This Shabbos</h2>
+        <span class="ref" id="weeklyParshaTag"></span>
+      </header>
+      <div class="kv" id="weeklyShabbos"></div>
     </article>
   </section>
 
@@ -470,6 +481,6 @@
 
 </main>
 
-<script src="/app.js?v=27"></script>
+<script src="/app.js?v=28"></script>
 </body>
 </html>
