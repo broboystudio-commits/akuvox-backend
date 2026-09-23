@@ -561,10 +561,19 @@ body.hide-english .en { display: none; }
   display: inline-flex;
   gap: 2px;
   max-width: 100%;
-  padding: 3px;
+  padding: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
-  border: 1px solid var(--line);
+  /* Solid, because the words scroll behind it.
+     Frosted was tried first and the Hebrew read straight through the blur --
+     at its worst a number sat on a stroke of text almost its own colour. A
+     small raised control is allowed to be a slightly different shade from the
+     card it rests on; a band stretched across the whole card is not, which is
+     why this is a pill and not a bar. */
+  background: var(--card-bg-top);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-cast);
   /* On a narrow phone ten numbers will not fit; the track scrolls rather
      than shrinking them to nothing, and the one you are on scrolls itself
      into view. */
@@ -1496,32 +1505,24 @@ body.hide-english .verse-card .verse-en { display: none; }
   border-top: 1px solid var(--line);
 }
 
+/* The numbers float; nothing behind them is painted over.
+   A solid band across the card could never be the right colour: the card is
+   a gradient, so a bar that matched it at the top of the page had drifted
+   visibly off it by halfway down -- a lighter stripe laid across the card,
+   which is what it looked like. A frosted pill has nothing to match. What
+   passes behind it is blurred out of legibility, the numbers stay readable
+   on top, and it reads as a control rather than a slab. */
 .card > .chapters {
   position: sticky;
   top: calc(var(--topbar-h, 96px) + 6px);
   z-index: 6;
-  /* Out to the card's own edges, and back in again with padding. A band that
-     stopped at the text would let the words show past both ends of it. */
-  margin-left: calc(var(--card-pad) * -1);
-  margin-right: calc(var(--card-pad) * -1);
-  padding: 8px var(--card-pad) 10px;
-  /* Solid, not a fade. The fade used to run out before the bar did, so on a
-     phone -- where the ten numbers need two rows -- the psalm heading scrolled
-     up into the see-through part and sat on top of the numbers. */
-  background: var(--card-bg-top);
-}
-
-/* The fade now lives just below the bar, where there is nothing to hide. */
-.card > .chapters::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 14px;
-  background: linear-gradient(180deg, var(--card-bg-top), transparent);
+  padding: 6px 0 8px;
+  background: none;
+  /* Only the track itself takes the taps; the empty space beside it lets the
+     words underneath be selected as usual. */
   pointer-events: none;
 }
+.card > .chapters .chapter-track { pointer-events: auto; }
 
 .resume {
   display: flex;
@@ -1579,11 +1580,8 @@ body.hide-english .verse-card .verse-en { display: none; }
   font-variant-numeric: tabular-nums;
 }
 
-:root[data-theme="dark"] .card > .chapters { background: var(--card-bg-top); }
-:root[data-theme="dark"] .chapter-track {
-  background: rgba(0, 0, 0, 0.22);
-  border-color: rgba(255, 255, 255, 0.08);
-}
+
+:root[data-theme="dark"] .chapter-track { background: var(--card-bg-top); }
 :root[data-theme="dark"] .resume {
   background: linear-gradient(135deg, rgba(185,129,140,0.16), rgba(201,164,88,0.14));
 }
