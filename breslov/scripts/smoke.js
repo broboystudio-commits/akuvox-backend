@@ -87,6 +87,22 @@ async function checkTheLock(server, report) {
   const keyed = await call(server, '/api/today?key=' + encodeURIComponent(PASSWORD));
   const cookie = (keyed.setCookie || '').split(';')[0];
 
+  // The password box itself, which is the only way in that a phone has.
+  const form = async (body, headers) => {
+    const { port } = server.address();
+    const res = await fetch(`http://127.0.0.1:${port}/api/unlock`, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded' }, headers || {}),
+      body: new URLSearchParams(body).toString(),
+    });
+    return { status: res.status, location: res.headers.get('location') || '', cookie: res.headers.get('set-cookie') || '' };
+  };
+
+  const good = await form({ password: PASSWORD, next: '/tikkun' });
+  const badTry = await form({ password: 'not-it', next: '/tikkun' });
+  const offSite = await form({ password: PASSWORD, next: '//example.com/steal' });
+
   const cases = [
     ['health stays open when locked', '/api/health', {}, 200],
     ['a page is shut',                '/',           {}, 401],
@@ -117,6 +133,22 @@ async function checkTheLock(server, report) {
       console.log(`${line} FAIL  ${err.message}`);
       report();
     }
+  }
+
+  const box = [
+    ['the password box lets you in',        good.status === 303],
+    ['and sends you where you were going',  good.location === '/tikkun'],
+    ['and hands back the cookie',           good.cookie.indexOf('bd_access=') === 0],
+    ['a wrong password is refused',         badTry.status === 401],
+    ['and hands back no cookie',            badTry.cookie === ''],
+    // `next` comes off the address bar, so it is somewhere on this site or
+    // it is the front page -- never a jump to somebody else's.
+    ['it cannot be used to send you away',  offSite.status === 303 && offSite.location === '/'],
+  ];
+  for (const [name, ok] of box) {
+    const line = `  ${name}`.padEnd(42);
+    if (ok) console.log(`${line} ok`);
+    else { console.log(`${line} FAIL`); report(); }
   }
 
   // ?key= should have handed back a cookie, or the key would have to be on

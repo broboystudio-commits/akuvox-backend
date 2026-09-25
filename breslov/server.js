@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '29';
+const BUILD = '30';
 
 app.use(cors());
 
@@ -43,6 +43,9 @@ app.use(cors());
 app.use(lock.middleware);
 
 app.use(express.json());
+// The password box posts an ordinary form, which is what makes it work in
+// every browser without a line of JavaScript.
+app.use(express.urlencoded({ extended: false }));
 
 /**
  * A small in-memory cache. Text for a given day never changes, so we work it
@@ -109,6 +112,27 @@ app.get('/api/health', route(async () => ({
   cache: sefaria.cacheStats(),
   memoryKeys: cache.size,
 })));
+
+/**
+ * The password box posts here.
+ *
+ * Right password: the cookie is set and you are sent back to the page you
+ * were trying to reach. Wrong one: the same page again, saying so. Either way
+ * it is a plain form post and a redirect, so it behaves the same in Safari,
+ * in the app on a home screen, and through the service worker -- which is
+ * where the browser's own password dialog fell down.
+ */
+app.post('/api/unlock', (req, res) => {
+  const next = lock.safeNext(req.body && req.body.next);
+  if (!lock.isLocked() || lock.accepts(req.body && req.body.password)) {
+    if (lock.isLocked()) lock.remember(req, res);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.redirect(303, next);
+  }
+  res.status(401);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.type('html').send(lock.page({ next, wrong: true }));
+});
 
 /**
  * The key a calendar subscription needs, handed only to somebody who is

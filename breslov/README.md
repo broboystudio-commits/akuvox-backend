@@ -137,13 +137,15 @@ find it.
    |---|---|
    | `SITE_PASSWORD` | whatever password you want |
 
-4. Optionally add `SITE_USER` as well if you want the name to be something
-   other than `breslov`.
-5. Click **Save Changes**. Render redeploys on its own, which takes a couple of
+4. Click **Save Changes**. Render redeploys on its own, which takes a couple of
    minutes.
 
-Open the site afterwards and the phone or the computer asks for a name and a
-password. The name is `breslov` unless you changed it.
+Open the site afterwards and it shows a password box — on the page itself, not
+a browser pop-up. Type the password and you are in, on the page you were
+trying to reach. It remembers for a year.
+
+There is no username to type. (`SITE_USER` still exists for anything sending
+an old-fashioned browser login, but nothing here needs it.)
 
 **To turn the lock off again**, delete `SITE_PASSWORD` and save. The site is
 open to everyone the moment the redeploy finishes.
@@ -160,9 +162,9 @@ the end of the address instead:
 https://your-address/api/widget?key=YOUR-PASSWORD
 ```
 
-- **The site itself.** Open `https://your-address/?key=YOUR-PASSWORD` once on
-  each phone or computer. It remembers for a year, so the password only has to
-  be typed the once.
+- **The site itself.** Typing the password into the box is usually simpler, but
+  `https://your-address/?key=YOUR-PASSWORD` also works and skips the box — handy
+  for a link you send yourself.
 - **The Scriptable widget.** Put the password between the quotes on the
   `ACCESS_KEY` line near the top of `ios/scriptable/BreslovDaily.js`.
 - **The iPhone app.** Settings → Server → the password box under the address.

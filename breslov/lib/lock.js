@@ -13,11 +13,19 @@
  *
  * Three ways in, because three very different things ask for pages:
  *
- *   1. A browser    -- the usual name-and-password box (HTTP Basic auth).
- *   2. A link       -- ?key=... on the end of any address. The answer sets a
- *                      cookie, so it only has to be on the address once.
+ *   1. A person     -- a password box on the page itself, which posts to
+ *                      /api/unlock and is answered with a cookie.
+ *   2. A link       -- ?key=... on the end of any address. The answer sets the
+ *                      same cookie, so it only has to be on the address once.
  *   3. A machine    -- the iPhone widgets and the calendar subscription send
  *                      the same key as an X-Access-Key header or ?key=.
+ *
+ * The password box is drawn on the page rather than left to the browser's own
+ * name-and-password dialog. That dialog never appeared on an iPhone: the
+ * service worker handles the page request, and no browser raises a credential
+ * prompt for a reply that came through a service worker -- so the locked page
+ * arrived with nowhere to type. Basic auth is still accepted for anything
+ * that sends it, but nothing depends on the browser offering it.
  *
  * /api/health stays open on purpose: Render polls it to decide whether the
  * service is alive, and a locked-out health check would fail every deploy.
@@ -25,8 +33,11 @@
 
 const crypto = require('crypto');
 
-/** Addresses that answer even when the site is locked. */
-const ALWAYS_OPEN = ['/api/health'];
+/**
+ * Addresses that answer even when the site is locked: the health check Render
+ * polls, and the form that takes the password.
+ */
+const ALWAYS_OPEN = ['/api/health', '/api/unlock'];
 
 /** The name of the cookie that remembers a ?key=... visit. */
 const COOKIE = 'bd_access';
@@ -122,6 +133,20 @@ function admits(req) {
   return '';
 }
 
+/** Somewhere on this site, and nowhere else -- never an address off it. */
+function safeNext(value) {
+  const path = String(value || '/');
+  if (path.indexOf('/') !== 0 || path.indexOf('//') === 0) return '/';
+  return path;
+}
+
+/** Does this password open the door? */
+function accepts(sent) {
+  const given = String(sent || '');
+  if (!given || !isLocked()) return false;
+  return same(given, password()) || same(given, key());
+}
+
 /** Remember a ?key=... visit so the key need not be on every address. */
 function remember(req, res) {
   const bits = [
@@ -133,6 +158,84 @@ function remember(req, res) {
   ];
   if (isSecure(req)) bits.push('Secure');
   res.setHeader('Set-Cookie', bits.join('; '));
+}
+
+/**
+ * The locked page: a password box, drawn here rather than left to the
+ * browser. Deliberately one self-contained file with no stylesheet and no
+ * script of its own -- everything else on the site is behind the lock, so
+ * nothing it could ask for would arrive.
+ */
+function page(opts) {
+  const next = escapeHtml(safeNext(opts.next));
+  const wrong = opts.wrong
+    ? '<p class="bad">That password did not work. Try again.</p>'
+    : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Breslov Daily</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100svh; display: flex; align-items: center;
+    justify-content: center; padding: 24px;
+    background: #fbf1ec; color: #2b2530;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  main { width: 100%; max-width: 21rem; text-align: center; }
+  h1 { margin: 0 0 6px; font-size: 1.375rem; letter-spacing: -0.01em; }
+  p { margin: 0 0 22px; color: #635b6d; font-size: 0.9375rem; }
+  .bad { color: #8a545c; font-weight: 600; }
+  input, button { font: inherit; width: 100%; }
+  input {
+    padding: 14px 18px; border-radius: 999px; border: 1px solid rgba(43,37,48,0.13);
+    background: #fffaf7; color: #2b2530; -webkit-appearance: none; appearance: none;
+  }
+  input:focus-visible { outline: 2px solid #e3a4a8; outline-offset: 2px; }
+  button {
+    margin-top: 10px; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.72);
+    border-radius: 999px; font-weight: 600; color: #8a545c; cursor: pointer;
+    background: linear-gradient(135deg, #fadedd, #fbeed2);
+    box-shadow: 0 1px 2px rgba(43,37,48,0.05), 0 10px 30px -14px rgba(138,84,92,0.3);
+  }
+  button:active { transform: scale(0.97); }
+  @media (prefers-color-scheme: dark) {
+    body { background: #251d31; color: #f6f1f9; }
+    p { color: #d2c8dc; }
+    .bad { color: #f6ccd4; }
+    input { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #f6f1f9; }
+    button { background: linear-gradient(135deg, rgba(185,129,140,0.28), rgba(201,164,88,0.24));
+             border-color: rgba(255,255,255,0.12); color: #f6ccd4; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Breslov Daily</h1>
+  <p>This site is private for now.</p>
+  ${wrong}
+  <form method="POST" action="/api/unlock">
+    <input type="hidden" name="next" value="${next}">
+    <input type="password" name="password" autocomplete="current-password"
+           autocapitalize="off" autocorrect="off" spellcheck="false"
+           enterkeyhint="go" placeholder="Password" aria-label="Password" autofocus>
+    <button type="submit">Come in</button>
+  </form>
+</main>
+</body>
+</html>`;
+}
+
+/** Nothing typed into the address bar may end up inside that page as markup. */
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /**
@@ -148,7 +251,17 @@ function middleware(req, res, next) {
     return next();
   }
 
-  res.setHeader('WWW-Authenticate', 'Basic realm="Breslov Daily", charset="UTF-8"');
+  // No WWW-Authenticate header, deliberately.
+  //
+  // That header is what tells a browser "this 401 is mine to handle": it then
+  // takes the reply away and puts up its own name-and-password dialog instead
+  // of showing the page. In a browser with no way to raise that dialog -- an
+  // app on a home screen, or a page answered by a service worker, which is
+  // every page here -- the result is a dead end with nothing to type into.
+  // Chromium refuses the reply outright with ERR_INVALID_AUTH_CREDENTIALS.
+  // Leave the header off and the same 401 renders as an ordinary page, which
+  // is where the password box lives. A basic-auth header is still *accepted*
+  // from anything that sends one; it is simply never asked for.
   res.setHeader('Cache-Control', 'no-store');
   res.status(401);
 
@@ -156,19 +269,7 @@ function middleware(req, res, next) {
   // box; anything else gets JSON it can actually parse.
   const wantsHtml = String(req.headers.accept || '').indexOf('text/html') !== -1;
   if (wantsHtml) {
-    res.type('html').send([
-      '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">',
-      '<meta name="viewport" content="width=device-width, initial-scale=1">',
-      '<title>Breslov Daily</title>',
-      '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;',
-      'justify-content:center;background:#fbf1ec;color:#4a3b52;',
-      'font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px}',
-      'main{max-width:22rem;text-align:center}h1{font-size:1.25rem;margin:0 0 .5rem}',
-      'p{margin:0;opacity:.75}</style></head><body><main>',
-      '<h1>Breslov Daily</h1>',
-      '<p>This site is private for now. Enter the password to come in.</p>',
-      '</main></body></html>',
-    ].join(''));
+    res.type('html').send(page({ next: req.originalUrl, wrong: false }));
     return undefined;
   }
   res.json({ error: 'Locked', detail: 'This site is private. A password or key is needed.' });
@@ -180,4 +281,4 @@ function status() {
   return { locked: isLocked(), keySet: isLocked() && key() !== '' };
 }
 
-module.exports = { middleware, isLocked, status, key, ALWAYS_OPEN, COOKIE };
+module.exports = { middleware, isLocked, status, key, accepts, remember, page, safeNext, ALWAYS_OPEN, COOKIE };

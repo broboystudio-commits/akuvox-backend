@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '29';
+  var BUILD = '30';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1501,6 +1501,19 @@
     });
   }
 
+  /**
+   * The page you asked for, if you asked for one.
+   *
+   * Every address on this site is answered with the same page, so /tikkun
+   * used to open on Today like everything else. That matters now: after the
+   * password box sends you back to where you were going, landing somewhere
+   * else makes it look as though it lost you.
+   */
+  function panelFromAddress() {
+    var path = String(window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
+    return PANELS.indexOf(path) !== -1 ? path : '';
+  }
+
   function start() {
     applyTheme();
     applyFont();
@@ -1581,6 +1594,9 @@
     });
 
     learnAccessKey();
+
+    var asked = panelFromAddress();
+    if (asked) showPanel(asked);
 
     // Show the saved copy straight away, then bring it up to date.
     var saved = load(STORE.lastToday, null);
