@@ -85,7 +85,7 @@ function writeCache(key, value) {
 }
 
 /** One HTTP GET against Sefaria, with a timeout. */
-async function request(urlPath, timeoutMs) {
+async function once(urlPath, timeoutMs) {
   const url = `${API}${urlPath}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs || TIMEOUT_MS);
@@ -102,6 +102,36 @@ async function request(urlPath, timeoutMs) {
     return await res.json();
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/** Worth asking again, or is the answer going to be the same? */
+function worthRetrying(err) {
+  // A 404 means the text is not there, and a 403 means we are not welcome;
+  // asking twice changes neither. A timeout, a dropped connection or a 5xx is
+  // the other kind of failure -- the kind that is often gone a second later.
+  const status = err && err.status;
+  if (status && status < 500 && status !== 429) return false;
+  return true;
+}
+
+const REST = Number(process.env.SEFARIA_RETRY_MS || 800);
+
+/**
+ * The same GET, tried twice.
+ *
+ * One blip used to empty every page on the site: a single timed-out request
+ * and the day's teaching, the Tehillim and the Tikkun all came back as "not
+ * available". Sefaria is a free service being asked from a free host, and a
+ * request that fails once quite often works immediately afterwards.
+ */
+async function request(urlPath, timeoutMs) {
+  try {
+    return await once(urlPath, timeoutMs);
+  } catch (err) {
+    if (!worthRetrying(err)) throw err;
+    await new Promise((done) => setTimeout(done, REST));
+    return once(urlPath, timeoutMs);
   }
 }
 
@@ -208,6 +238,17 @@ async function getCalendars(diaspora = true) {
   return fetchCached('calendars', `/api/calendars?diaspora=${diaspora ? 1 : 0}`);
 }
 
+/**
+ * Empty the in-memory cache.
+ *
+ * Only a test asks for this: to see what happens when Sefaria has a bad
+ * moment, a test has to be sure the answer is not already sitting in memory
+ * from the call before it.
+ */
+function clearMemory() {
+  memory.clear();
+}
+
 /** True if we have ever successfully cached anything -- used for a health check. */
 function cacheStats() {
   let files = 0;
@@ -219,6 +260,7 @@ function cacheStats() {
 
 module.exports = {
   API, getShape, getText, getLinks, getCalendars, normaliseText, cacheStats, request,
+  clearMemory,
 };
 
 /**

@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '30';
+const BUILD = '31';
 
 app.use(cors());
 
@@ -668,10 +668,48 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+/**
+ * Fetch the day's learning once, as soon as the server is up.
+ *
+ * The disk is wiped on every deploy, so the cache starts empty and whoever
+ * opens the site first goes to Sefaria live, on a server that is still
+ * warming up. That person -- and only that person -- got a page of "this
+ * could not be loaded" while everybody after them got it from the cache.
+ *
+ * So the server is that person now. It asks for the same four things the home
+ * screen asks for, before anyone has visited. Failures are ignored on purpose:
+ * this is a head start, not a requirement, and a visitor would have retried
+ * anyway.
+ */
+function warmUp(port) {
+  const key = lock.isLocked() ? lock.key() : '';
+  const paths = ['/api/today', '/api/tikkun', '/api/weekly'];
+
+  return Promise.all(paths.map((path) =>
+    fetch(`http://127.0.0.1:${port}${path}`, {
+      headers: Object.assign({ Accept: 'application/json' },
+        key ? { 'X-Access-Key': key } : {}),
+    })
+      .then((res) => res.json())
+      .then((body) => ({ path, ok: !body || body.error === undefined }))
+      .catch((err) => ({ path, ok: false, why: err.message }))
+  )).then((results) => {
+    const failed = results.filter((r) => !r.ok);
+    console.log(failed.length
+      ? `Warmed the cache; ${failed.length} of ${results.length} did not answer yet.`
+      : 'Warmed the cache: today\'s learning is ready before anyone asks.');
+    return results;
+  });
+}
+
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Breslov Daily is running -> http://localhost:${PORT}`);
+    // A moment after the port opens, so the health check Render is waiting on
+    // is answered before we start pulling text.
+    setTimeout(() => warmUp(server.address().port), 1500);
   });
 }
 
 module.exports = app;
+module.exports.warmUp = warmUp;
