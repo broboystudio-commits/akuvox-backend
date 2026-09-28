@@ -159,14 +159,19 @@ function addHebrew(stack, text, font, color, lines) {
   return t;
 }
 
+/** "in 40 min", "in 3h 12m", or "now". */
+function awayFromNow(mins) {
+  if (mins < 1) return 'now';
+  if (mins < 60) return `in ${mins} min`;
+  return `in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
 function nextZmanLine(data) {
-  if (!data.next) return 'No more zmanim today';
-  const mins = data.next.minutesAway;
-  let away;
-  if (mins < 1) away = 'now';
-  else if (mins < 60) away = `in ${mins} min`;
-  else away = `in ${Math.floor(mins / 60)}h ${mins % 60}m`;
-  return `${data.next.label} · ${data.next.time} (${away})`;
+  // There is always a next zman -- after the last one of the day it is
+  // tomorrow's first. The widget used to go blank every evening instead.
+  if (!data.next) return '';
+  const when = data.next.tomorrow ? 'tomorrow' : awayFromNow(data.next.minutesAway);
+  return `${data.next.label} · ${data.next.time} (${when})`;
 }
 
 function buildSmall(data) {
@@ -212,7 +217,8 @@ function buildMedium(data) {
     .rightAlignText();
 
   w.addSpacer(8);
-  addLine(w, nextZmanLine(data), Font.mediumSystemFont(12), COLORS.inkSoft, 1);
+  const upNext = nextZmanLine(data);
+  if (upNext) addLine(w, upNext, Font.mediumSystemFont(12), COLORS.inkSoft, 1);
   w.addSpacer(8);
 
   if (data.teaching) {
@@ -266,21 +272,34 @@ function buildLarge(data) {
   return w;
 }
 
-/** Lock screen: one rectangle, so only the most useful two lines fit. */
+/**
+ * Lock screen: a rectangle iOS fixes the size of, so the only way to make it
+ * bigger is to put less in it.
+ *
+ * The zman comes first and largest -- it is the thing you look at a lock
+ * screen for, and it changes through the day. The Hebrew date sits under it.
+ * The parsha has been dropped: it was the third line at eleven points, which
+ * is small enough to be decoration rather than information, and it is on the
+ * home screen widget anyway.
+ */
 function buildAccessoryRectangular(data) {
   const w = new ListWidget();
-  w.setPadding(2, 2, 2, 2);
-  addHebrew(w, data.hebrewDate, Font.semiboldSystemFont(13), Color.white(), 1);
+  w.setPadding(1, 2, 1, 2);
+
   if (data.next) {
-    addLine(w, `${data.next.label} ${data.next.time}`, Font.systemFont(12), Color.white(), 1);
+    addLine(w, `${data.next.time} · ${data.next.label}`, Font.semiboldSystemFont(16), Color.white(), 1);
+    addLine(w, data.next.tomorrow ? 'tomorrow' : awayFromNow(data.next.minutesAway),
+      Font.systemFont(12), Color.white(), 1);
   }
-  if (data.parsha) addLine(w, data.parsha, Font.systemFont(11), Color.white(), 1);
+  addHebrew(w, data.hebrewDate, Font.semiboldSystemFont(14), Color.white(), 1);
   return w;
 }
 
 function buildAccessoryInline(data) {
   const w = new ListWidget();
-  const text = data.next ? `${data.next.label} ${data.next.time}` : data.hebrewDateEn;
+  const text = data.next
+    ? `${data.next.label} ${data.next.time}${data.next.tomorrow ? ' tomorrow' : ''}`
+    : data.hebrewDateEn;
   addLine(w, text, Font.systemFont(12), Color.white(), 1);
   return w;
 }

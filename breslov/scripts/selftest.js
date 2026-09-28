@@ -54,6 +54,42 @@ async function main() {
   check('Tikkun HaKlali has ten psalms', library.TIKKUN_HAKLALI.length === 10,
     library.TIKKUN_HAKLALI.join(', '));
 
+  console.log('\nThe widget always has something to show');
+
+  // The widget used to say "No more zmanim today" every evening, and on the
+  // lock screen -- where that line is only drawn when there is one -- it
+  // showed nothing at all.
+  //
+  // The moments are taken from the day's own zmanim rather than from the
+  // clock. Setting "midday" by hand meant midday UTC, which is breakfast in
+  // Brooklyn, and the check passed while testing the wrong hour entirely.
+  const server = require('../server');
+  const widgetPlace = dates.normalisePlace({});
+  const theDay = new Date();
+  const dayTimes = zmanim.zmanimFor(theDay, widgetPlace, new Date())
+    .times.filter((t) => t.isChosen);
+  const firstOf = new Date(dayTimes[0].iso);
+  const lastOf = new Date(dayTimes[dayTimes.length - 1].iso);
+
+  const moments = [
+    ['before the first zman', new Date(firstOf.getTime() - 60000)],
+    ['in the middle of the day', new Date((firstOf.getTime() + lastOf.getTime()) / 2)],
+    ['one minute after the last', new Date(lastOf.getTime() + 60000)],
+    ['at two in the morning', new Date(lastOf.getTime() + 5 * 3600 * 1000)],
+  ];
+
+  for (const [when, at] of moments) {
+    const found = server.nextZmanOrTomorrow(widgetPlace, theDay, at, {});
+    check(`A next zman ${when}`, !!(found && found.time),
+      found ? `${found.en} ${found.time}${found.tomorrow ? ' (tomorrow)' : ''}` : 'nothing');
+  }
+
+  // And the two after dark have to be tomorrow's, not a stale one from today.
+  const afterDark = server.nextZmanOrTomorrow(widgetPlace, theDay, new Date(lastOf.getTime() + 60000), {});
+  check('After the last zman it rolls over to tomorrow',
+    !!(afterDark && afterDark.tomorrow === true && afterDark.minutesAway > 0),
+    afterDark ? `${afterDark.en}, ${afterDark.minutesAway} minutes away` : 'nothing');
+
   console.log('\nTexts (needs the internet)');
   try {
     const text = await sefaria.getText('Psalms 16');

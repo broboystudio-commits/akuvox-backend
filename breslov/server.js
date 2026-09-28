@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '31';
+const BUILD = '32';
 
 app.use(cors());
 
@@ -410,11 +410,41 @@ app.get('/api/today', route(async (req) => {
  * A deliberately small answer for the iPhone widgets -- just the few lines a
  * widget can actually fit, so it loads fast and uses little battery.
  */
+/**
+ * The next zman -- and when today has none left, tomorrow's first.
+ *
+ * After the last zman of the day the widget used to say "No more zmanim
+ * today", and on the lock screen, where that line is only drawn if there is
+ * one, it showed nothing at all. Every evening the widget looked broken.
+ * There is always a next zman; it is just not today's.
+ *
+ * Anchored at midday, so adding a day never lands on the wrong side of a
+ * clock change.
+ */
+function nextZmanOrTomorrow(place, date, now, prefs) {
+  const today = zmanimLib.zmanimFor(date, place, now, prefs);
+  if (today.next) return Object.assign({}, today.next, { tomorrow: false });
+
+  const nextDay = new Date(date.getTime());
+  nextDay.setDate(nextDay.getDate() + 1);
+  const tomorrow = zmanimLib.zmanimFor(nextDay, place, now, prefs);
+  const first = tomorrow.times.find((t) => t.isChosen && new Date(t.iso).getTime() > now.getTime());
+  if (!first) return null;
+
+  return Object.assign({}, first, {
+    minutesAway: Math.round((new Date(first.iso).getTime() - now.getTime()) / 60000),
+    tomorrow: true,
+  });
+}
+
 app.get('/api/widget', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place);
-  const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
+  const now = new Date();
+  const prefs = zmanimPrefsFromQuery(req);
+  const zmanim = zmanimLib.zmanimFor(date, place, now, prefs);
+  const upNext = nextZmanOrTomorrow(place, date, now, prefs);
   const spark = await cached(`spark:${daily.dayKey(date)}`, DAY, () => daily.dailySpark(date));
 
   return {
@@ -426,13 +456,14 @@ app.get('/api/widget', route(async (req) => {
     candles: calendar.candles ? calendar.candles.time : null,
     candlesDate: calendar.candles ? calendar.candles.date : null,
     havdalah: calendar.havdalah ? calendar.havdalah.time : null,
-    next: zmanim.next
+    next: upNext
       ? {
-          label: zmanim.next.en,
-          he: zmanim.next.he,
-          time: zmanim.next.time,
-          opinion: zmanim.next.opinion,
-          minutesAway: zmanim.next.minutesAway,
+          label: upNext.en,
+          he: upNext.he,
+          time: upNext.time,
+          opinion: upNext.opinion,
+          minutesAway: upNext.minutesAway,
+          tomorrow: upNext.tomorrow,
         }
       : null,
     minhag: zmanim.prefs.minhag,
@@ -713,3 +744,4 @@ if (require.main === module) {
 
 module.exports = app;
 module.exports.warmUp = warmUp;
+module.exports.nextZmanOrTomorrow = nextZmanOrTomorrow;
