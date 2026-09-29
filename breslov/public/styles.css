@@ -2555,3 +2555,73 @@ body.hide-english .verse-card .verse-en { display: none; }
 /* The rows are divided by one hairline, the faintest thing on the sheet. */
 .sidebar .sheet-row { border-top-color: var(--panel-line); }
 .sidebar .side-head { padding-bottom: 4px; }
+
+
+/* ---- the number bar's pane slides too ---------------------------------- */
+/* It used to be the selected number's own background, which meant it could
+   only ever disappear from one number and reappear on another. As one pane
+   living in the bar it travels: under a finger it is exactly where the
+   finger is, and on a tap it springs across.
+
+   Everything that made the old pane look like a lens -- the fill, the
+   chromatic rim, the specular arc -- moves onto it, so the number riding in
+   it is read against exactly what it was read against before. */
+.chapters .chapter-track { position: relative; }
+.chapters .chapter-track .bar-lens {
+  display: block;
+  position: absolute;
+  top: 5px;
+  left: 0;
+  height: calc(100% - 10px);
+  width: 0;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bar-lens);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 6px 14px -6px rgba(0, 0, 0, 0.30);
+  transition: transform var(--bounce) var(--spring),
+              width var(--bounce) var(--spring),
+              opacity var(--base) var(--ease);
+}
+/* Under a finger, nothing eases. */
+.chapters .chapter-track.is-dragging .bar-lens { transition: none; }
+/* The chromatic rim and the specular arc, now on the thing that moves. */
+.chapters .chapter-track .bar-lens::before,
+.chapters .chapter-track .bar-lens::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.chapters .chapter-track .bar-lens::before {
+  padding: 1.5px;
+  background: conic-gradient(from 212deg,
+    rgba(255, 255, 255, 0.95)  0deg,
+    rgba(255, 216, 170, 0.85) 54deg,
+    rgba(255, 255, 255, 0.50) 118deg,
+    rgba(176, 208, 255, 0.80) 196deg,
+    rgba(214, 176, 255, 0.75) 248deg,
+    rgba(255, 255, 255, 0.45) 308deg,
+    rgba(255, 255, 255, 0.95) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.chapters .chapter-track .bar-lens::after {
+  background: radial-gradient(64% 34% at 32% 4%,
+    rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 72%);
+}
+/* And the selected number gives its pane up -- it keeps only the colour of
+   its numeral, which still has to be read against the pane now behind it. */
+:root .chapters .chapter-track button.is-active {
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+:root .chapters .chapter-track button.is-active::before,
+:root .chapters .chapter-track button.is-active::after { display: none; }

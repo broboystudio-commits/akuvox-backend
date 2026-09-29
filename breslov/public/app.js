@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '47';
+  var BUILD = '48';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1490,6 +1490,35 @@
     }
 
     var boxes = [];        // where each item is, read once per gesture
+    var drift = 0;         // how far translateX(0) is from the bar's left edge
+
+    /**
+     * Where the pane sits when it is told to move nowhere.
+     *
+     * `translateX(0)` is not the bar's left edge. The pane is absolutely
+     * placed, so it starts at the bar's padding edge, and the two bars pad
+     * differently -- the tab bar happened to land right and the number bar
+     * landed half a number out. It is measured rather than worked out,
+     * because the number that matters is where the browser actually put it.
+     *
+     * Measured with the transition off and read back in the same frame. An
+     * earlier version placed the pane, read where it had got to and corrected
+     * the difference, which cannot work: the read lands in the middle of the
+     * spring, so it corrects towards wherever the pane happens to be passing
+     * -- it left the number bar 8px out and threw the tab bar 136px.
+     */
+    function calibrate() {
+      if (!lens) return;
+      var was = lens.style.transition;
+      lens.style.transition = 'none';
+      var hadTransform = lens.style.transform;
+      lens.style.transform = 'translateX(0px)';
+      drift = lens.getBoundingClientRect().left - bar.getBoundingClientRect().left;
+      lens.style.transform = hadTransform;
+      // Forced read, so the restored transform is not animated from nowhere.
+      void lens.offsetWidth;
+      lens.style.transition = was;
+    }
     var holding = null;
     var startX = 0, startY = 0;
     var engaged = false, decided = false;
@@ -1536,7 +1565,8 @@
       var p = bar.getBoundingClientRect();
       // It follows the finger rather than hopping from one to the next, but
       // it never leaves the bar: a pane hanging off the end reads as a bug.
-      var x = Math.max(0, Math.min(clientX - p.left - near.w / 2, p.width - near.w));
+      var want = clientX - p.left - near.w / 2;
+      var x = Math.max(0, Math.min(want, p.width - near.w)) - drift;
       lens.style.width = near.w + 'px';
       lens.style.transform = 'translateX(' + x + 'px) scale(1.06)';
       lens.style.opacity = '1';
@@ -1556,7 +1586,7 @@
       var p = bar.getBoundingClientRect();
       var r = on.getBoundingClientRect();
       lens.style.width = r.width + 'px';
-      lens.style.transform = 'translateX(' + (r.left - p.left) + 'px)';
+      lens.style.transform = 'translateX(' + (r.left - p.left - drift) + 'px)';
       lens.style.opacity = '1';
     }
 
@@ -1576,6 +1606,7 @@
       decided = false;
       engaged = !!opts.grabAtOnce;
       measure();
+      calibrate();
       if (engaged) {
         bar.classList.add('is-dragging');
         queue(startX);
@@ -1618,12 +1649,28 @@
     bar.addEventListener('touchcancel', function () { release(); settle(); });
 
     try {
-      new ResizeObserver(function () { settle(); }).observe(bar);
+      new ResizeObserver(function () { calibrate(); settle(); }).observe(bar);
     } catch (err) {
-      window.addEventListener('resize', settle);
+      window.addEventListener('resize', function () { calibrate(); settle(); });
     }
+
+    // The selection can change without anyone touching this bar: a tap, a
+    // scroll that carries the reading position into the next psalm, a jump
+    // from another page. Watching for it here means the pane follows all of
+    // them, rather than only the ones something remembered to tell it about.
+    if (lens) {
+      try {
+        var waiting = 0;
+        new MutationObserver(function () {
+          if (engaged || waiting) return;
+          waiting = window.requestAnimationFrame(function () { waiting = 0; settle(); });
+        }).observe(bar, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      } catch (err) { /* older browser: the pane still moves on a tap */ }
+    }
+
+    calibrate();
     settle();
-    return settle;
+    return function () { calibrate(); settle(); };
   }
 
   /* The tab bar's pane, and the function that puts it back where it belongs
@@ -1652,7 +1699,13 @@
   function wireNumberBars() {
     Array.prototype.forEach.call(document.querySelectorAll('.chapter-track'), function (track) {
       wireBarGesture(track, 'button', {
-        lens: false,
+        // The same sliding pane as the tab bar. The number you are on used to
+        // carry its own, which meant it could only ever vanish from one
+        // number and appear on another; this one travels.
+        lens: true,
+        // Not at once, though. A finger landing on this bar may be about to
+        // scroll the psalm rather than to drag along the numbers, so it waits
+        // to see which before it takes the gesture.
         onPick: function (button) { button.click(); },
       });
     });
