@@ -54,7 +54,14 @@
   --bar-on:     var(--rose-700);
   --bar-veil:   rgba(253, 251, 249, 0.62);
   --bar-bright-tabs: 1.18;
-  --panel-glass: rgba(253, 251, 249, 0.82);
+  /* 0.52 was clearer and measured 4.31:1 on the row labels, just under the
+     line. Light glass over a bright page ends up nearly white anyway --
+     Apple's daylight menus are no clearer than this. */
+  --panel-glass: rgba(255, 255, 255, 0.66);
+  --ctl-glass:   rgba(255, 255, 255, 0.45);
+  --ctl-rim:     rgba(255, 255, 255, 0.85);
+  --ctl-lit:     rgba(255, 255, 255, 0.9);
+  --ctl-shade:   rgba(120, 110, 130, 0.16);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -310,21 +317,35 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .sidebar {
   position: fixed;
-  top: 0; right: 0; bottom: 0;
+  /* It floats, like a menu, rather than being welded to three edges of the
+     screen. Apple's menus never touch the sides. */
+  top: calc(var(--safe-top) + 10px);
+  right: 10px;
+  /* It ends where its last row ends. A menu that runs to the bottom of the
+     screen whatever is on it is a drawer, and a drawer is the pattern this
+     was before. Apple's menus are the height of their contents. */
+  bottom: auto;
+  max-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 20px);
   z-index: 50;
   width: min(340px, 86vw);
-  padding: 18px 20px calc(20px + var(--safe-bottom));
+  padding: 18px 20px 20px;
+  border-radius: 26px;
   overflow-y: auto;
-  /* A panel that floats over the page is exactly what glass is for, and this
-     was the largest thing in the app still painted solid. Heavier than the
-     bars, because a bar shows you a strip of the page for a second and this
-     covers a third of it while you read a menu off it. */
+  /* Photographed next to the menu in Apple's Photos app, the first version of
+     this was a flat dark sheet: the blur was there, the tint was so heavy
+     that nothing came through it. Apple's carries the picture behind it in
+     colour, and its edges are a bright hairline rather than a border.
+     So: half the tint, more saturation to keep what does come through from
+     going grey, and the edge drawn as light instead of as a line. */
   background: var(--panel-glass);
-  backdrop-filter: blur(34px) saturate(190%);
-  -webkit-backdrop-filter: blur(34px) saturate(190%);
-  border-left: 1px solid var(--glass-edge);
-  box-shadow: inset 1px 0 0 var(--bar-lit), -18px 0 46px -18px rgba(40, 30, 50, 0.4);
-  transform: translateX(102%);
+  backdrop-filter: blur(40px) saturate(220%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%);
+  border: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--ctl-rim),
+    inset 0 1px 0 var(--ctl-lit),
+    0 24px 60px -20px rgba(20, 14, 26, 0.55);
+  transform: translateX(calc(100% + 16px));
   transition: transform var(--bounce) var(--spring);
 }
 .sidebar.is-open { transform: none; }
@@ -1062,7 +1083,11 @@ body.hide-english .en { display: none; }
      which is the difference between looking like glass and looking like a
      dark slab with words on it. */
   --bar-bright-tabs: 0.88;
-  --panel-glass: rgba(28, 28, 30, 0.72);
+  --panel-glass: rgba(44, 44, 48, 0.44);
+  --ctl-glass:   rgba(120, 120, 128, 0.28);
+  --ctl-rim:     rgba(255, 255, 255, 0.26);
+  --ctl-lit:     rgba(255, 255, 255, 0.42);
+  --ctl-shade:   rgba(0, 0, 0, 0.3);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -2452,3 +2477,40 @@ body.hide-english .verse-card .verse-en { display: none; }
   }
   :root .chapters .chapter-track button.is-under:not(.is-active) { color: var(--bar-on); }
 }
+
+
+/* ---- the settings sheet, and the controls on it ------------------------ */
+/* Held next to the same menu in Apple's Photos app, what separates their
+   buttons from ours is not the fill -- it is that every one of them has a
+   bright edge along the top and a dark one along the bottom. That pair is
+   what says "a piece of glass sitting on something" rather than "a grey
+   shape". Ours had a flat fill and a 1px border of a single colour, which
+   says the second thing however much blur is behind it.
+
+   The switch is left its own fill, because that fill is how you can tell it
+   is on. It gets the edges and nothing else. */
+.sidebar .choice,
+.sidebar .stepper button,
+.sidebar .pill,
+.sidebar .icon-btn {
+  background: var(--ctl-glass);
+  background-color: var(--ctl-glass);
+  border-color: transparent;
+  -webkit-backdrop-filter: blur(16px) saturate(200%);
+  backdrop-filter: blur(16px) saturate(200%);
+}
+.sidebar .choice,
+.sidebar .stepper button,
+.sidebar .pill,
+.sidebar .icon-btn,
+.sidebar .switch {
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 var(--ctl-lit),
+    inset 0 -1px 0 var(--ctl-shade),
+    inset 0 0 0 1px var(--ctl-rim),
+    0 2px 8px -3px rgba(0, 0, 0, 0.38);
+}
+/* The sheet's own hairlines, the way a menu divides itself. */
+.sidebar .sheet-row { border-top-color: var(--ctl-rim); }
+.sidebar .side-head { padding-bottom: 4px; }
