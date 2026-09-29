@@ -54,6 +54,7 @@
   --bar-on:     var(--rose-700);
   --bar-veil:   rgba(253, 251, 249, 0.62);
   --bar-bright-tabs: 1.18;
+  --panel-glass: rgba(253, 251, 249, 0.82);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -314,9 +315,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   width: min(340px, 86vw);
   padding: 18px 20px calc(20px + var(--safe-bottom));
   overflow-y: auto;
-  background: var(--card-bg-top);
+  /* A panel that floats over the page is exactly what glass is for, and this
+     was the largest thing in the app still painted solid. Heavier than the
+     bars, because a bar shows you a strip of the page for a second and this
+     covers a third of it while you read a menu off it. */
+  background: var(--panel-glass);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
   border-left: 1px solid var(--glass-edge);
-  box-shadow: -18px 0 46px -18px rgba(40, 30, 50, 0.4);
+  box-shadow: inset 1px 0 0 var(--bar-lit), -18px 0 46px -18px rgba(40, 30, 50, 0.4);
   transform: translateX(102%);
   transition: transform var(--bounce) var(--spring);
 }
@@ -1055,6 +1062,7 @@ body.hide-english .en { display: none; }
      which is the difference between looking like glass and looking like a
      dark slab with words on it. */
   --bar-bright-tabs: 0.88;
+  --panel-glass: rgba(28, 28, 30, 0.72);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -1415,9 +1423,12 @@ body.hide-english .verse-card .verse-en { display: none; }
   min-width: 0;
   padding: 14px 18px;
   border-radius: 999px;
-  border: 1px solid var(--line-2);
-  background: linear-gradient(180deg, rgba(255, 252, 250, 0.96), rgba(252, 240, 238, 0.94));
-  box-shadow: var(--shadow-sm);
+  /* The one control in the app still painted as a solid box. */
+  border: 1px solid transparent;
+  background: var(--bar-glass);
+  backdrop-filter: blur(20px) saturate(190%) brightness(var(--bar-bright-tabs));
+  -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(var(--bar-bright-tabs));
+  box-shadow: inset 0 1px 0 var(--bar-lit), inset 0 0 0 1px var(--bar-rim), var(--shadow-sm);
   color: var(--ink);
   font-family: inherit;
   font-size: 1rem;
@@ -2390,10 +2401,10 @@ body.hide-english .verse-card .verse-en { display: none; }
    Above 900px the bar is a row of pills in the flow of the page. Nothing to
    slide along and no finger to do it with, so the lens stays hidden and the
    pills keep the pane they had. */
-.tab-lens { display: none; }
+.bar-lens { display: none; }
 
 @media (max-width: 899px) {
-  .tab-lens {
+  .tabs .bar-lens {
     display: block;
     position: absolute;
     top: 6px;
@@ -2413,11 +2424,10 @@ body.hide-english .verse-card .verse-en { display: none; }
                 width var(--bounce) var(--spring),
                 opacity var(--base) var(--ease);
   }
-  /* Under a finger it has to be exactly where the finger is. A spring on the
-     way back is right; a spring under the finger is lag. */
-  .tabs.is-dragging .tab-lens {
-    transition: width var(--fast) var(--ease), opacity var(--base) var(--ease);
-  }
+  /* Under a finger, nothing is animated at all. A spring on the way back is
+     right; anything at all under the finger is the pane arriving where the
+     finger has just been, which is exactly what "not smooth" felt like. */
+  .tabs.is-dragging .bar-lens { transition: none; }
   /* The pane that belonged to the tab gives way to the one that slides. */
   .tab.is-active::after { display: none; }
   /* Whatever the lens is over is magnified, the way a lens laid on a page
@@ -2428,4 +2438,17 @@ body.hide-english .verse-card .verse-en { display: none; }
   .tab span { display: inline-block; transition: transform var(--bounce) var(--spring); }
   /* A drag along the bar is the bar's gesture, not the page's. */
   .tabs { touch-action: none; }
+
+  /* The number bars magnify too, but they keep the lens they already have --
+     the one measured against the psalm passing behind it. A second pane
+     sliding over that one would be two panes. */
+  /* Written with :root in front to outweigh the rule further up that sets
+     `transform: none` on every unselected number -- that one carries a :root
+     of its own, and without one here the magnifying silently did nothing
+     while the class went on being applied. */
+  :root .chapters .chapter-track button.is-under {
+    transform: scale(1.22);
+    z-index: 2;
+  }
+  :root .chapters .chapter-track button.is-under:not(.is-active) { color: var(--bar-on); }
 }

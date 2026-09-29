@@ -297,10 +297,24 @@ function answersTo(shape, asked) {
   // a missing field.
   if (!names.length) return true;
 
-  // "Tanya" answering to "Tanya", or "Noam Elimelech, Bereshit" to
-  // "Noam Elimelech" -- but never "Tanya" answering to "Likutei Amarim".
-  return names.some((got) =>
-    got === wanted || got.indexOf(wanted) === 0 || wanted.indexOf(got) === 0);
+  // The asked-for name has to appear in what came back, or the other way
+  // round. "Tanya" answers to "Tanya"; "Noam Elimelech, Bereshit" answers to
+  // "Noam Elimelech"; "Tanya" never answers to "Likutei Amarim", which is
+  // the whole reason this function exists.
+  //
+  // Anchored at the start once, which was too strict: a sefer filed with a
+  // word in front of its name -- "Sefer Noam Elimelech", "Likutei Amarim
+  // Tanya" -- failed, and Noam Elimelech and the Chofetz Chaim were being
+  // refused on their own yahrzeits by their own titles. Containment keeps
+  // the substitution this guards against out (neither name contains the
+  // other there) and lets a prefix in.
+  return names.some((got) => got.indexOf(wanted) >= 0 || wanted.indexOf(got) >= 0);
+}
+
+/** What Sefaria calls the thing it sent back, for saying so in a diagnostic. */
+function shapeNames(shape) {
+  const nodes = Array.isArray(shape) ? shape : [shape];
+  return nodes.map((node) => node && (node.title || node.book)).filter(Boolean);
 }
 
 /**
@@ -329,7 +343,15 @@ async function yahrzeitPassage(titles, date, tried) {
   for (const title of candidates) {
     try {
       const shape = await sefaria.getShape(title);
-      if (!answersTo(shape, title)) { note(title, 'a different sefer answers to this name'); continue; }
+      if (!answersTo(shape, title)) {
+        // Say which sefer, not just that it was the wrong one. "A different
+        // sefer answers to this name" is exactly as useful as silence when
+        // the question is whether the guard or the title is at fault.
+        var got = shapeNames(shape);
+        note(title, 'a different sefer answers to this name: Sefaria calls it ' +
+          (got.slice(0, 4).join(' / ') || 'nothing at all'));
+        continue;
+      }
       const refs = library.refsFromShape(shape, { title });
       if (!refs.length) { note(title, 'the shape described no pieces'); continue; }
 
@@ -372,7 +394,7 @@ async function yahrzeitPassage(titles, date, tried) {
 }
 
 module.exports = {
-  yahrzeitPassage, answersTo,
+  yahrzeitPassage, answersTo, shapeNames,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '44';
+  var BUILD = '45';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -692,6 +692,7 @@
     // One psalm is not a list to choose from.
     if (teh.parts.length > 1) fillWith('tehillimNav', track);
     else fillWith('tehillimNav', document.createDocumentFragment());
+    wireNumberBars();
     watchTehillim(teh.parts.length);
   }
 
@@ -756,6 +757,7 @@
       track.appendChild(b);
     });
     fillWith('tikkunNav', track);
+    wireNumberBars();
 
     markChapter(state.tikkunChapter || 0, total);
     offerResume(tikkun, total);
@@ -1450,140 +1452,210 @@
   // ------------------------------------------------------------- the lens
 
   /**
-   * The tab bar's lens, and the finger that drags it.
+   * A bar you can drag your finger along.
    *
-   * On the phone the pane under the tab you are on is not a decoration on
-   * that tab -- it is a single piece of glass that lives in the bar and
-   * slides. Put a finger on the bar and it comes to meet you; drag along and
-   * it follows, swelling a little and magnifying whatever it is over, the
-   * way a lens laid on a page does; lift, and it settles on whatever it is
-   * holding and takes you there.
+   * Two bars use this. On the tab bar a piece of glass slides: put a finger
+   * down and it comes to meet you, drag and it follows, lift and it settles
+   * on whatever it is holding and takes you there. On the Tikkun and Tehillim
+   * number bars there is no sliding pane -- the one you are on already has a
+   * lens of its own, measured and tuned -- but the finger still magnifies
+   * whatever it passes over, and lifting opens it.
    *
-   * It has to be one element for any of that to be possible. As a ::after on
-   * each tab there is nothing that moves between them -- one disappears and
-   * another appears, which is a different thing and reads as one.
+   * Smoothness is the whole job, and the first version had none. Three things
+   * were wrong and all three had to go:
    *
-   * From 900px the bar leaves the bottom of the screen and becomes a row of
-   * pills in the flow of the page. There is nothing to slide along there and
-   * no finger to do it with, so the lens stays out of the way and the pills
-   * keep their own pane.
+   *   The pane had a transition on its width while the finger was down, so it
+   *   was always arriving where the finger had been. Nothing is animated
+   *   during a drag now. It is placed exactly under the finger on every
+   *   frame, which is as smooth as a thing can be, by definition.
+   *
+   *   Every move measured all five tabs. Reading an element's box forces the
+   *   browser to settle the layout first, so a drag was asking for five
+   *   layouts a frame. The geometry is read once, when the finger lands.
+   *
+   *   Moves were handled as they arrived, several per frame, each one writing
+   *   a new position that would never be drawn. They are collected and the
+   *   last one is written once per frame.
    */
-  var tabLens = null;
-  var tabBar = null;
+  function wireBarGesture(bar, itemSelector, options) {
+    if (!bar || bar.getAttribute('data-gesture') === 'on') return null;
+    bar.setAttribute('data-gesture', 'on');
 
-  function floatingBar() {
-    return tabBar && window.getComputedStyle(tabBar).position === 'fixed';
-  }
-
-  /** Where a tab sits inside the bar, in the bar's own coordinates. */
-  function lensBoxOf(tab) {
-    var b = tab.getBoundingClientRect();
-    var p = tabBar.getBoundingClientRect();
-    return { x: b.left - p.left, w: b.width, mid: b.left + b.width / 2 };
-  }
-
-  function putLensOn(tab, grown) {
-    if (!tabLens || !tab || !floatingBar()) {
-      if (tabLens) tabLens.style.opacity = '0';
-      return;
+    var opts = options || {};
+    var lens = null;
+    if (opts.lens) {
+      lens = el('span', 'bar-lens');
+      lens.setAttribute('aria-hidden', 'true');
+      bar.insertBefore(lens, bar.firstChild);
     }
-    var m = lensBoxOf(tab);
-    tabLens.style.width = m.w + 'px';
-    tabLens.style.transform = 'translateX(' + m.x + 'px)' + (grown ? ' scale(1.06)' : '');
-    tabLens.style.opacity = '1';
+
+    var boxes = [];        // where each item is, read once per gesture
+    var holding = null;
+    var startX = 0, startY = 0;
+    var engaged = false, decided = false;
+    var pending = null, frame = 0;
+
+    function live() {
+      // The tab bar stops being a bar at 900px, and a number bar that has
+      // more numbers than it can show belongs to the scroll, not to us.
+      if (opts.onlyWhenFixed && window.getComputedStyle(bar).position !== 'fixed') return false;
+      if (bar.scrollWidth > bar.clientWidth + 1) return false;
+      return true;
+    }
+
+    function measure() {
+      var p = bar.getBoundingClientRect();
+      boxes = Array.prototype.map.call(bar.querySelectorAll(itemSelector), function (node) {
+        var r = node.getBoundingClientRect();
+        return { node: node, x: r.left - p.left, w: r.width, mid: r.left + r.width / 2 };
+      });
+      return p;
+    }
+
+    function nearest(clientX) {
+      var best = null, gap = Infinity;
+      for (var i = 0; i < boxes.length; i++) {
+        var d = Math.abs(boxes[i].mid - clientX);
+        if (d < gap) { gap = d; best = boxes[i]; }
+      }
+      return best;
+    }
+
+    function draw() {
+      frame = 0;
+      if (pending === null || !boxes.length) return;
+      var clientX = pending;
+      pending = null;
+      var near = nearest(clientX);
+      if (!near) return;
+      holding = near.node;
+      boxes.forEach(function (b) {
+        b.node.classList.toggle('is-under', b.node === near.node);
+      });
+      if (!lens) return;
+      var p = bar.getBoundingClientRect();
+      // It follows the finger rather than hopping from one to the next, but
+      // it never leaves the bar: a pane hanging off the end reads as a bug.
+      var x = Math.max(0, Math.min(clientX - p.left - near.w / 2, p.width - near.w));
+      lens.style.width = near.w + 'px';
+      lens.style.transform = 'translateX(' + x + 'px) scale(1.06)';
+      lens.style.opacity = '1';
+    }
+
+    function queue(clientX) {
+      pending = clientX;
+      if (!frame) frame = window.requestAnimationFrame(draw);
+    }
+
+    /** Put the pane back on the item that is actually selected, with a spring. */
+    function settle() {
+      if (!lens) return;
+      if (!live()) { lens.style.opacity = '0'; return; }
+      var on = bar.querySelector(itemSelector + '.is-active');
+      if (!on) { lens.style.opacity = '0'; return; }
+      var p = bar.getBoundingClientRect();
+      var r = on.getBoundingClientRect();
+      lens.style.width = r.width + 'px';
+      lens.style.transform = 'translateX(' + (r.left - p.left) + 'px)';
+      lens.style.opacity = '1';
+    }
+
+    function release() {
+      bar.classList.remove('is-dragging');
+      boxes.forEach(function (b) { b.node.classList.remove('is-under'); });
+      if (frame) { window.cancelAnimationFrame(frame); frame = 0; }
+      pending = null;
+      engaged = false;
+      decided = false;
+    }
+
+    bar.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || !live()) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      decided = false;
+      engaged = !!opts.grabAtOnce;
+      measure();
+      if (engaged) {
+        bar.classList.add('is-dragging');
+        queue(startX);
+      }
+    }, { passive: true });
+
+    bar.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 1 || !boxes.length) return;
+      var t = e.touches[0];
+      if (!decided && !engaged) {
+        var dx = Math.abs(t.clientX - startX);
+        var dy = Math.abs(t.clientY - startY);
+        if (dy > 10 && dy > dx) { decided = true; return; }   // the page is scrolling
+        if (dx > 10 && dx > dy) { decided = true; engaged = true; bar.classList.add('is-dragging'); }
+        else return;
+      }
+      if (!engaged) return;
+      // Once this is our gesture the page must not scroll under it.
+      if (e.cancelable) e.preventDefault();
+      queue(t.clientX);
+    }, { passive: false });
+
+    bar.addEventListener('touchend', function (e) {
+      if (!engaged) { release(); return; }
+      var moved = Math.abs((e.changedTouches[0] || {}).clientX - startX) > 8;
+      var picked = holding;
+      release();
+      settle();
+      // A tap is left to the click that follows it, so a thing is opened in
+      // exactly one place. A drag has no click worth having -- the finger
+      // comes up over an item it never went down on, and the browser would
+      // send the click to the wrong one -- so that is stopped and acted on
+      // here instead.
+      if (moved && picked) {
+        if (e.cancelable) e.preventDefault();
+        if (opts.onPick) opts.onPick(picked);
+      }
+    }, { passive: false });
+
+    bar.addEventListener('touchcancel', function () { release(); settle(); });
+
+    try {
+      new ResizeObserver(function () { settle(); }).observe(bar);
+    } catch (err) {
+      window.addEventListener('resize', settle);
+    }
+    settle();
+    return settle;
   }
 
-  /** Called whenever the page changes or the bar is resized. */
+  /* The tab bar's pane, and the function that puts it back where it belongs
+     whenever the page changes underneath it. */
+  var settleTabLens = null;
+
   function positionTabLens() {
-    if (!tabLens) return;
-    var on = document.querySelector('.tabs .tab.is-active');
-    putLensOn(on, false);
+    if (settleTabLens) settleTabLens();
   }
 
   function wireTabLens() {
-    tabBar = document.querySelector('.tabs');
-    if (!tabBar || tabLens) return;
+    settleTabLens = wireBarGesture(document.querySelector('.tabs'), '.tab', {
+      lens: true,
+      // The pane comes to meet a finger the moment it lands, before any
+      // movement -- that is most of what makes the bar feel alive.
+      grabAtOnce: true,
+      onlyWhenFixed: true,
+      onPick: function (tab) { showPanel(tab.getAttribute('data-panel')); },
+    });
+  }
 
-    tabLens = el('span', 'tab-lens');
-    tabLens.setAttribute('aria-hidden', 'true');
-    tabBar.insertBefore(tabLens, tabBar.firstChild);
-
-    var tabs = Array.prototype.slice.call(tabBar.querySelectorAll('.tab'));
-    var holding = null;
-    var startedAt = 0;
-    var moved = false;
-
-    // Which tab is nearest the finger, and the lens dragged to meet it.
-    function follow(clientX) {
-      var p = tabBar.getBoundingClientRect();
-      var near = null, best = Infinity;
-      tabs.forEach(function (tab) {
-        var d = Math.abs(lensBoxOf(tab).mid - clientX);
-        if (d < best) { best = d; near = tab; }
+  /* The number bars. No sliding pane here: the number you are on already has
+     a lens of its own, measured against the psalm passing behind it, and a
+     second one would be two. The finger still magnifies what it passes over,
+     and lifting opens it. */
+  function wireNumberBars() {
+    Array.prototype.forEach.call(document.querySelectorAll('.chapter-track'), function (track) {
+      wireBarGesture(track, 'button', {
+        lens: false,
+        onPick: function (button) { button.click(); },
       });
-      if (!near) return null;
-      var m = lensBoxOf(near);
-      // It follows the finger rather than snapping tab to tab, but it never
-      // leaves the bar -- a lens hanging off the end looks like a bug.
-      var x = Math.max(0, Math.min(clientX - p.left - m.w / 2, p.width - m.w));
-      tabLens.style.width = m.w + 'px';
-      tabLens.style.transform = 'translateX(' + x + 'px) scale(1.06)';
-      tabLens.style.opacity = '1';
-      tabs.forEach(function (tab) { tab.classList.toggle('is-under', tab === near); });
-      return near;
-    }
-
-    function letGo() {
-      tabBar.classList.remove('is-dragging');
-      tabs.forEach(function (tab) { tab.classList.remove('is-under'); });
-      holding = null;
-      moved = false;
-    }
-
-    tabBar.addEventListener('touchstart', function (e) {
-      if (!floatingBar() || e.touches.length !== 1) return;
-      startedAt = e.touches[0].clientX;
-      moved = false;
-      tabBar.classList.add('is-dragging');
-      holding = follow(startedAt);
-    }, { passive: true });
-
-    tabBar.addEventListener('touchmove', function (e) {
-      if (!holding || e.touches.length !== 1) return;
-      var x = e.touches[0].clientX;
-      if (Math.abs(x - startedAt) > 8) moved = true;
-      holding = follow(x);
-    }, { passive: true });
-
-    tabBar.addEventListener('touchend', function (e) {
-      if (!holding) return;
-      var picked = holding;
-      var dragged = moved;
-      letGo();
-      putLensOn(picked, false);
-      // A tap is left to the click that follows it, so a tab is opened in
-      // exactly one place. A drag has no click worth having -- the finger
-      // went up over a tab it never went down on -- so that one is stopped
-      // here and acted on directly.
-      if (dragged) {
-        if (e.cancelable) e.preventDefault();
-        showPanel(picked.getAttribute('data-panel'));
-      }
     });
-
-    tabBar.addEventListener('touchcancel', function () {
-      letGo();
-      positionTabLens();
-    });
-
-    // The bar changes width when the phone turns, and changes shape entirely
-    // at 900px. Either way the lens has to be told.
-    try {
-      new ResizeObserver(function () { positionTabLens(); }).observe(tabBar);
-    } catch (err) {
-      window.addEventListener('resize', positionTabLens);
-    }
-    positionTabLens();
   }
 
   // ------------------------------------------------------------- navigation

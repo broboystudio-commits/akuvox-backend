@@ -124,6 +124,16 @@ async function main() {
     answers([{ length: 124, chapters: [] }], 'Tanya') === true);
   check('A book field counts as its name',
     answers([{ book: 'Tanya' }], 'Likutei Amarim') === false);
+  // Both of these were being refused on their own yahrzeits, by their own
+  // titles, because the match was anchored at the start of the name.
+  check('A sefer filed with a word in front of its name is still itself',
+    answers([{ title: 'Sefer Noam Elimelech' }], 'Noam Elimelech') === true);
+  check('And one filed under two names at once',
+    answers([{ title: 'Likutei Amarim Tanya' }], 'Tanya') === true);
+  // The substitution this guard exists for still has to be caught: neither
+  // name contains the other, so widening the match did not let it through.
+  check('But the Tanya still does not answer to the Maggid\'s sefer',
+    answers([{ title: 'Tanya' }], 'Likutei Amarim') === false);
 
   // And the count of years is right, not off by one.
   const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];
