@@ -53,6 +53,7 @@
   --bar-lens:   rgba(255, 255, 255, 0.88);
   --bar-on:     var(--rose-700);
   --bar-veil:   rgba(253, 251, 249, 0.62);
+  --bar-bright-tabs: 1.18;
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -122,6 +123,12 @@ body {
      shadow past that -- so the old 76px left the last line of a page sitting
      behind it. */
   padding-bottom: calc(100px + var(--safe-bottom));
+  /* Do NOT give this a stacking context. `isolation: isolate` here, or on
+     <main> or <html>, cuts the top bar's backdrop down to the page
+     background -- flat colour -- and its blur then has nothing to blur.
+     Measured before and after: 14.3 of movement without it, 0.00 with. It
+     was added once, on the strength of a test that turned out to be
+     measuring itself. */
   overscroll-behavior-y: contain;
 
   /* The pastel wash: three soft pools of colour over warm white. */
@@ -152,8 +159,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      to read the page moving under it -- 0.62 where it used to be 0.92 with a
      hard rule drawn under it. */
   background: var(--bar-veil);
-  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
-  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  /* Deeper than the bars below it. They pass over a column of text for a
+     moment as you scroll; this one has the whole page running under it all
+     the time, and at 18px the sentences came through as sentences. */
+  backdrop-filter: blur(30px) saturate(190%) brightness(var(--bar-bright));
+  -webkit-backdrop-filter: blur(30px) saturate(190%) brightness(var(--bar-bright));
   /* No rule. A hairline across the screen is the one thing that says "this
      is a panel painted on top" rather than "this is glass". What marks the
      edge instead is the light along it. */
@@ -661,8 +671,8 @@ body.hide-english .en { display: none; }
   border-radius: 28px;
   border: 0;
   background: var(--bar-glass);
-  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
-  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  backdrop-filter: blur(20px) saturate(200%) brightness(var(--bar-bright-tabs));
+  -webkit-backdrop-filter: blur(20px) saturate(200%) brightness(var(--bar-bright-tabs));
   box-shadow:
     inset 0 1px 0 var(--bar-lit),
     inset 0 -1px 0 var(--bar-under),
@@ -1039,6 +1049,12 @@ body.hide-english .en { display: none; }
   --bar-lens:   rgba(255, 255, 255, 0.95);
   --bar-on:     #1c1c1e;
   --bar-veil:   rgba(0, 0, 0, 0.34);
+  /* The number bar is dimmed hard because it lies over the psalm you are
+     reading. The tab bar lies over the end of the page, and its labels have
+     four times the contrast they need, so it can afford to stay clear --
+     which is the difference between looking like glass and looking like a
+     dark slab with words on it. */
+  --bar-bright-tabs: 0.88;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
