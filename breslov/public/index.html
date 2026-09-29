@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="37">
+<html lang="en" data-build="38">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=37" />
+<link rel="stylesheet" href="/styles.css?v=38" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -156,17 +156,6 @@
       <div class="chips" id="heroChips"></div>
     </article>
 
-    <!-- Only on a day there is one. Placed straight after the date so it is
-         the first thing in the right-hand column on a wide screen. -->
-    <article class="card" id="yahrzeitCard" hidden>
-      <header class="card-head">
-        <h2 id="yahrzeitTitle">Yahrzeit</h2>
-        <span class="ref he" id="yahrzeitHe"></span>
-      </header>
-      <p class="hint" id="yahrzeitAbout"></p>
-      <div id="yahrzeitBody"></div>
-    </article>
-
     <article class="card verse-card">
       <header class="card-head">
         <h2>A word for today</h2>
@@ -175,6 +164,21 @@
       <div id="verseBody"><div class="skeleton"></div></div>
       <div class="full" id="sparkFull" hidden></div>
       <button class="btn" id="openFull" type="button" hidden>Read the whole lesson</button>
+    </article>
+
+    <!-- After the lesson, not before it.
+         On a wide screen the lesson is told to stand beside three cards in
+         the right-hand column. Putting this one ahead of it in the markup
+         sent the grid past column one before the lesson asked for it, so the
+         lesson dropped to the next row and left the whole left-hand side of
+         the page empty. Order in the markup is the order down that column. -->
+    <article class="card" id="yahrzeitCard" hidden>
+      <header class="card-head">
+        <h2 id="yahrzeitTitle">Yahrzeit</h2>
+        <span class="ref he" id="yahrzeitHe"></span>
+      </header>
+      <p class="hint" id="yahrzeitAbout"></p>
+      <div id="yahrzeitBody"></div>
     </article>
 
     <article class="card">
@@ -492,6 +496,6 @@
 
 </main>
 
-<script src="/app.js?v=37"></script>
+<script src="/app.js?v=38"></script>
 </body>
 </html>

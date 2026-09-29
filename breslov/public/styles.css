@@ -911,11 +911,16 @@ body.hide-english .en { display: none; }
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Lifted a long way off black: a plum you can read on at night without the
-     page feeling like a hole. The cards sit lighter again on top of it. */
-  --paper: #251d31;
-  --white: #332942;
-  --card-bg-top: #322840;
+  /* Apple's own dark palette, near enough to the value.
+     The plum this replaces tinted every surface in the app, and what people
+     saw first was the colour rather than the words. A dark interface is
+     supposed to disappear: black page, near-black cards one step off it, and
+     colour spent only where it means something. These are the system values
+     -- systemBackground and secondarySystemBackground -- so the app sits on a
+     phone looking like the rest of it rather than like a theme. */
+  --paper: #000000;
+  --white: #1c1c1e;
+  --card-bg-top: #1c1c1e;
 
   --glass-fill:   rgba(255, 255, 255, 0.07);
   --glass-fill-2: rgba(255, 255, 255, 0.15);
@@ -927,76 +932,84 @@ body.hide-english .en { display: none; }
                   0 8px 20px -8px rgba(0, 0, 0, 0.55);
   --glass-cast-lifted: 0 2px 4px rgba(0, 0, 0, 0.38),
                        0 16px 30px -10px rgba(0, 0, 0, 0.62);
-  --veil: rgba(58, 47, 74, 0.74);
+  --veil: rgba(44, 44, 46, 0.86);
 
-  --rose-50:  #382c46;
-  --rose-100: #453552;
-  --rose-200: #57415f;
-  --rose-300: #cf97a3;
-  --rose-500: #e4b2bb;
-  --rose-700: #f6ccd4;
+  /* The quiet end of the scale is grey now, not plum: these are the fills a
+     card or a pill sits on, and they should read as a surface rather than a
+     colour. Rose and gold stay, but only where they say something -- the
+     zman you are waiting for, the psalm you are on, a heading. */
+  --rose-50:  #1c1c1e;
+  --rose-100: #2c2c2e;
+  --rose-200: #3a3a3c;
+  --rose-300: #e0a7ae;
+  --rose-500: #eab8bf;
+  --rose-700: #f4ccd2;
 
-  --gold-100: #40344a;
-  --gold-200: #5b4a3c;
-  --gold-400: #ddb771;
-  --gold-600: #edcd8b;
-  --gold-700: #f8e0aa;
+  --gold-100: #2c2c2e;
+  --gold-200: #3a3a3c;
+  --gold-400: #e3bd79;
+  --gold-600: #efd095;
+  --gold-700: #f6e0ad;
 
-  --ink:   #f6f1f9;
-  /* Was #c6bad2, which came to 4.4:1 on a glass pill -- just under the mark. */
-  --ink-2: #d2c8dc;
-  --ink-3: #9a8fa8;
-  /* The rose-gold fill stays light in the dark theme, so its label stays dark. */
-  --on-accent: #2b2137;
+  /* Apple's label colours. Pure white for what you read, and two steps down
+     for what you glance at. */
+  --ink:   #ffffff;
+  --ink-2: rgba(235, 235, 245, 0.72);
+  --ink-3: rgba(235, 235, 245, 0.42);
+  /* The rose-gold fill stays light, so its label stays dark. */
+  --on-accent: #1c1c1e;
 
-  --line:   rgba(255, 255, 255, 0.10);
-  --line-2: rgba(255, 255, 255, 0.18);
+  /* separator and opaqueSeparator. */
+  --line:   rgba(84, 84, 88, 0.65);
+  --line-2: rgba(120, 120, 128, 0.55);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
   --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 56px -22px rgba(0, 0, 0, 0.8);
 }
 
+/* Black, and nothing else.
+   Four coloured washes used to cross the page behind everything, which is
+   what made the whole app look tinted. Apple's dark mode has no wash at all:
+   the background is the absence of one. */
 :root[data-theme="dark"] body {
-  background:
-    radial-gradient(1150px 660px at 6% -14%,  rgba(196, 118, 134, 0.34), transparent 60%),
-    radial-gradient(920px 560px at 110% -6%,  rgba(186, 148, 84, 0.28), transparent 58%),
-    radial-gradient(980px 800px at 52% 112%,  rgba(146, 100, 134, 0.32), transparent 62%),
-    radial-gradient(700px 500px at 88% 62%,   rgba(168, 122, 146, 0.22), transparent 60%),
-    var(--paper);
+  background: var(--paper);
 }
 
+/* The bars are the frosted material over black, not a coloured pane. */
 :root[data-theme="dark"] .topbar {
-  background: linear-gradient(180deg, rgba(37, 29, 49, 0.94) 0%, rgba(37, 29, 49, 0.76) 100%);
+  background: rgba(0, 0, 0, 0.72);
 }
 
 :root[data-theme="dark"] .tabs {
-  background: linear-gradient(0deg, rgba(37, 29, 49, 0.96) 0%, rgba(37, 29, 49, 0.80) 100%);
+  background: rgba(0, 0, 0, 0.78);
 }
 
+/* Flat, one step off the page. A card in Apple's dark mode is a shade, not a
+   gradient -- and a gradient behind text on black is what made the reading
+   pages feel murky. */
 :root[data-theme="dark"] .card,
 :root[data-theme="dark"] .hero {
-  background: linear-gradient(168deg,
-    rgba(58, 47, 76, 0.94) 0%,
-    rgba(51, 41, 66, 0.90) 55%,
-    rgba(64, 48, 78, 0.94) 100%);
-  border-color: rgba(255, 255, 255, 0.09);
+  background: var(--white);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
+/* A filled button carries the accent; everything else is a grey fill. */
 :root[data-theme="dark"] .btn {
-  background: linear-gradient(135deg, rgba(185, 129, 140, 0.20), rgba(201, 164, 88, 0.20));
+  background: rgba(120, 120, 128, 0.24);
   border-color: rgba(255, 255, 255, 0.10);
   color: var(--rose-700);
 }
 
+/* secondarySystemFill, which is what an unselected control sits on. */
 :root[data-theme="dark"] .chapters button,
 :root[data-theme="dark"] .pill,
 :root[data-theme="dark"] .quick-card,
 :root[data-theme="dark"] .stepper button,
 :root[data-theme="dark"] .icon-btn,
 :root[data-theme="dark"] .aa {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(120, 120, 128, 0.20);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 :root[data-theme="dark"] .chapters button.is-active,
@@ -1006,14 +1019,14 @@ body.hide-english .en { display: none; }
 }
 
 :root[data-theme="dark"] .zman.is-next {
-  background: linear-gradient(120deg, rgba(185, 129, 140, 0.20), rgba(201, 164, 88, 0.18));
+  background: rgba(224, 167, 174, 0.14);
 }
 
 :root[data-theme="dark"] .switch { background: rgba(255, 255, 255, 0.09); }
-:root[data-theme="dark"] .switch::after { background: #cfc4d6; }
+:root[data-theme="dark"] .switch::after { background: #ffffff; }
 
 :root[data-theme="dark"] .notice {
-  background: linear-gradient(135deg, rgba(185, 129, 140, 0.14), rgba(201, 164, 88, 0.12));
+  background: rgba(120, 120, 128, 0.18);
 }
 
 /* Every background property is named here rather than using the shorthand,
@@ -1239,7 +1252,7 @@ body.hide-english .verse-card .verse-en { display: none; }
 .suggest[hidden] { display: none; }
 
 :root[data-theme="dark"] .suggest {
-  background: linear-gradient(168deg, #3d3150 0%, #332942 100%);
+  background: #2c2c2e;
 }
 
 .suggest-item {
@@ -1330,8 +1343,8 @@ body.hide-english .verse-card .verse-en { display: none; }
 .searchbar .btn { width: auto; flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }
 
 :root[data-theme="dark"] .searchbar input {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(120, 120, 128, 0.20);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .result {
@@ -1582,12 +1595,10 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 
 :root[data-theme="dark"] .chapter-track { background: var(--card-bg-top); }
-:root[data-theme="dark"] .resume {
-  background: linear-gradient(135deg, rgba(185,129,140,0.16), rgba(201,164,88,0.14));
-}
+:root[data-theme="dark"] .resume { background: rgba(120, 120, 128, 0.18); }
 :root[data-theme="dark"] .resume button {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.12);
+  background: rgba(120, 120, 128, 0.24);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* ---------------------------------------------------------------- desktop
@@ -2075,9 +2086,11 @@ body.hide-english .verse-card .verse-en { display: none; }
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
   pointer-events: none;
 }
+/* No gloss on a dark card. On black it reads as a grey film across the top
+   of everything rather than as light. */
 :root[data-theme="dark"] .card::after,
 :root[data-theme="dark"] .hero::after {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0));
+  background: none;
 }
 .card { position: relative; }
 
