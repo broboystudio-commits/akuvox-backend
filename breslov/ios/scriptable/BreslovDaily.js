@@ -211,7 +211,11 @@ function buildSmall(data) {
   w.setPadding(14, 14, 14, 14);
 
   addHebrew(w, data.hebrewDate, Font.semiboldSystemFont(15), COLORS.gold, 1);
-  if (data.parsha) addLine(w, data.parsha, Font.systemFont(10), COLORS.inkFaint, 1);
+  // On the seventeen days a year it falls, the yahrzeit takes the parsha's
+  // line. There is only room for one of them and it is the rarer.
+  const small = (data.yahrzeits || [])[0];
+  if (small) addLine(w, small.name, Font.semiboldSystemFont(10), COLORS.goldSoft, 1);
+  else if (data.parsha) addLine(w, data.parsha, Font.systemFont(10), COLORS.inkFaint, 1);
 
   w.addSpacer(6);
 
@@ -316,21 +320,31 @@ function buildLarge(data) {
 function buildAccessoryRectangular(data) {
   const w = new ListWidget();
   w.setPadding(1, 2, 1, 2);
+  const who = (data.yahrzeits || [])[0];
 
   if (data.next) {
     addLine(w, `${data.next.time} · ${data.next.label}`, Font.semiboldSystemFont(16), Color.white(), 1);
-    addLine(w, data.next.tomorrow ? 'tomorrow' : awayFromNow(data.next.minutesAway),
-      Font.systemFont(12), Color.white(), 1);
+    // Three lines fit. On a yahrzeit the countdown gives up its place: you
+    // can work out "in 40 minutes" from the time, and there is no working
+    // out that it is the eighteenth of Tishrei.
+    if (!who) {
+      addLine(w, data.next.tomorrow ? 'tomorrow' : awayFromNow(data.next.minutesAway),
+        Font.systemFont(12), Color.white(), 1);
+    }
   }
   addHebrew(w, data.hebrewDate, Font.semiboldSystemFont(14), Color.white(), 1);
+  if (who) addLine(w, `Yahrzeit · ${who.name}`, Font.systemFont(11), Color.white(), 1);
   return w;
 }
 
 function buildAccessoryInline(data) {
   const w = new ListWidget();
-  const text = data.next
-    ? `${data.next.label} ${data.next.time}${data.next.tomorrow ? ' tomorrow' : ''}`
-    : data.hebrewDateEn;
+  const who = (data.yahrzeits || [])[0];
+  const text = who
+    ? `Yahrzeit · ${who.name}`
+    : data.next
+      ? `${data.next.label} ${data.next.time}${data.next.tomorrow ? ' tomorrow' : ''}`
+      : data.hebrewDateEn;
   addLine(w, text, Font.systemFont(12), Color.white(), 1);
   return w;
 }

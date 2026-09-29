@@ -9,7 +9,8 @@
     "seed": "node scripts/seed.js",
     "check": "node scripts/selftest.js",
     "smoke": "node scripts/smoke.js",
-    "resilience": "node scripts/resilience.js"
+    "resilience": "node scripts/resilience.js",
+    "widget": "node scripts/widget-check.js"
   },
   "dependencies": {
     "@hebcal/core": "^5.4.11",
