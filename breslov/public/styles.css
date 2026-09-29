@@ -39,6 +39,12 @@
   --glass-blur: blur(14px) saturate(185%) brightness(1.04);
   /* A card is a bigger pane, so it takes a deeper blur. */
   --glass-blur-card: blur(22px) saturate(180%);
+
+  /* The number track: a trough of glass with the numbers riding in it. */
+  --track-glass: rgba(255, 255, 255, 0.68);
+  --track-rim:   rgba(255, 255, 255, 0.85);
+  --track-lit:   rgba(255, 255, 255, 0.9);
+  --track-pill:  rgba(255, 255, 255, 0.72);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -563,17 +569,23 @@ body.hide-english .en { display: none; }
   max-width: 100%;
   padding: 4px;
   border-radius: 999px;
-  /* Solid, because the words scroll behind it.
-     Frosted was tried first and the Hebrew read straight through the blur --
-     at its worst a number sat on a stroke of text almost its own colour. A
-     small raised control is allowed to be a slightly different shade from the
-     card it rests on; a band stretched across the whole card is not, which is
-     why this is a pill and not a bar. */
-  background: var(--card-bg-top);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-cast);
+  /* Glass, in two layers, which is the only way it is both.
+     A single frosted pane was tried and the Hebrew read straight through it
+     -- at its worst a number sat on a stroke of text at 1.02:1. So the pane
+     carries the blur and the tint and does the looking-like-glass, and each
+     number sits on a small fill of its own, so no glyph is ever laid directly
+     over smeared text. Apple's own segmented control is built the same way:
+     a glass trough with a lozenge riding in it. */
+  background: var(--track-glass);
+  /* Heavy blur on purpose. At 28px the words behind were still legible
+     through the glass, which is busy to read a psalm over -- what should come
+     through is colour and movement, not sentences. */
+  -webkit-backdrop-filter: blur(44px) saturate(190%);
+  backdrop-filter: blur(44px) saturate(190%);
+  border: 1px solid var(--track-rim);
+  /* A lit top edge inside, a contact shadow outside: the two things that
+     make a pane look like it has thickness rather than being painted on. */
+  box-shadow: inset 0 1px 0 var(--track-lit), var(--glass-cast);
   /* On a narrow phone ten numbers will not fit; the track scrolls rather
      than shrinking them to nothing, and the one you are on scrolls itself
      into view. */
@@ -581,6 +593,9 @@ body.hide-english .en { display: none; }
   scrollbar-width: none;
 }
 .chapter-track::-webkit-scrollbar { display: none; }
+
+/* The lozenge. Its own fill, so a glyph never sits straight on the blur. */
+.chapter-track button { background: var(--track-pill); }
 
 .chapters button {
   flex: 0 0 auto;
@@ -962,6 +977,16 @@ body.hide-english .en { display: none; }
   /* separator and opaqueSeparator. */
   --line:   rgba(84, 84, 88, 0.65);
   --line-2: rgba(120, 120, 128, 0.55);
+
+  /* On black the trough is dark glass and the lozenges ride a shade lighter
+     in it. A light trough was tried first and measured 2.83:1 -- light
+     numbers on a light fill, made worse by bright Hebrew blurring through
+     from behind. Glass over a dark page is dark; that is why Apple's own
+     bars go darker at night rather than lighter. */
+  --track-glass: rgba(20, 20, 22, 0.82);
+  --track-rim:   rgba(255, 255, 255, 0.18);
+  --track-lit:   rgba(255, 255, 255, 0.16);
+  --track-pill:  rgba(120, 120, 128, 0.34);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -1594,7 +1619,7 @@ body.hide-english .verse-card .verse-en { display: none; }
 }
 
 
-:root[data-theme="dark"] .chapter-track { background: var(--card-bg-top); }
+
 :root[data-theme="dark"] .resume { background: rgba(120, 120, 128, 0.18); }
 :root[data-theme="dark"] .resume button {
   background: rgba(120, 120, 128, 0.24);
