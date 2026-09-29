@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '34';
+  var BUILD = '35';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -548,13 +548,38 @@
 
     var body = $('yahrzeitBody');
     if (!body) return;
-    if (today.passage && today.passage.available) {
-      fill(body, passage(today.passage));
-    } else {
-      fill(body, el('p', 'hint', today.book
-        ? 'His sefer is not on Sefaria, so there is nothing to quote here rather than something he did not say.'
-        : ''));
+    var p = today.passage;
+    if (!p || !p.available) {
+      fill(body, el('p', 'hint',
+        'His sefer is not on Sefaria, so there is nothing quoted here rather than something he did not say.'));
+      return;
     }
+
+    // An excerpt, with the reference and a way through to the whole piece.
+    // The card is beside the day's learning, not instead of it.
+    var box = el('div', 'passage');
+    if (p.ref) box.appendChild(el('div', 'passage-label', p.heRef || p.ref));
+    if (p.he) box.appendChild(el('div', 'he', p.he));
+    if (p.en && state.english) box.appendChild(el('div', 'en', p.en));
+
+    var src = el('div', 'source');
+    if (p.credit) {
+      var bits = [];
+      if (p.credit.hebrew) bits.push('Hebrew: ' + p.credit.hebrew);
+      if (p.credit.english) bits.push('Translation: ' + p.credit.english);
+      if (p.credit.license) bits.push('License: ' + p.credit.license);
+      src.appendChild(document.createTextNode(bits.join(' · ')));
+    }
+    if (p.url) {
+      src.appendChild(document.createElement('br'));
+      var a = el('a', null, 'Read the whole piece on Sefaria →');
+      a.href = p.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      src.appendChild(a);
+    }
+    box.appendChild(src);
+    fill(body, box);
   }
 
   function renderZmanim(zmanim, cal) {

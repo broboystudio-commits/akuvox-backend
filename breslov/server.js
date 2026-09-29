@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '34';
+const BUILD = '35';
 
 app.use(cors());
 
@@ -187,9 +187,12 @@ app.get('/api/diagnostics', route(async (req) => {
   const withBooks = yahrzeits.all().filter((y) => y.book);
   const yahrzeitBooks = await Promise.all(withBooks.map(async (y) => {
     try {
-      const shape = await sefaria.getShape(y.book);
-      const refs = library.refsFromShape(shape, { title: y.book });
-      return { name: y.name, book: y.book, ok: refs.length > 0, pieces: refs.length };
+      for (const title of [y.book].concat(y.aliases || [])) {
+        const shape = await sefaria.getShape(title);
+        const refs = library.refsFromShape(shape, { title });
+        if (refs.length) return { name: y.name, book: y.book, foundAs: title, ok: true, pieces: refs.length };
+      }
+      return { name: y.name, book: y.book, ok: false, pieces: 0 };
     } catch (err) {
       return { name: y.name, book: y.book, ok: false, detail: err.message };
     }
@@ -390,7 +393,7 @@ async function yahrzeitsFor(calendar, date) {
   return Promise.all(today.map(async (who) => {
     const passage = who.book
       ? await cached(`yahrzeit:${who.id}:${daily.dayKey(date)}`, DAY,
-          () => daily.yahrzeitPassage(who.book, date))
+          () => daily.yahrzeitPassage([who.book].concat(who.aliases || []), date))
       : null;
     return Object.assign({}, who, { passage: passage || null });
   }));

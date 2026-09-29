@@ -275,21 +275,42 @@ function dayKey(date) {
  * here trusts a title without asking. If the answer is no, the yahrzeit is
  * shown on its own. Nothing is ever put into a tzaddik's mouth.
  */
-async function yahrzeitPassage(title, date) {
-  if (!title) return null;
-  try {
-    const shape = await sefaria.getShape(title);
-    const refs = library.refsFromShape(shape, { title });
-    if (!refs.length) return null;
+async function yahrzeitPassage(titles, date) {
+  const candidates = (Array.isArray(titles) ? titles : [titles])
+    .filter((t, i, all) => t && all.indexOf(t) === i);
 
-    // The same piece all day, and a different one next year.
-    const ref = pickForDay(refs, date, 29);
-    const text = await sefaria.getText(ref);
-    if (!text || !(text.hebrew || []).length) return null;
-    return present(text, { book: title });
-  } catch (err) {
-    return null;
+  for (const title of candidates) {
+    try {
+      const shape = await sefaria.getShape(title);
+      const refs = library.refsFromShape(shape, { title });
+      if (!refs.length) continue;
+
+      // The same piece all day, and a different one next year.
+      const ref = pickForDay(refs, date, 29);
+      const text = await sefaria.getText(ref);
+      if (!text || !(text.hebrew || []).length) continue;
+
+      // An excerpt, not the whole piece.
+      //
+      // Keter Shem Tov resolves to two references -- its two parts -- so
+      // "a passage" from it is an entire half of the sefer. A yahrzeit card
+      // is not the place for that, whichever sefer it is, and the link goes
+      // to the whole thing on Sefaria.
+      const full = present(text, { book: title });
+      return {
+        available: true,
+        ref: full.ref,
+        heRef: full.heRef,
+        url: full.url,
+        he: full.snippetHe,
+        en: full.snippetEn,
+        credit: full.credit,
+      };
+    } catch (err) {
+      // Try the next spelling.
+    }
   }
+  return null;
 }
 
 module.exports = {

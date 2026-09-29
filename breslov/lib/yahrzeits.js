@@ -44,7 +44,11 @@ const YAHRZEITS = [
     he: 'רַבִּי דֹּב בֶּער מִמֶּזְרִיטְשׁ',
     month: 'Kislev', day: 19, year: 5533,
     about: 'Rabbi Dov Ber, successor to the Baal Shem Tov, whose talmidim carried Chassidus across Europe.',
+    // Sefaria does not have it under this spelling -- the diagnostics said so
+    // plainly, 0 pieces -- so these are tried too. Transliteration from
+    // Hebrew has no single right answer and the app must not assume one.
     book: 'Maggid Devarav LeYaakov',
+    aliases: ['Magid Devarav LeYaakov', 'Or Torah', 'Likutei Amarim'],
   },
   {
     id: 'alter-rebbe',
@@ -185,6 +189,7 @@ function yahrzeitsOn(hebrew) {
       about: y.about,
       year: y.year || null,
       book: y.book || null,
+      aliases: y.aliases || [],
       // How many years, when we know the year they passed away.
       years: y.year ? hebrew.year - y.year : null,
       inSecondAdar: y.month === 'Adar' && hebrew.monthName === 'Adar II',
