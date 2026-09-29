@@ -54,14 +54,10 @@
   --bar-on:     var(--rose-700);
   --bar-veil:   rgba(253, 251, 249, 0.62);
   --bar-bright-tabs: 1.18;
-  /* 0.52 was clearer and measured 4.31:1 on the row labels, just under the
-     line. Light glass over a bright page ends up nearly white anyway --
-     Apple's daylight menus are no clearer than this. */
-  --panel-glass: rgba(255, 255, 255, 0.66);
-  --ctl-glass:   rgba(255, 255, 255, 0.45);
-  --ctl-rim:     rgba(255, 255, 255, 0.85);
-  --ctl-lit:     rgba(255, 255, 255, 0.9);
-  --ctl-shade:   rgba(120, 110, 130, 0.16);
+  --panel-glass: rgba(255, 255, 255, 0.62);
+  /* One faint hairline, and that is the whole edge. */
+  --panel-rim:   rgba(120, 110, 130, 0.14);
+  --panel-line:  rgba(120, 110, 130, 0.13);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -338,13 +334,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      So: half the tint, more saturation to keep what does come through from
      going grey, and the edge drawn as light instead of as a line. */
   background: var(--panel-glass);
-  backdrop-filter: blur(40px) saturate(220%);
-  -webkit-backdrop-filter: blur(40px) saturate(220%);
+  /* Clear, with enough blur to soften what is behind rather than erase it.
+     At 40px the page behind was a flat wash; at 26 you can still tell there
+     is a page there, which is the point of a pane you can see through. */
+  backdrop-filter: blur(26px) saturate(210%);
+  -webkit-backdrop-filter: blur(26px) saturate(210%);
   border: 0;
+  /* One faint hairline and the shadow that lifts it. The bright rim and the
+     lit top edge were two more things to look at on a panel whose whole job
+     is to be looked through. */
   box-shadow:
-    inset 0 0 0 1px var(--ctl-rim),
-    inset 0 1px 0 var(--ctl-lit),
-    0 24px 60px -20px rgba(20, 14, 26, 0.55);
+    inset 0 0 0 1px var(--panel-rim),
+    0 24px 60px -20px rgba(20, 14, 26, 0.5);
   transform: translateX(calc(100% + 16px));
   transition: transform var(--bounce) var(--spring);
 }
@@ -1056,7 +1057,11 @@ body.hide-english .en { display: none; }
      numbers on a light fill, made worse by bright Hebrew blurring through
      from behind. Glass over a dark page is dark; that is why Apple's own
      bars go darker at night rather than lighter. */
-  --bar-glass:  rgba(120, 120, 128, 0.18);
+  /* A dark tint, not a light one. A light grey veil over a black page looks
+     like glass until a bright Hebrew stroke passes under it: the veil adds
+     to it instead of covering it, and a white numeral on top measured 4.17:1.
+     A dark tint takes the stroke down the way a dark material does. */
+  --bar-glass:  rgba(18, 18, 20, 0.40);
   --bar-rim:    rgba(255, 255, 255, 0.38);
   --bar-lit:    rgba(255, 255, 255, 0.28);
   --bar-under:  rgba(255, 255, 255, 0.06);
@@ -1066,6 +1071,11 @@ body.hide-english .en { display: none; }
      made the bar a sheet again. Dimming keeps it clear -- you still see the
      shapes and the colour through it, darker -- and that is what a dark
      material does on a phone. */
+  /* 0.6 read as a pass for several builds, but the check was measuring a
+     page that had not finished arriving. Settled, it was 3.95:1. Dimming
+     harder made it worse, which is what finally gave the cause away: the
+     tint was a light grey adding to the very strokes it was meant to cover.
+     With a dark tint doing that work, this can stay where it was. */
   --bar-bright: 0.6;
   --bar-ink:    #ffffff;
   /* The lens is the one part of the bar that cannot be clear. At 0.18 it
@@ -1083,11 +1093,9 @@ body.hide-english .en { display: none; }
      which is the difference between looking like glass and looking like a
      dark slab with words on it. */
   --bar-bright-tabs: 0.88;
-  --panel-glass: rgba(44, 44, 48, 0.44);
-  --ctl-glass:   rgba(120, 120, 128, 0.28);
-  --ctl-rim:     rgba(255, 255, 255, 0.26);
-  --ctl-lit:     rgba(255, 255, 255, 0.42);
-  --ctl-shade:   rgba(0, 0, 0, 0.3);
+  --panel-glass: rgba(44, 44, 48, 0.34);
+  --panel-rim:   rgba(255, 255, 255, 0.10);
+  --panel-line:  rgba(255, 255, 255, 0.09);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -2479,38 +2487,71 @@ body.hide-english .verse-card .verse-en { display: none; }
 }
 
 
-/* ---- the settings sheet, and the controls on it ------------------------ */
-/* Held next to the same menu in Apple's Photos app, what separates their
-   buttons from ours is not the fill -- it is that every one of them has a
-   bright edge along the top and a dark one along the bottom. That pair is
-   what says "a piece of glass sitting on something" rather than "a grey
-   shape". Ours had a flat fill and a 1px border of a single colour, which
-   says the second thing however much blur is behind it.
+/* ---- the settings sheet ------------------------------------------------ */
+/* Nothing on this sheet is a button any more.
+   A menu in iOS is a list of rows: a label on the left, and on the right the
+   thing you can change, written as text. It is not a grid of pills. Every
+   control in here had a fill, a border and a shadow of its own, so a panel
+   with five settings on it was showing you five more shapes than it had
+   anything to say.
+   So the fills, the borders, the shadows and the blur come off all of them.
+   What is left is the label, and the value in the accent colour -- which is
+   what tells you it is the part you can touch. The tap targets do not change
+   size; only what is drawn in them does.
+   The switches keep their track, because a switch with no track is not a
+   switch -- there would be nothing to say which side it is on. */
+/* Written with :root in front because the night theme names these controls
+   directly, and a plain `.sidebar .pill` weighs less than
+   `:root[data-theme="dark"] .pill`. Without it the fills stayed exactly where
+   they were and only the text colour changed, which is what the first
+   attempt at this looked like. */
+:root .sidebar .choice,
+:root .sidebar .stepper button,
+:root .sidebar .pill,
+:root .sidebar .icon-btn {
+  background: none;
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--rose-700);
+  font-weight: 500;
+}
+/* And the glass system draws a ring and a sheen on every control in the app
+   through ::before and ::after. They are the outlines that were still there
+   after the fills came off. */
+:root .sidebar .choice::before,  :root .sidebar .choice::after,
+:root .sidebar .stepper button::before, :root .sidebar .stepper button::after,
+:root .sidebar .pill::before,    :root .sidebar .pill::after,
+:root .sidebar .icon-btn::before, :root .sidebar .icon-btn::after { display: none; }
+:root .sidebar .choice {
+  padding-right: 22px;
+  /* `background: none` above takes the chevron with it, so it is restated --
+     the arrow is the only thing on the row that says this opens a list. */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b8848b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  background-size: 14px;
+}
+:root .sidebar .stepper { gap: 14px; }
+:root .sidebar .stepper button { width: auto; min-width: 30px; height: 34px; }
+:root .sidebar .pill { padding: 6px 2px; }
+:root .sidebar .icon-btn { width: 34px; height: 34px; color: var(--ink-3); }
+/* They still answer to a finger; they simply do it with light rather than
+   with a box. */
+.sidebar .choice:active,
+.sidebar .stepper button:active,
+.sidebar .pill:active,
+.sidebar .icon-btn:active,
+.sidebar .choice.is-pressed,
+.sidebar .stepper button.is-pressed,
+.sidebar .pill.is-pressed,
+.sidebar .icon-btn.is-pressed { opacity: 0.45; transform: none; }
 
-   The switch is left its own fill, because that fill is how you can tell it
-   is on. It gets the edges and nothing else. */
-.sidebar .choice,
-.sidebar .stepper button,
-.sidebar .pill,
-.sidebar .icon-btn {
-  background: var(--ctl-glass);
-  background-color: var(--ctl-glass);
-  border-color: transparent;
-  -webkit-backdrop-filter: blur(16px) saturate(200%);
-  backdrop-filter: blur(16px) saturate(200%);
-}
-.sidebar .choice,
-.sidebar .stepper button,
-.sidebar .pill,
-.sidebar .icon-btn,
-.sidebar .switch {
-  border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 var(--ctl-lit),
-    inset 0 -1px 0 var(--ctl-shade),
-    inset 0 0 0 1px var(--ctl-rim),
-    0 2px 8px -3px rgba(0, 0, 0, 0.38);
-}
-/* The sheet's own hairlines, the way a menu divides itself. */
-.sidebar .sheet-row { border-top-color: var(--ctl-rim); }
+/* The switch keeps its track and loses everything else. */
+:root .sidebar .switch { border-color: transparent; box-shadow: none; }
+
+/* The rows are divided by one hairline, the faintest thing on the sheet. */
+.sidebar .sheet-row { border-top-color: var(--panel-line); }
 .sidebar .side-head { padding-bottom: 4px; }
