@@ -55,6 +55,43 @@ async function main() {
   check('Tikkun HaKlali has ten psalms', library.TIKKUN_HAKLALI.length === 10,
     library.TIKKUN_HAKLALI.join(', '));
 
+  console.log('\nYahrzeits');
+
+  // Every entry has to land on exactly one day of the year. A month spelled
+  // the way hebcal does not spell it -- "Shevat" for "Sh'vat", "Tevet" for
+  // "Teves" -- fails no test on its own: it simply never matches, and the
+  // yahrzeit silently never appears. So the year is walked day by day and
+  // every name must be found.
+  const yahrzeits = require('../lib/yahrzeits');
+  const { HDate } = require('@hebcal/core');
+
+  for (const year of [5787, 5788]) {
+    const found = new Map();
+    const start = new HDate(1, 7, year).abs();
+    const end = new HDate(1, 7, year + 1).abs();
+    for (let abs = start; abs < end; abs++) {
+      const hd = new HDate(abs);
+      const on = yahrzeits.yahrzeitsOn({ day: hd.getDate(), monthName: hd.getMonthName(), year });
+      for (const who of on) found.set(who.id, (found.get(who.id) || 0) + 1);
+    }
+    const all = yahrzeits.all();
+    const missing = all.filter((y) => !found.has(y.id)).map((y) => y.name);
+    const twice = all.filter((y) => (found.get(y.id) || 0) > 1).map((y) => y.name);
+    check(`Every yahrzeit falls once in ${year}${HDate.isLeapYear(year) ? ' (leap)' : ''}`,
+      missing.length === 0 && twice.length === 0,
+      missing.length ? `never: ${missing.join(', ')}`
+        : twice.length ? `twice: ${twice.join(', ')}`
+        : `all ${all.length}`);
+  }
+
+  check('No two entries share an id',
+    new Set(yahrzeits.all().map((y) => y.id)).size === yahrzeits.all().length);
+
+  // And the count of years is right, not off by one.
+  const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];
+  check('It counts the years since', nachman && nachman.years === 5787 - 5571,
+    nachman ? `${nachman.name}, ${nachman.years} years` : 'not found');
+
   console.log('\nThe Jewish day turns at nightfall');
 
   // Until this was here the app used the civil date all evening: at eight

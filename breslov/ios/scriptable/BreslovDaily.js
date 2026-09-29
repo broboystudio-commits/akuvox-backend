@@ -174,6 +174,37 @@ function nextZmanLine(data) {
   return `${data.next.label} · ${data.next.time} (${when})`;
 }
 
+/**
+ * The teaching, on a screen anyone standing near you can read.
+ *
+ * Hebrew only, deliberately. The rotation serves whatever the day lands on,
+ * and some of it -- Likutei Moharan 205 on the tikkun for a nocturnal
+ * emission, for one -- is not something to have sitting in plain English on a
+ * home screen. The English is one tap away in the app, where you chose to
+ * open it. Set TEACHING_LANGUAGE to 'both' if you would rather have it.
+ */
+const TEACHING_LANGUAGE = 'hebrew';   // 'hebrew' or 'both'
+
+function addTeaching(w, data, headingFont, hebrewFont, englishFont, lines) {
+  if (!data.teaching) return;
+  addLine(w, data.teaching.heading, headingFont, COLORS.gold, 1);
+  if (data.teaching.he) {
+    w.addSpacer(3);
+    addHebrew(w, data.teaching.he, hebrewFont, COLORS.ink, lines);
+  }
+  if (TEACHING_LANGUAGE === 'both' && data.teaching.en) {
+    w.addSpacer(3);
+    addLine(w, data.teaching.en, englishFont, COLORS.inkSoft, lines);
+  }
+}
+
+/** "216 years today" -- shown on a day there is a yahrzeit. */
+function yahrzeitLine(data) {
+  const who = (data.yahrzeits || [])[0];
+  if (!who) return '';
+  return who.years ? `Yahrzeit · ${who.name} · ${who.years} years` : `Yahrzeit · ${who.name}`;
+}
+
 function buildSmall(data) {
   const w = new ListWidget();
   background(w);
@@ -191,10 +222,7 @@ function buildSmall(data) {
 
   w.addSpacer();
 
-  if (data.teaching) {
-    addLine(w, data.teaching.heading, Font.semiboldSystemFont(9), COLORS.goldSoft, 1);
-    addLine(w, data.teaching.en, Font.systemFont(10), COLORS.inkSoft, 3);
-  }
+  addTeaching(w, data, Font.semiboldSystemFont(9), Font.systemFont(11), Font.systemFont(10), 3);
   return w;
 }
 
@@ -221,10 +249,13 @@ function buildMedium(data) {
   if (upNext) addLine(w, upNext, Font.mediumSystemFont(12), COLORS.inkSoft, 1);
   w.addSpacer(8);
 
-  if (data.teaching) {
-    addLine(w, data.teaching.heading, Font.semiboldSystemFont(10), COLORS.gold, 1);
-    addLine(w, data.teaching.en, Font.systemFont(11), COLORS.inkSoft, 3);
+  const yahrzeit = yahrzeitLine(data);
+  if (yahrzeit) {
+    addLine(w, yahrzeit, Font.semiboldSystemFont(11), COLORS.gold, 1);
+    w.addSpacer(6);
   }
+
+  addTeaching(w, data, Font.semiboldSystemFont(10), Font.systemFont(12), Font.systemFont(11), 3);
   return w;
 }
 
@@ -262,13 +293,13 @@ function buildLarge(data) {
   if (data.tehillim) addLine(w, `Tehillim today: ${data.tehillim}`, Font.systemFont(10), COLORS.inkFaint, 1);
   w.addSpacer(8);
 
-  if (data.teaching) {
-    addLine(w, data.teaching.heading, Font.semiboldSystemFont(11), COLORS.gold, 1);
-    w.addSpacer(3);
-    addHebrew(w, data.teaching.he, Font.systemFont(13), COLORS.ink, 3);
-    w.addSpacer(3);
-    addLine(w, data.teaching.en, Font.systemFont(11), COLORS.inkSoft, 5);
+  const yahrzeitBig = yahrzeitLine(data);
+  if (yahrzeitBig) {
+    addLine(w, yahrzeitBig, Font.semiboldSystemFont(11), COLORS.gold, 1);
+    w.addSpacer(6);
   }
+
+  addTeaching(w, data, Font.semiboldSystemFont(11), Font.systemFont(14), Font.systemFont(11), 4);
   return w;
 }
 

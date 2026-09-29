@@ -19,6 +19,7 @@ const ics = require('./lib/ics');
 const zmanimLib = require('./lib/zmanim');
 const daily = require('./lib/daily');
 const library = require('./lib/library');
+const yahrzeits = require('./lib/yahrzeits');
 const sefaria = require('./lib/sefaria');
 const lock = require('./lib/lock');
 const { isoDateInZone, dateFromIso } = require('./lib/util');
@@ -31,7 +32,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '33';
+const BUILD = '34';
 
 app.use(cors());
 
@@ -179,6 +180,24 @@ app.get('/api/diagnostics', route(async (req) => {
   }
 
   // --- the part that needs the internet
+  // Which of the yahrzeit seforim Sefaria actually carries. Those titles are
+  // a guess at how Sefaria files them, and six Breslov works were once added
+  // to this app that it does not have at all -- so this asks rather than
+  // assumes, and says plainly which will show a passage and which will not.
+  const withBooks = yahrzeits.all().filter((y) => y.book);
+  const yahrzeitBooks = await Promise.all(withBooks.map(async (y) => {
+    try {
+      const shape = await sefaria.getShape(y.book);
+      const refs = library.refsFromShape(shape, { title: y.book });
+      return { name: y.name, book: y.book, ok: refs.length > 0, pieces: refs.length };
+    } catch (err) {
+      return { name: y.name, book: y.book, ok: false, detail: err.message };
+    }
+  }));
+  record('Yahrzeit seforim on Sefaria',
+    yahrzeitBooks.some((b) => b.ok),
+    `${yahrzeitBooks.filter((b) => b.ok).length} of ${yahrzeitBooks.length} found`);
+
   const startedAt = Date.now();
   let texts = { ok: false, detail: '' };
   try {
@@ -324,6 +343,11 @@ app.get('/api/diagnostics', route(async (req) => {
       : 'The dates and times work, but this server cannot fetch the texts from sefaria.org. ' +
         'Nothing is shown in place of a text it cannot load.',
     checks,
+    yahrzeits: {
+      total: yahrzeits.all().length,
+      today: yahrzeits.yahrzeitsOn(dates.calendarFor(today, place, new Date()).hebrew).map((y) => y.name),
+      books: yahrzeitBooks,
+    },
     searchAttempts,
     searchSample,
     titleHelp,
@@ -352,9 +376,31 @@ app.get('/api/zmanim', route(async (req) => {
   };
 }));
 
+/**
+ * Whoever's yahrzeit it is today, with a passage where there is one to be had.
+ *
+ * The Jewish day turns at nightfall, and so does this: from shkia the app is
+ * already on the next day, so a yahrzeit shows from the evening it begins
+ * rather than the morning after.
+ */
+async function yahrzeitsFor(calendar, date) {
+  const today = yahrzeits.yahrzeitsOn(calendar.hebrew);
+  if (!today.length) return [];
+
+  return Promise.all(today.map(async (who) => {
+    const passage = who.book
+      ? await cached(`yahrzeit:${who.id}:${daily.dayKey(date)}`, DAY,
+          () => daily.yahrzeitPassage(who.book, date))
+      : null;
+    return Object.assign({}, who, { passage: passage || null });
+  }));
+}
+
 app.get('/api/calendar', route(async (req) => {
   const place = placeFromQuery(req);
-  return dates.calendarFor(dateFromQuery(req, place), place, new Date());
+  const date = dateFromQuery(req, place);
+  const calendar = dates.calendarFor(date, place, new Date());
+  return Object.assign({}, calendar, { yahrzeits: await yahrzeitsFor(calendar, date) });
 }));
 
 // ---------------------------------------------------------------- the learning
@@ -395,15 +441,16 @@ app.get('/api/today', route(async (req) => {
   const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
   const week = Math.floor(daily.dayKey(date) / 7);
 
-  const [spark, tehillim, weekly] = await Promise.all([
+  const [spark, tehillim, weekly, yahrzeitsToday] = await Promise.all([
     cached(`spark:${daily.dayKey(date)}`, DAY, () => daily.dailySpark(date)),
     cached(`tehillim:${calendar.hebrew.year}-${calendar.hebrew.monthName}-${calendar.hebrew.day}`,
       DAY, () => daily.dailyTehillim(calendar.hebrew)),
     cached(`weekly:${week}:${place.israel ? 'il' : 'chu'}`, DAY,
       () => daily.weeklyTorah(date, calendar)),
+    yahrzeitsFor(calendar, date),
   ]);
 
-  return { calendar, zmanim, spark, tehillim, weekly };
+  return { calendar, zmanim, spark, tehillim, weekly, yahrzeits: yahrzeitsToday };
 }));
 
 /**
@@ -473,6 +520,10 @@ app.get('/api/widget', route(async (req) => {
     teaching: spark.available
       ? { heading: spark.heading, he: spark.snippetHe, en: spark.snippetEn, url: spark.url }
       : null,
+    // Just the name and how many years. A widget has no room for a passage,
+    // and the app is one tap away.
+    yahrzeits: yahrzeits.yahrzeitsOn(calendar.hebrew)
+      .map((y) => ({ name: y.name, he: y.he, years: y.years })),
     tehillim: library.tehillimForDay(calendar.hebrew.day, calendar.hebrew.daysInMonth)
       .map(library.tehillimLabel).join(' • '),
     place: place.name,

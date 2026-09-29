@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '33';
+  var BUILD = '34';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -516,9 +516,45 @@
     fillWith('weeklyShabbos', shabbosRows());
     setText('weeklyParshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
 
+    renderYahrzeits(data.yahrzeits);
     renderZmanim(data.zmanim, cal);
     renderWeekly(data.weekly);
     renderTehillim(data.tehillim);
+  }
+
+  /**
+   * Whoever's yahrzeit it is today.
+   *
+   * Shown from nightfall, because that is when the Jewish day turns and when
+   * a yahrzeit begins. The passage under it, when there is one, is a real
+   * piece of that tzaddik's own sefer fetched from Sefaria like everything
+   * else here -- and where his sefer is not on Sefaria there is no passage,
+   * rather than words he never said.
+   */
+  function renderYahrzeits(list) {
+    var card = $('yahrzeitCard');
+    if (!card) return;
+    var today = (list || [])[0];
+    if (!today) { card.hidden = true; return; }
+
+    card.hidden = false;
+    setText('yahrzeitTitle', 'Yahrzeit · ' + today.name);
+    setText('yahrzeitHe', today.he || '');
+
+    var about = today.about || '';
+    if (today.years) about = today.years + ' years today. ' + about;
+    if (today.inSecondAdar) about += ' (Marked in Adar II this year.)';
+    setText('yahrzeitAbout', about);
+
+    var body = $('yahrzeitBody');
+    if (!body) return;
+    if (today.passage && today.passage.available) {
+      fill(body, passage(today.passage));
+    } else {
+      fill(body, el('p', 'hint', today.book
+        ? 'His sefer is not on Sefaria, so there is nothing to quote here rather than something he did not say.'
+        : ''));
+    }
   }
 
   function renderZmanim(zmanim, cal) {

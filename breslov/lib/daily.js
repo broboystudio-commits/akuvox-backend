@@ -266,7 +266,34 @@ function dayKey(date) {
   return dayNumber(date);
 }
 
+/**
+ * A passage from a tzaddik whose yahrzeit it is.
+ *
+ * Only from a sefer Sefaria actually carries. The title in the yahrzeit list
+ * is a guess at how they file it, not a promise -- six Breslov works were once
+ * added to this app that Sefaria does not have at all, which is why nothing
+ * here trusts a title without asking. If the answer is no, the yahrzeit is
+ * shown on its own. Nothing is ever put into a tzaddik's mouth.
+ */
+async function yahrzeitPassage(title, date) {
+  if (!title) return null;
+  try {
+    const shape = await sefaria.getShape(title);
+    const refs = library.refsFromShape(shape, { title });
+    if (!refs.length) return null;
+
+    // The same piece all day, and a different one next year.
+    const ref = pickForDay(refs, date, 29);
+    const text = await sefaria.getText(ref);
+    if (!text || !(text.hebrew || []).length) return null;
+    return present(text, { book: title });
+  } catch (err) {
+    return null;
+  }
+}
+
 module.exports = {
+  yahrzeitPassage,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };
