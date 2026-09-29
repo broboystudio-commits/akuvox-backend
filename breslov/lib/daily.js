@@ -9,7 +9,7 @@
 
 const sefaria = require('./sefaria');
 const library = require('./library');
-const { pickForDay, pickForWeek, snippet, dayNumber } = require('./util');
+const { pickForDay, pickRunForDay, pickForWeek, snippet, dayNumber } = require('./util');
 
 /** A short, uniform "sorry" object so the app never shows invented text. */
 function unavailable(what, err) {
@@ -312,40 +312,60 @@ function answersTo(shape, asked) {
  * here trusts a title without asking. If the answer is no, the yahrzeit is
  * shown on its own. Nothing is ever put into a tzaddik's mouth.
  */
-async function yahrzeitPassage(titles, date) {
+/**
+ * A piece of a tzaddik's own sefer for his yahrzeit.
+ *
+ * `tried` is an optional array; every reference this reaches for is pushed
+ * onto it with what came back. Nothing here reads it -- it exists so the
+ * diagnostics can say WHICH reference came back empty instead of reporting
+ * that a book "gave no passage", which is true and useless. That was the
+ * whole difficulty with the two seforim this was written for.
+ */
+async function yahrzeitPassage(titles, date, tried) {
   const candidates = (Array.isArray(titles) ? titles : [titles])
     .filter((t, i, all) => t && all.indexOf(t) === i);
+  const note = (ref, why) => { if (Array.isArray(tried)) tried.push({ ref, why }); };
 
   for (const title of candidates) {
     try {
       const shape = await sefaria.getShape(title);
-      if (!answersTo(shape, title)) continue;
+      if (!answersTo(shape, title)) { note(title, 'a different sefer answers to this name'); continue; }
       const refs = library.refsFromShape(shape, { title });
-      if (!refs.length) continue;
+      if (!refs.length) { note(title, 'the shape described no pieces'); continue; }
 
-      // The same piece all day, and a different one next year.
-      const ref = pickForDay(refs, date, 29);
-      const text = await sefaria.getText(ref);
-      if (!text || !(text.hebrew || []).length) continue;
+      // The same piece all day, and a different one next year -- and, if that
+      // piece turns out to be a heading with no text under it, the next few
+      // in the same rotation rather than nothing at all.
+      for (const ref of pickRunForDay(refs, date, 29, 8)) {
+        let text = null;
+        try {
+          text = await sefaria.getText(ref);
+        } catch (err) {
+          note(ref, `fetch failed: ${err.message}`);
+          continue;
+        }
+        if (!text || !(text.hebrew || []).length) { note(ref, 'no Hebrew in this piece'); continue; }
 
-      // An excerpt, not the whole piece.
-      //
-      // Keter Shem Tov resolves to two references -- its two parts -- so
-      // "a passage" from it is an entire half of the sefer. A yahrzeit card
-      // is not the place for that, whichever sefer it is, and the link goes
-      // to the whole thing on Sefaria.
-      const full = present(text, { book: title });
-      return {
-        available: true,
-        ref: full.ref,
-        heRef: full.heRef,
-        url: full.url,
-        he: full.snippetHe,
-        en: full.snippetEn,
-        credit: full.credit,
-      };
+        // An excerpt, not the whole piece.
+        //
+        // Keter Shem Tov resolves to two references -- its two parts -- so
+        // "a passage" from it is an entire half of the sefer. A yahrzeit card
+        // is not the place for that, whichever sefer it is, and the link goes
+        // to the whole thing on Sefaria.
+        const full = present(text, { book: title });
+        note(ref, 'ok');
+        return {
+          available: true,
+          ref: full.ref,
+          heRef: full.heRef,
+          url: full.url,
+          he: full.snippetHe,
+          en: full.snippetEn,
+          credit: full.credit,
+        };
+      }
     } catch (err) {
-      // Try the next spelling.
+      note(title, `shape lookup failed: ${err.message}`);
     }
   }
   return null;

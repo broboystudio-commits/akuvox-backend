@@ -12,7 +12,7 @@
 const dates = require('../lib/dates');
 const zmanim = require('../lib/zmanim');
 const library = require('../lib/library');
-const { dateFromIso } = require('../lib/util');
+const { dateFromIso, pickForDay, pickRunForDay } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
 let failures = 0;
@@ -129,6 +129,24 @@ async function main() {
   const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];
   check('It counts the years since', nachman && nachman.years === 5787 - 5571,
     nachman ? `${nachman.name}, ${nachman.years} years` : 'not found');
+
+  // A sefer is not lost because one of its pieces is a heading with no text
+  // under it. The run has somewhere to fall through to, and the first of it
+  // is still exactly the piece the old single pick returned, so no sefer
+  // that already worked moves to a different passage today.
+  const pieces = Array.from({ length: 30 }, (_, i) => `Piece ${i + 1}`);
+  const someIso = dateFromIso('2026-09-29');
+  const run = pickRunForDay(pieces, someIso, 29, 8);
+  check('The day\'s piece is unchanged', run[0] === pickForDay(pieces, someIso, 29), run[0]);
+  check('And there are others to fall through to', run.length === 8, `${run.length} deep`);
+  check('None of them repeats', new Set(run).size === run.length);
+  // A book with fewer pieces than the run is asked for must not loop forever
+  // or hand back the same piece eight times.
+  const tiny = pickRunForDay(['Only one'], someIso, 29, 8);
+  check('A one-piece sefer gives one piece, not eight', tiny.length === 1, tiny.join(', '));
+  const three = pickRunForDay(['a', 'b', 'c'], someIso, 29, 8);
+  check('A three-piece sefer gives three', three.length === 3 && new Set(three).size === 3,
+    three.join(', '));
 
   console.log('\nThe Jewish day turns at nightfall');
 

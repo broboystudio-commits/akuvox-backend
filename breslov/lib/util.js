@@ -44,12 +44,33 @@ function dayNumber(date) {
  * `salt` keeps different books on different rotations.
  */
 function pickForDay(items, date, salt = 0) {
-  if (!items || !items.length) return null;
+  return pickRunForDay(items, date, salt, 1)[0] || null;
+}
+
+/**
+ * The day's pick, and the ones that come after it in the same rotation.
+ *
+ * Asking for one is asking a book to be perfect. Sefaria holds sections that
+ * carry a heading and no text -- a volume title, an approbation, a gap in the
+ * digitisation -- and landing on one of those was enough to lose the whole
+ * sefer for the day, because there was nothing to fall through to. Two of the
+ * eight yahrzeit seforim were coming back empty for exactly that reason.
+ *
+ * The first item is still the day's pick, so nothing that already worked
+ * moves; the rest are only ever reached when the one before them is empty.
+ */
+function pickRunForDay(items, date, salt = 0, count = 1) {
+  if (!items || !items.length) return [];
   const order = seededShuffle(items, 0x5eed + salt);
   const cycle = Math.floor(dayNumber(date) / order.length);
   // Re-shuffle each full cycle so the order is not identical year after year.
   const rotated = cycle === 0 ? order : seededShuffle(order, 0x5eed + salt + cycle);
-  return rotated[dayNumber(date) % order.length];
+  const start = dayNumber(date) % order.length;
+  const run = [];
+  for (let i = 0; i < Math.min(count, rotated.length); i++) {
+    run.push(rotated[(start + i) % rotated.length]);
+  }
+  return run;
 }
 
 /** Same idea, but the choice only changes once a week (Sunday to Shabbos). */
@@ -164,6 +185,7 @@ module.exports = {
   seededShuffle,
   dayNumber,
   pickForDay,
+  pickRunForDay,
   pickForWeek,
   stripHtml,
   flattenText,

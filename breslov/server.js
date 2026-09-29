@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '40';
+const BUILD = '41';
 
 app.use(cors());
 
@@ -198,11 +198,15 @@ app.get('/api/diagnostics', route(async (req) => {
           // End to end, not inferred. A shape resolving is not the same as a
           // passage arriving: the title guard once refused five of these on a
           // missing field and nothing here would have shown it.
-          const got = await daily.yahrzeitPassage([y.book].concat(y.aliases || []), today);
+          const tried = [];
+          const got = await daily.yahrzeitPassage([y.book].concat(y.aliases || []), today, tried);
           return {
             name: y.name, book: y.book, foundAs: title,
             sefariaCalls, ok: true, pieces: refs.length,
             passage: got ? got.ref : null,
+            // Only when it failed. On a good book this is noise; on a bad one
+            // it is the only thing that says why.
+            tried: got ? undefined : tried,
           };
         }
       }
