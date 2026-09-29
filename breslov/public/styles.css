@@ -40,15 +40,19 @@
   /* A card is a bigger pane, so it takes a deeper blur. */
   --glass-blur-card: blur(22px) saturate(180%);
 
-  /* The number track: a trough of glass with the numbers riding in it. */
-  --track-glass:  rgba(255, 255, 255, 0.22);
-  --track-rim:    rgba(255, 255, 255, 0.75);
-  --track-lit:    rgba(255, 255, 255, 0.95);
-  --track-under:  rgba(255, 255, 255, 0.35);
-  --track-bright: 1.18;
-  --track-ink:    #3a3a44;
-  --track-lens:   rgba(255, 255, 255, 0.88);
-  --track-on:     var(--rose-700);
+  /* One material, three bars: the top bar, the number bar and the tab bar.
+     They were three different panes until the day they sat on a screen
+     together and only one of them looked like glass. `veil` is the top bar's
+     own, because it is the only one with words printed straight on it. */
+  --bar-glass:  rgba(255, 255, 255, 0.22);
+  --bar-rim:    rgba(255, 255, 255, 0.75);
+  --bar-lit:    rgba(255, 255, 255, 0.95);
+  --bar-under:  rgba(255, 255, 255, 0.35);
+  --bar-bright: 1.18;
+  --bar-ink:    #3a3a44;
+  --bar-lens:   rgba(255, 255, 255, 0.88);
+  --bar-on:     var(--rose-700);
+  --bar-veil:   rgba(253, 251, 249, 0.62);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -114,7 +118,10 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.5;
-  padding-bottom: calc(76px + var(--safe-bottom));
+  /* Room for the tab bar. It floats now -- 10px of air under it and a soft
+     shadow past that -- so the old 76px left the last line of a page sitting
+     behind it. */
+  padding-bottom: calc(100px + var(--safe-bottom));
   overscroll-behavior-y: contain;
 
   /* The pastel wash: three soft pools of colour over warm white. */
@@ -138,12 +145,20 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   top: 0;
   z-index: 30;
   padding-top: var(--safe-top);
-  background: linear-gradient(180deg,
-    rgba(253, 251, 249, 0.92) 0%,
-    rgba(253, 251, 249, 0.74) 100%);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--line);
+  /* The same glass as the two floating bars, with one difference: this one
+     has words printed on it. The bars below carry a numeral on its own
+     lozenge or a label on a lens; the date and the next zman sit straight on
+     this pane, so it keeps a veil the others do not need. Still clear enough
+     to read the page moving under it -- 0.62 where it used to be 0.92 with a
+     hard rule drawn under it. */
+  background: var(--bar-veil);
+  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  /* No rule. A hairline across the screen is the one thing that says "this
+     is a panel painted on top" rather than "this is glass". What marks the
+     edge instead is the light along it. */
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--bar-under), 0 1px 12px -6px rgba(0, 0, 0, 0.22);
 }
 
 .bar {
@@ -179,7 +194,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   gap: 6px;
   margin: 4px 0 0;
   font-size: 0.8125rem;
-  color: var(--ink-3);
+  /* The third grey, not the second, is for text you are not meant to read --
+     a caption under something, a hint. The civil date is the line that tells
+     you which day the app thinks it is, and at 13px on a light page the
+     third grey put it at 3.19:1. Nothing had ever measured this bar, so it
+     had been that way since the first build; it showed up the moment the
+     glass gave it a check of its own. */
+  color: var(--ink-2);
   white-space: nowrap;
 }
 .subline > span:first-child { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
@@ -231,7 +252,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   direction: rtl;
   unicode-bidi: isolate;
 }
-.nextzman .away { color: var(--ink-3); }
+/* "in 3h 46m" is the answer to the question the line is asking, so it is
+   not caption text either. Same third-grey mistake as the civil date, found
+   by the same check. */
+.nextzman .away { color: var(--ink-2); }
 
 /* ------------------------------------------------------------- reading options */
 
@@ -618,20 +642,45 @@ body.hide-english .en { display: none; }
 
 /* ------------------------------------------------------------- tabs */
 
+/* The tab bar floats, the way the App Store's does: a capsule with air all
+   round it and the page running on underneath, rather than a slab welded to
+   the bottom of the screen with a hairline on top. Same glass as the number
+   bar, same lens on the one you are on. */
 .tabs {
   position: fixed;
-  left: 0; right: 0; bottom: 0;
+  left: 0; right: 0;
+  bottom: calc(var(--safe-bottom) + 10px);
   z-index: 40;
+  width: calc(100% - 24px);
+  max-width: 460px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
-  padding: 7px 8px var(--safe-bottom);
-  background: linear-gradient(0deg,
-    rgba(253, 251, 249, 0.95) 0%,
-    rgba(253, 251, 249, 0.80) 100%);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-top: 1px solid var(--line);
+  padding: 6px;
+  border-radius: 28px;
+  border: 0;
+  background: var(--bar-glass);
+  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  box-shadow:
+    inset 0 1px 0 var(--bar-lit),
+    inset 0 -1px 0 var(--bar-under),
+    0 1px 2px rgba(0, 0, 0, 0.10),
+    0 12px 32px -10px rgba(0, 0, 0, 0.34);
+}
+/* The rim, and the refraction in it -- the same trick as the number bar. */
+.tabs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(3px) saturate(260%);
+  backdrop-filter: blur(3px) saturate(260%);
+  -webkit-mask: radial-gradient(closest-side, transparent 80%, #000 97%);
+  mask: radial-gradient(closest-side, transparent 80%, #000 97%);
+  box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 0 8px -2px var(--bar-rim);
 }
 
 .tab {
@@ -969,26 +1018,27 @@ body.hide-english .en { display: none; }
      numbers on a light fill, made worse by bright Hebrew blurring through
      from behind. Glass over a dark page is dark; that is why Apple's own
      bars go darker at night rather than lighter. */
-  --track-glass:  rgba(120, 120, 128, 0.18);
-  --track-rim:    rgba(255, 255, 255, 0.38);
-  --track-lit:    rgba(255, 255, 255, 0.28);
-  --track-under:  rgba(255, 255, 255, 0.06);
+  --bar-glass:  rgba(120, 120, 128, 0.18);
+  --bar-rim:    rgba(255, 255, 255, 0.38);
+  --bar-lit:    rgba(255, 255, 255, 0.28);
+  --bar-under:  rgba(255, 255, 255, 0.06);
   /* At night the material dims what passes under it rather than tinting it.
      A white numeral crossing a bright Hebrew stroke measured 4.41:1 with the
      backdrop at full brightness; a tint strong enough to fix that would have
      made the bar a sheet again. Dimming keeps it clear -- you still see the
      shapes and the colour through it, darker -- and that is what a dark
      material does on a phone. */
-  --track-bright: 0.6;
-  --track-ink:    #ffffff;
+  --bar-bright: 0.6;
+  --bar-ink:    #ffffff;
   /* The lens is the one part of the bar that cannot be clear. At 0.18 it
      was, and a Hebrew stroke passing under it put the numeral at 1.78:1 --
      caught by the label check, missed by the glass check, which had been
      sampling a kinder spot. Bright and nearly solid, with a dark numeral,
      which is also what the photograph shows: on a dark screen the chosen
      tab's capsule is the brightest thing on the bar. */
-  --track-lens:   rgba(255, 255, 255, 0.95);
-  --track-on:     #1c1c1e;
+  --bar-lens:   rgba(255, 255, 255, 0.95);
+  --bar-on:     #1c1c1e;
+  --bar-veil:   rgba(0, 0, 0, 0.34);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -1004,13 +1054,8 @@ body.hide-english .en { display: none; }
 }
 
 /* The bars are the frosted material over black, not a coloured pane. */
-:root[data-theme="dark"] .topbar {
-  background: rgba(0, 0, 0, 0.72);
-}
-
-:root[data-theme="dark"] .tabs {
-  background: rgba(0, 0, 0, 0.78);
-}
+/* Both bars take their material from the tokens now, so there is nothing
+   left to override here at night. */
 
 /* Flat, one step off the page. A card in Apple's dark mode is a shade, not a
    gradient -- and a gradient behind text on black is what made the reading
@@ -1669,7 +1714,12 @@ body.hide-english .verse-card .verse-en { display: none; }
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     border-top: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
+  /* In the flow of the page it is a row of pills, not a floating capsule,
+     so the rim goes with the float. */
+  .tabs::after { display: none; }
   .tab {
     flex-direction: row;
     gap: 8px;
@@ -2185,14 +2235,14 @@ body.hide-english .verse-card .verse-en { display: none; }
   padding: 6px;
   border-radius: 999px;
   border: 0;
-  background: var(--track-glass);
-  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--track-bright));
-  backdrop-filter: blur(18px) saturate(190%) brightness(var(--track-bright));
+  background: var(--bar-glass);
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
   /* Lit along the top inside, shaded along the bottom inside: thickness.
      Then a close contact shadow and a wide soft one: height off the page. */
   box-shadow:
-    inset 0 1px 0 var(--track-lit),
-    inset 0 -1px 0 var(--track-under),
+    inset 0 1px 0 var(--bar-lit),
+    inset 0 -1px 0 var(--bar-under),
     0 1px 2px rgba(0, 0, 0, 0.10),
     0 10px 28px -8px rgba(0, 0, 0, 0.28);
   position: relative;
@@ -2208,7 +2258,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   backdrop-filter: blur(3px) saturate(260%);
   -webkit-mask: radial-gradient(closest-side, transparent 78%, #000 96%);
   mask: radial-gradient(closest-side, transparent 78%, #000 96%);
-  box-shadow: inset 0 0 0 1px var(--track-rim), inset 0 0 8px -2px var(--track-rim);
+  box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 0 8px -2px var(--bar-rim);
 }
 /* A number you are not on is a numeral, not a control. */
 :root .chapters .chapter-track button:not(.is-active),
@@ -2216,7 +2266,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   background: none;
   border-color: transparent;
   box-shadow: none;
-  color: var(--track-ink);
+  color: var(--bar-ink);
   font-weight: 600;
   transform: none;
 }
@@ -2227,8 +2277,8 @@ body.hide-english .verse-card .verse-en { display: none; }
    bar in the photograph does. */
 :root .chapters .chapter-track button.is-active,
 :root[data-theme="dark"] .chapters .chapter-track button.is-active {
-  background: var(--track-lens);
-  color: var(--track-on);
+  background: var(--bar-lens);
+  color: var(--bar-on);
   font-weight: 700;
   border-color: transparent;
   box-shadow:
@@ -2255,4 +2305,60 @@ body.hide-english .verse-card .verse-en { display: none; }
   opacity: 1;
   background: radial-gradient(64% 34% at 32% 4%,
     rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 72%);
+}
+
+
+/* ---- the same glass on the other two bars ------------------------------ */
+/* The number bar was done first and the top bar and the tab bar were left
+   as they were: opaque panels with a hairline drawn along the edge. Next to
+   clear glass they read as what they are, which is why they had to follow.
+
+   The labels take the same treatment as the numerals did. A tab you are not
+   on is a label straight on the glass; the one you are on gets a lens, and
+   the accent moves into the label rather than sitting behind it. */
+:root .tab { color: var(--bar-ink); }
+:root .tab.is-active { color: var(--bar-on); }
+:root .tab.is-active::after,
+:root[data-theme="dark"] .tab.is-active::after {
+  border-radius: 14px;
+  background: var(--bar-lens);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 6px 14px -6px rgba(0, 0, 0, 0.30);
+}
+:root .tab.is-active svg {
+  /* The glow under the icon was tuned against a dark panel and reads as
+     smudge on a bright lens. */
+  filter: none;
+}
+
+/* The two round buttons in the header are the same material again. They were
+   solid discs with a rim, which on glass looks like two holes punched in it. */
+:root .icon-btn,
+:root[data-theme="dark"] .icon-btn {
+  background: var(--bar-glass);
+  border-color: transparent;
+  color: var(--bar-ink);
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  backdrop-filter: blur(18px) saturate(190%) brightness(var(--bar-bright));
+  box-shadow:
+    inset 0 1px 0 var(--bar-lit),
+    inset 0 -1px 0 var(--bar-under),
+    0 1px 2px rgba(0, 0, 0, 0.10),
+    0 6px 16px -8px rgba(0, 0, 0, 0.30);
+}
+:root .icon-btn::before { opacity: 0.55; }
+
+/* From 900px the tab bar leaves the bottom of the screen and becomes a row
+   of pills in the flow of the page. There is no lens under the label there,
+   so it keeps the accent colour: the near-black above is for reading off
+   bright glass and nothing else, and on the pastel pill it measured 1.22:1.
+
+   This has to come after the block above rather than inside the 900px rules
+   where it belongs, because the two selectors weigh the same and the last
+   one written is the one that counts. */
+@media (min-width: 900px) {
+  :root .tab { color: var(--ink-2); }
+  :root .tab.is-active { color: var(--rose-700); }
 }
