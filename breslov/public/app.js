@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '42';
+  var BUILD = '43';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1447,6 +1447,145 @@
     });
   }
 
+  // ------------------------------------------------------------- the lens
+
+  /**
+   * The tab bar's lens, and the finger that drags it.
+   *
+   * On the phone the pane under the tab you are on is not a decoration on
+   * that tab -- it is a single piece of glass that lives in the bar and
+   * slides. Put a finger on the bar and it comes to meet you; drag along and
+   * it follows, swelling a little and magnifying whatever it is over, the
+   * way a lens laid on a page does; lift, and it settles on whatever it is
+   * holding and takes you there.
+   *
+   * It has to be one element for any of that to be possible. As a ::after on
+   * each tab there is nothing that moves between them -- one disappears and
+   * another appears, which is a different thing and reads as one.
+   *
+   * From 900px the bar leaves the bottom of the screen and becomes a row of
+   * pills in the flow of the page. There is nothing to slide along there and
+   * no finger to do it with, so the lens stays out of the way and the pills
+   * keep their own pane.
+   */
+  var tabLens = null;
+  var tabBar = null;
+
+  function floatingBar() {
+    return tabBar && window.getComputedStyle(tabBar).position === 'fixed';
+  }
+
+  /** Where a tab sits inside the bar, in the bar's own coordinates. */
+  function lensBoxOf(tab) {
+    var b = tab.getBoundingClientRect();
+    var p = tabBar.getBoundingClientRect();
+    return { x: b.left - p.left, w: b.width, mid: b.left + b.width / 2 };
+  }
+
+  function putLensOn(tab, grown) {
+    if (!tabLens || !tab || !floatingBar()) {
+      if (tabLens) tabLens.style.opacity = '0';
+      return;
+    }
+    var m = lensBoxOf(tab);
+    tabLens.style.width = m.w + 'px';
+    tabLens.style.transform = 'translateX(' + m.x + 'px)' + (grown ? ' scale(1.06)' : '');
+    tabLens.style.opacity = '1';
+  }
+
+  /** Called whenever the page changes or the bar is resized. */
+  function positionTabLens() {
+    if (!tabLens) return;
+    var on = document.querySelector('.tabs .tab.is-active');
+    putLensOn(on, false);
+  }
+
+  function wireTabLens() {
+    tabBar = document.querySelector('.tabs');
+    if (!tabBar || tabLens) return;
+
+    tabLens = el('span', 'tab-lens');
+    tabLens.setAttribute('aria-hidden', 'true');
+    tabBar.insertBefore(tabLens, tabBar.firstChild);
+
+    var tabs = Array.prototype.slice.call(tabBar.querySelectorAll('.tab'));
+    var holding = null;
+    var startedAt = 0;
+    var moved = false;
+
+    // Which tab is nearest the finger, and the lens dragged to meet it.
+    function follow(clientX) {
+      var p = tabBar.getBoundingClientRect();
+      var near = null, best = Infinity;
+      tabs.forEach(function (tab) {
+        var d = Math.abs(lensBoxOf(tab).mid - clientX);
+        if (d < best) { best = d; near = tab; }
+      });
+      if (!near) return null;
+      var m = lensBoxOf(near);
+      // It follows the finger rather than snapping tab to tab, but it never
+      // leaves the bar -- a lens hanging off the end looks like a bug.
+      var x = Math.max(0, Math.min(clientX - p.left - m.w / 2, p.width - m.w));
+      tabLens.style.width = m.w + 'px';
+      tabLens.style.transform = 'translateX(' + x + 'px) scale(1.06)';
+      tabLens.style.opacity = '1';
+      tabs.forEach(function (tab) { tab.classList.toggle('is-under', tab === near); });
+      return near;
+    }
+
+    function letGo() {
+      tabBar.classList.remove('is-dragging');
+      tabs.forEach(function (tab) { tab.classList.remove('is-under'); });
+      holding = null;
+      moved = false;
+    }
+
+    tabBar.addEventListener('touchstart', function (e) {
+      if (!floatingBar() || e.touches.length !== 1) return;
+      startedAt = e.touches[0].clientX;
+      moved = false;
+      tabBar.classList.add('is-dragging');
+      holding = follow(startedAt);
+    }, { passive: true });
+
+    tabBar.addEventListener('touchmove', function (e) {
+      if (!holding || e.touches.length !== 1) return;
+      var x = e.touches[0].clientX;
+      if (Math.abs(x - startedAt) > 8) moved = true;
+      holding = follow(x);
+    }, { passive: true });
+
+    tabBar.addEventListener('touchend', function (e) {
+      if (!holding) return;
+      var picked = holding;
+      var dragged = moved;
+      letGo();
+      putLensOn(picked, false);
+      // A tap is left to the click that follows it, so a tab is opened in
+      // exactly one place. A drag has no click worth having -- the finger
+      // went up over a tab it never went down on -- so that one is stopped
+      // here and acted on directly.
+      if (dragged) {
+        if (e.cancelable) e.preventDefault();
+        showPanel(picked.getAttribute('data-panel'));
+      }
+    });
+
+    tabBar.addEventListener('touchcancel', function () {
+      letGo();
+      positionTabLens();
+    });
+
+    // The bar changes width when the phone turns, and changes shape entirely
+    // at 900px. Either way the lens has to be told.
+    try {
+      new ResizeObserver(function () { positionTabLens(); }).observe(tabBar);
+    } catch (err) {
+      window.addEventListener('resize', positionTabLens);
+    }
+    positionTabLens();
+  }
+
   // ------------------------------------------------------------- navigation
 
   var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
@@ -1475,6 +1614,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.classList.toggle('is-active', t.getAttribute('data-panel') === name);
     });
+    positionTabLens();
 
     var panel = $('panel-' + name);
     if (panel) replay(panel);
@@ -1598,6 +1738,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
       tab.addEventListener('click', function () { showPanel(tab.getAttribute('data-panel')); });
     });
+    wireTabLens();
     Array.prototype.forEach.call(document.querySelectorAll('[data-goto]'), function (b) {
       b.addEventListener('click', function () { showPanel(b.getAttribute('data-goto')); });
     });
