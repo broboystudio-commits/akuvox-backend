@@ -41,10 +41,10 @@
   --glass-blur-card: blur(22px) saturate(180%);
 
   /* The number track: a trough of glass with the numbers riding in it. */
-  --track-glass: rgba(255, 255, 255, 0.68);
-  --track-rim:   rgba(255, 255, 255, 0.85);
+  --track-glass: rgba(233, 230, 234, 0.90);
+  --track-rim:   rgba(255, 255, 255, 0.72);
   --track-lit:   rgba(255, 255, 255, 0.9);
-  --track-pill:  rgba(255, 255, 255, 0.72);
+  --track-pill:  rgba(255, 255, 255, 0.46);
   --veil: rgba(255, 250, 247, 0.74);
 
   /* ---- rose */
@@ -567,7 +567,10 @@ body.hide-english .en { display: none; }
   display: inline-flex;
   gap: 2px;
   max-width: 100%;
-  padding: 4px;
+  /* Five, not four. The chosen lens swells past the others and carries a
+     ring of light around it; both need somewhere to go. A track that scrolls
+     sideways clips vertically too, so the room has to be padding. */
+  padding: 5px;
   border-radius: 999px;
   /* Glass, in two layers, which is the only way it is both.
      A single frosted pane was tried and the Hebrew read straight through it
@@ -577,11 +580,18 @@ body.hide-english .en { display: none; }
      over smeared text. Apple's own segmented control is built the same way:
      a glass trough with a lozenge riding in it. */
   background: var(--track-glass);
-  /* Heavy blur on purpose. At 28px the words behind were still legible
-     through the glass, which is busy to read a psalm over -- what should come
-     through is colour and movement, not sentences. */
-  -webkit-backdrop-filter: blur(44px) saturate(190%);
-  backdrop-filter: blur(44px) saturate(190%);
+  /* The blur is the smaller half of this, and it is worth writing down why,
+     because the comment that used to sit here was wrong. Photographed at 3x
+     with the bar sitting over a paragraph, the words behind were sharp and
+     readable: the backdrop here is thin grey text on a near-white card, and
+     blurring that spreads it rather than removing it. What actually stops a
+     sentence showing through is the tint above -- which is why it is at 0.90
+     in the light theme and not the 0.66 that looked nicer in isolation.
+     The blur and the saturation still earn their place on colour: a coloured
+     card, a heading, a highlight passing under the bar arrives as a wash of
+     colour rather than as a shape. */
+  -webkit-backdrop-filter: blur(44px) saturate(230%) brightness(1.1);
+  backdrop-filter: blur(44px) saturate(230%) brightness(1.1);
   border: 1px solid var(--track-rim);
   /* A lit top edge inside, a contact shadow outside: the two things that
      make a pane look like it has thickness rather than being painted on. */
@@ -594,8 +604,9 @@ body.hide-english .en { display: none; }
 }
 .chapter-track::-webkit-scrollbar { display: none; }
 
-/* The lozenge. Its own fill, so a glyph never sits straight on the blur. */
-.chapter-track button { background: var(--track-pill); }
+/* The lozenges are dressed further down, after the glass system -- that
+   block restyles every control on the page and would otherwise land on top
+   of whatever was said here. */
 
 .chapters button {
   flex: 0 0 auto;
@@ -983,10 +994,10 @@ body.hide-english .en { display: none; }
      numbers on a light fill, made worse by bright Hebrew blurring through
      from behind. Glass over a dark page is dark; that is why Apple's own
      bars go darker at night rather than lighter. */
-  --track-glass: rgba(20, 20, 22, 0.82);
-  --track-rim:   rgba(255, 255, 255, 0.18);
-  --track-lit:   rgba(255, 255, 255, 0.16);
-  --track-pill:  rgba(120, 120, 128, 0.34);
+  --track-glass: rgba(20, 20, 22, 0.62);
+  --track-rim:   rgba(255, 255, 255, 0.24);
+  --track-lit:   rgba(255, 255, 255, 0.22);
+  --track-pill:  rgba(120, 120, 128, 0.22);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
@@ -1041,6 +1052,16 @@ body.hide-english .en { display: none; }
 :root[data-theme="dark"] .pill.is-active {
   background: linear-gradient(135deg, var(--rose-300), var(--gold-400));
   color: #2a1f33;
+}
+
+/* The track's own lozenges, dark. The shared rule above hands every control
+   secondarySystemFill, which is nearly clear -- fine on a card, wrong here,
+   because what is behind this one is bright Hebrew coming through glass. A
+   light numeral needs something dark under it, and the numeral itself goes
+   to full white rather than the 72% label grey. */
+:root[data-theme="dark"] .chapter-track button:not(.is-active) {
+  background: var(--track-pill);
+  color: #ffffff;
 }
 
 :root[data-theme="dark"] .zman.is-next {
@@ -2016,6 +2037,62 @@ body.hide-english .verse-card .verse-en { display: none; }
 .tab.is-active svg {
   filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--rose-300) 55%, transparent));
 }
+
+/* ---- the channel ------------------------------------------------------- */
+/* Everywhere else on the page a control is a chip: a rim, a fill, a shadow.
+   Nine of those in a row and the trough behind them read as nothing at all,
+   which is the opposite of the thing being copied. Apple's segmented control
+   has one visible channel and draws nothing inside it except the one you are
+   on. So in here the rim and the shadow come off, the fill drops to a
+   whisper, and the covering -- keeping a glyph off smeared Hebrew -- moves to
+   the trough, which is opaque enough now to do it. Contrast went up, not
+   down: 5.2:1 light, 6.4:1 dark, measured over scrolling text.
+   The chosen lens keeps all of it. */
+.chapters .chapter-track button:not(.is-active) {
+  background: var(--track-pill);
+  border-color: transparent;
+  box-shadow: none;
+}
+.chapters .chapter-track button:not(.is-active)::before { opacity: 0.3; }
+.chapters .chapter-track button:not(.is-active)::after { opacity: 0.5; }
+
+/* ---- the lens ----------------------------------------------------------
+   Three things separate Apple's Liquid Glass from a pill with a tint on it,
+   and every one of them lives at the edge.
+
+   A real bevel bends light, and bent light comes apart into colour, so the
+   rim is warm on one side and cool on the other rather than white all the
+   way round. Light also has a source: there is one hard bright stroke near
+   the top where the curve faces it, not an even wash. And the lens stands
+   proud of the trough it rides in, which is why it reads as a thing sitting
+   in a channel rather than a colour painted into one.
+
+   The fill underneath all of it stays. A fully clear lens was tried -- it is
+   what the reference photo looks like -- and a numeral laid straight over
+   blurred Hebrew measured 1.02:1. Apple can go clear because a tab bar sits
+   over a scrolled-away app; this bar sits over the psalm you are reading. */
+.chapters button.is-active::before {
+  padding: 1.5px;
+  background: conic-gradient(from 212deg,
+    rgba(255, 255, 255, 0.95)  0deg,
+    rgba(255, 216, 170, 0.90) 54deg,
+    rgba(255, 255, 255, 0.55) 118deg,
+    rgba(176, 208, 255, 0.85) 196deg,
+    rgba(214, 176, 255, 0.80) 248deg,
+    rgba(255, 255, 255, 0.50) 308deg,
+    rgba(255, 255, 255, 0.95) 360deg);
+}
+/* The specular arc: short, bright and high, where the curve turns to face
+   the light. The two washes under it are the old sheen, pulled back so the
+   arc is the brightest thing on the lens. */
+.chapters button.is-active::after {
+  background:
+    radial-gradient(64% 36% at 32% 3%, rgba(255, 255, 255, 0.95) 0%,
+                                       rgba(255, 255, 255, 0) 72%),
+    radial-gradient(120% 86% at 28% -16%, rgba(255, 255, 255, 0.46) 0%, transparent 64%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 62%);
+}
+
 
 /* Hover tilts the light across the glass and lifts it off the page. */
 @media (hover: hover) and (pointer: fine) {
