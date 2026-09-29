@@ -267,6 +267,32 @@ function dayKey(date) {
 }
 
 /**
+ * Did Sefaria hand back the sefer we asked for, or a different one?
+ *
+ * Asking for "Likutei Amarim" returns the Tanya -- which is correct, that is
+ * the Tanya's own name, but it was in the list as a possible spelling of the
+ * Maggid of Mezritch's sefer. Something resolved, 124 pieces came back, and
+ * the check passed: the Alter Rebbe's sefer would have appeared under the
+ * Maggid's name on his yahrzeit.
+ *
+ * So a title is only accepted when Sefaria's own name for what came back is
+ * the title we asked for. A spelling may differ; a sefer may not.
+ */
+function answersTo(shape, asked) {
+  const nodes = Array.isArray(shape) ? shape : [shape];
+  const plain = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const wanted = plain(asked);
+  if (!wanted) return false;
+  return nodes.some((node) => {
+    const got = plain(node && node.title);
+    if (!got) return false;
+    // "Tanya" answering to "Tanya", or "Noam Elimelech, Bereshit" to
+    // "Noam Elimelech" -- but never "Tanya" answering to "Likutei Amarim".
+    return got === wanted || got.indexOf(wanted) === 0 || wanted.indexOf(got) === 0;
+  });
+}
+
+/**
  * A passage from a tzaddik whose yahrzeit it is.
  *
  * Only from a sefer Sefaria actually carries. The title in the yahrzeit list
@@ -282,6 +308,7 @@ async function yahrzeitPassage(titles, date) {
   for (const title of candidates) {
     try {
       const shape = await sefaria.getShape(title);
+      if (!answersTo(shape, title)) continue;
       const refs = library.refsFromShape(shape, { title });
       if (!refs.length) continue;
 
@@ -314,7 +341,7 @@ async function yahrzeitPassage(titles, date) {
 }
 
 module.exports = {
-  yahrzeitPassage,
+  yahrzeitPassage, answersTo,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

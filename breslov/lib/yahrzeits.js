@@ -44,11 +44,15 @@ const YAHRZEITS = [
     he: 'רַבִּי דֹּב בֶּער מִמֶּזְרִיטְשׁ',
     month: 'Kislev', day: 19, year: 5533,
     about: 'Rabbi Dov Ber, successor to the Baal Shem Tov, whose talmidim carried Chassidus across Europe.',
-    // Sefaria does not have it under this spelling -- the diagnostics said so
-    // plainly, 0 pieces -- so these are tried too. Transliteration from
-    // Hebrew has no single right answer and the app must not assume one.
+    // Sefaria does not have his sefer under the spelling I first guessed, so
+    // other spellings are tried. NOT "Likutei Amarim": that is the Tanya's
+    // own name, and asking for it returned the Alter Rebbe's sefer, 124
+    // pieces, which the check waved through because something resolved. It
+    // would have put the Tanya under the Maggid's name on his yahrzeit.
+    // An alias may be another spelling of the same sefer. It may never be
+    // another sefer.
     book: 'Maggid Devarav LeYaakov',
-    aliases: ['Magid Devarav LeYaakov', 'Or Torah', 'Likutei Amarim'],
+    aliases: ['Magid Devarav LeYaakov', 'Maggid Devarav LeYa\'akov'],
   },
   {
     id: 'alter-rebbe',

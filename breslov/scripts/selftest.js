@@ -87,6 +87,28 @@ async function main() {
   check('No two entries share an id',
     new Set(yahrzeits.all().map((y) => y.id)).size === yahrzeits.all().length);
 
+  // Two tzaddikim pointing at one sefer means one of them is being credited
+  // with the other's words. "Likutei Amarim" was in the Maggid's list as a
+  // spelling of his sefer; it is the Tanya's own name, and it resolved.
+  const titles = [];
+  for (const y of yahrzeits.all()) {
+    for (const t of [y.book].concat(y.aliases || [])) if (t) titles.push(t.toLowerCase());
+  }
+  const shared = titles.filter((t, i) => titles.indexOf(t) !== i);
+  check('No sefer is claimed by two tzaddikim', shared.length === 0,
+    shared.length ? shared.join(', ') : `${titles.length} titles, all distinct`);
+
+  // The guard itself, on the case that got through.
+  const answers = require('../lib/daily').answersTo;
+  check('A sefer under another name is refused',
+    answers([{ title: 'Tanya' }], 'Likutei Amarim') === false);
+  check('The right sefer is accepted',
+    answers([{ title: 'Tanya' }], 'Tanya') === true);
+  check('A spelling that differs is still accepted',
+    answers([{ title: 'Keter Shem Tov' }], 'keter shem tov') === true);
+  check('And a section of the right sefer counts',
+    answers([{ title: 'Noam Elimelech, Bereshit' }], 'Noam Elimelech') === true);
+
   // And the count of years is right, not off by one.
   const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];
   check('It counts the years since', nachman && nachman.years === 5787 - 5571,

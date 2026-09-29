@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '35';
+const BUILD = '36';
 
 app.use(cors());
 
@@ -189,10 +189,25 @@ app.get('/api/diagnostics', route(async (req) => {
     try {
       for (const title of [y.book].concat(y.aliases || [])) {
         const shape = await sefaria.getShape(title);
+        // What Sefaria calls it, not what we asked for -- the two coming
+        // apart is how the Tanya nearly ended up under the Maggid's name.
+        const nodes = Array.isArray(shape) ? shape : [shape];
+        const sefariaCalls = (nodes[0] && nodes[0].title) || null;
         const refs = library.refsFromShape(shape, { title });
-        if (refs.length) return { name: y.name, book: y.book, foundAs: title, ok: true, pieces: refs.length };
+        if (refs.length) {
+          return {
+            name: y.name, book: y.book, foundAs: title,
+            sefariaCalls, ok: true, pieces: refs.length,
+          };
+        }
       }
-      return { name: y.name, book: y.book, ok: false, pieces: 0 };
+      // Nothing matched. Ask Sefaria what it does have by that name, so the
+      // next spelling is read off its own catalogue rather than guessed.
+      let suggestions = [];
+      try {
+        suggestions = (await sefaria.suggest(y.book)).slice(0, 5).map((x) => x.text);
+      } catch (err) { /* the suggestion service is a nicety, not a requirement */ }
+      return { name: y.name, book: y.book, ok: false, pieces: 0, sefariaSuggests: suggestions };
     } catch (err) {
       return { name: y.name, book: y.book, ok: false, detail: err.message };
     }
