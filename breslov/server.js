@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '32';
+const BUILD = '33';
 
 app.use(cors());
 
@@ -169,7 +169,7 @@ app.get('/api/diagnostics', route(async (req) => {
 
   // --- things that need no internet
   try {
-    const calendar = dates.calendarFor(today, place);
+    const calendar = dates.calendarFor(today, place, new Date());
     record('Hebrew date', !!calendar.hebrew.gematriya, calendar.hebrew.gematriya);
     record('Parsha', !!calendar.parsha, calendar.parsha ? calendar.parsha.en : 'none found');
     const z = zmanimLib.zmanimFor(today, place);
@@ -342,7 +342,7 @@ app.get('/api/diagnostics', route(async (req) => {
 app.get('/api/zmanim', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
-  const calendar = dates.calendarFor(date, place);
+  const calendar = dates.calendarFor(date, place, new Date());
   return {
     ...zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req)),
     hebrew: calendar.hebrew,
@@ -354,7 +354,7 @@ app.get('/api/zmanim', route(async (req) => {
 
 app.get('/api/calendar', route(async (req) => {
   const place = placeFromQuery(req);
-  return dates.calendarFor(dateFromQuery(req, place), place);
+  return dates.calendarFor(dateFromQuery(req, place), place, new Date());
 }));
 
 // ---------------------------------------------------------------- the learning
@@ -368,7 +368,7 @@ app.get('/api/daily', route(async (req) => {
 app.get('/api/tehillim', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
-  const { hebrew } = dates.calendarFor(date, place);
+  const { hebrew } = dates.calendarFor(date, place, new Date());
   return cached(`tehillim:${hebrew.year}-${hebrew.monthName}-${hebrew.day}`, DAY,
     () => daily.dailyTehillim(hebrew));
 }));
@@ -379,7 +379,7 @@ app.get('/api/tikkun', route(async () =>
 app.get('/api/weekly', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
-  const calendar = dates.calendarFor(date, place);
+  const calendar = dates.calendarFor(date, place, new Date());
   const week = Math.floor(daily.dayKey(date) / 7);
   return cached(`weekly:${week}:${place.israel ? 'il' : 'chu'}`, DAY,
     () => daily.weeklyTorah(date, calendar));
@@ -391,7 +391,7 @@ app.get('/api/weekly', route(async (req) => {
 app.get('/api/today', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
-  const calendar = dates.calendarFor(date, place);
+  const calendar = dates.calendarFor(date, place, new Date());
   const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
   const week = Math.floor(daily.dayKey(date) / 7);
 
@@ -440,7 +440,7 @@ function nextZmanOrTomorrow(place, date, now, prefs) {
 app.get('/api/widget', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
-  const calendar = dates.calendarFor(date, place);
+  const calendar = dates.calendarFor(date, place, new Date());
   const now = new Date();
   const prefs = zmanimPrefsFromQuery(req);
   const zmanim = zmanimLib.zmanimFor(date, place, now, prefs);

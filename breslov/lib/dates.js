@@ -7,7 +7,7 @@
  */
 
 const {
-  HDate, HebrewCalendar, Location, Sedra, gematriya, months,
+  HDate, HebrewCalendar, Location, Sedra, Zmanim, gematriya, months,
 } = require('@hebcal/core');
 const { isoDateInZone, dateFromIso } = require('./util');
 
@@ -79,6 +79,39 @@ function hebrewDate(date) {
     daysInMonth: HDate.daysInMonth(hd.getMonth(), hd.getFullYear()),
     isRoshChodesh: hd.getDate() === 1 || hd.getDate() === 30,
   };
+}
+
+/**
+ * Has the sun set where this person is?
+ *
+ * The Jewish day turns at nightfall, not at midnight. Until this was here the
+ * app used the civil date all evening: at eight o'clock on the 29th of
+ * September it still said 17 Tishrei, when it had been 18 Tishrei since
+ * sunset -- so the day's Tehillim were yesterday's, and a yahrzeit that
+ * begins tonight would not have shown until tomorrow morning.
+ *
+ * Sunset rather than tzais on purpose: the day turns at shkia, and the
+ * stretch between the two is bein hashmashos, which is doubtful. Showing the
+ * new day from shkia keeps the app on the side of the day that has begun.
+ */
+function isAfterSunset(localDate, place, now) {
+  if (!now) return false;
+  try {
+    const loc = toHebcalLocation(place);
+    const set = new Zmanim(loc, localDate, false).sunset();
+    return now.getTime() >= set.getTime();
+  } catch (err) {
+    // Somewhere the sun does not set that day, or a bad location: fall back on
+    // the civil date rather than guessing.
+    return false;
+  }
+}
+
+/** The day after a given one, keeping the midday anchor. */
+function dayAfter(date) {
+  const next = new Date(date.getTime());
+  next.setDate(next.getDate() + 1);
+  return next;
 }
 
 /**
@@ -175,10 +208,21 @@ function shabbosTimes(date, place) {
 }
 
 /** Everything calendar-related for one day, in one object. */
-function calendarFor(date, place) {
+function calendarFor(date, place, now) {
   const p = normalisePlace(place);
   const iso = isoDateInZone(date, p.timeZone);
   const localDate = dateFromIso(iso);
+
+  // The civil date is what the calendar on the wall says and does not move.
+  // Everything on the Jewish side of the day turns at nightfall.
+  //
+  // Only for the day actually being lived through. Ask for a date next week
+  // and you want that day's Hebrew date, not the one after it because the sun
+  // happens to have set while you were asking.
+  const isToday = now && isoDateInZone(now, p.timeZone) === iso;
+  const turned = isToday && isAfterSunset(localDate, p, now);
+  const jewishDate = turned ? dayAfter(localDate) : localDate;
+
   return {
     place: p,
     gregorian: {
@@ -190,14 +234,15 @@ function calendarFor(date, place) {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
       }),
     },
-    hebrew: hebrewDate(localDate),
-    parsha: weeklyParsha(localDate, p.israel),
-    ...shabbosTimes(localDate, p),
+    hebrew: Object.assign(hebrewDate(jewishDate), { afterSunset: turned }),
+    parsha: weeklyParsha(jewishDate, p.israel),
+    ...shabbosTimes(jewishDate, p),
   };
 }
 
 module.exports = {
   DEFAULT_PLACE,
+  isAfterSunset,
   normalisePlace,
   toHebcalLocation,
   hebrewDate,

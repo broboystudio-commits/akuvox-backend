@@ -12,6 +12,7 @@
 const dates = require('../lib/dates');
 const zmanim = require('../lib/zmanim');
 const library = require('../lib/library');
+const { dateFromIso } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
 let failures = 0;
@@ -53,6 +54,41 @@ async function main() {
   check('All 150 chapters covered', covered.size === 150, `${covered.size} chapters`);
   check('Tikkun HaKlali has ten psalms', library.TIKKUN_HAKLALI.length === 10,
     library.TIKKUN_HAKLALI.join(', '));
+
+  console.log('\nThe Jewish day turns at nightfall');
+
+  // Until this was here the app used the civil date all evening: at eight
+  // o'clock it still showed yesterday's Hebrew date, so the day's Tehillim
+  // were yesterday's too, and anything that begins at nightfall -- a
+  // yahrzeit, a yom tov -- would not have shown until the next morning.
+  const nightPlace = dates.normalisePlace({});
+  const someDay = dateFromIso('2026-09-29');
+  const { Zmanim, Location } = require('@hebcal/core');
+  const shkia = new Zmanim(dates.toHebcalLocation(nightPlace), someDay, false).sunset();
+
+  const dayBefore = dates.calendarFor(someDay, nightPlace, new Date(shkia.getTime() - 60 * 60 * 1000));
+  const dayAfter = dates.calendarFor(someDay, nightPlace, new Date(shkia.getTime() + 60 * 1000));
+
+  check('Before shkia it is still today', dayBefore.hebrew.afterSunset === false, dayBefore.hebrew.en);
+  check('A minute after shkia it is tomorrow', dayAfter.hebrew.afterSunset === true, dayAfter.hebrew.en);
+  check('And that is one day on, not two',
+    dayAfter.hebrew.day === (dayBefore.hebrew.day % dayBefore.hebrew.daysInMonth) + 1,
+    `${dayBefore.hebrew.day} then ${dayAfter.hebrew.day}`);
+
+  // The day's Tehillim follow the Hebrew date, so they have to turn with it.
+  const before = library.tehillimForDay(dayBefore.hebrew.day, dayBefore.hebrew.daysInMonth);
+  const after = library.tehillimForDay(dayAfter.hebrew.day, dayAfter.hebrew.daysInMonth);
+  // Compared by label, not by joining the array: these are objects, and
+  // joining them gives "[object Object]" on both sides, which is equal
+  // however different the psalms are. The check passed nothing at all.
+  const said = (list) => list.map(library.tehillimLabel).join(', ');
+  check('The day\'s Tehillim turn with it', said(before) !== said(after),
+    `${said(before)} then ${said(after)}`);
+
+  // But a date you asked for by name is that date, whatever the hour here.
+  const nextWeek = dates.calendarFor(dateFromIso('2026-10-05'), nightPlace,
+    new Date(shkia.getTime() + 60 * 60 * 1000));
+  check('A date you asked for does not move', nextWeek.hebrew.afterSunset === false, nextWeek.hebrew.en);
 
   console.log('\nThe widget always has something to show');
 
