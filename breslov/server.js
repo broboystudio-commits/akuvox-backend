@@ -32,7 +32,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '36';
+const BUILD = '37';
 
 app.use(cors());
 
@@ -195,9 +195,14 @@ app.get('/api/diagnostics', route(async (req) => {
         const sefariaCalls = (nodes[0] && nodes[0].title) || null;
         const refs = library.refsFromShape(shape, { title });
         if (refs.length) {
+          // End to end, not inferred. A shape resolving is not the same as a
+          // passage arriving: the title guard once refused five of these on a
+          // missing field and nothing here would have shown it.
+          const got = await daily.yahrzeitPassage([y.book].concat(y.aliases || []), today);
           return {
             name: y.name, book: y.book, foundAs: title,
             sefariaCalls, ok: true, pieces: refs.length,
+            passage: got ? got.ref : null,
           };
         }
       }
@@ -215,6 +220,9 @@ app.get('/api/diagnostics', route(async (req) => {
   record('Yahrzeit seforim on Sefaria',
     yahrzeitBooks.some((b) => b.ok),
     `${yahrzeitBooks.filter((b) => b.ok).length} of ${yahrzeitBooks.length} found`);
+  record('Yahrzeit passages actually arrive',
+    yahrzeitBooks.filter((b) => b.passage).length === yahrzeitBooks.filter((b) => b.ok).length,
+    `${yahrzeitBooks.filter((b) => b.passage).length} of ${yahrzeitBooks.filter((b) => b.ok).length} resolved books gave a passage`);
 
   const startedAt = Date.now();
   let texts = { ok: false, detail: '' };

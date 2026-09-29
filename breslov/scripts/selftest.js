@@ -90,13 +90,23 @@ async function main() {
   // Two tzaddikim pointing at one sefer means one of them is being credited
   // with the other's words. "Likutei Amarim" was in the Maggid's list as a
   // spelling of his sefer; it is the Tanya's own name, and it resolved.
-  const titles = [];
+  // Across entries, not within one. An entry's own list is spellings of the
+  // same sefer -- "leYaakov" and "LeYaakov" are one sefer, and counting them
+  // as two tzaddikim claiming it is the check misreading its own list.
+  const claimedBy = new Map();
   for (const y of yahrzeits.all()) {
-    for (const t of [y.book].concat(y.aliases || [])) if (t) titles.push(t.toLowerCase());
+    const mine = new Set([y.book].concat(y.aliases || [])
+      .filter(Boolean).map((t) => t.toLowerCase()));
+    for (const t of mine) {
+      if (!claimedBy.has(t)) claimedBy.set(t, new Set());
+      claimedBy.get(t).add(y.name);
+    }
   }
-  const shared = titles.filter((t, i) => titles.indexOf(t) !== i);
+  const shared = [...claimedBy.entries()].filter(([, who]) => who.size > 1);
   check('No sefer is claimed by two tzaddikim', shared.length === 0,
-    shared.length ? shared.join(', ') : `${titles.length} titles, all distinct`);
+    shared.length
+      ? shared.map(([t, who]) => `${t}: ${[...who].join(' and ')}`).join('; ')
+      : `${claimedBy.size} seforim, each to one name`);
 
   // The guard itself, on the case that got through.
   const answers = require('../lib/daily').answersTo;
@@ -108,6 +118,12 @@ async function main() {
     answers([{ title: 'Keter Shem Tov' }], 'keter shem tov') === true);
   check('And a section of the right sefer counts',
     answers([{ title: 'Noam Elimelech, Bereshit' }], 'Noam Elimelech') === true);
+  // Several shapes carry no title at all. Refusing those dropped the passage
+  // from five of the eight -- the Tanya among them -- on a missing field.
+  check('A shape with no name is not treated as the wrong sefer',
+    answers([{ length: 124, chapters: [] }], 'Tanya') === true);
+  check('A book field counts as its name',
+    answers([{ book: 'Tanya' }], 'Likutei Amarim') === false);
 
   // And the count of years is right, not off by one.
   const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];

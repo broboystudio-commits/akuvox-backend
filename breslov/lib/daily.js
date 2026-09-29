@@ -283,13 +283,24 @@ function answersTo(shape, asked) {
   const plain = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const wanted = plain(asked);
   if (!wanted) return false;
-  return nodes.some((node) => {
-    const got = plain(node && node.title);
-    if (!got) return false;
-    // "Tanya" answering to "Tanya", or "Noam Elimelech, Bereshit" to
-    // "Noam Elimelech" -- but never "Tanya" answering to "Likutei Amarim".
-    return got === wanted || got.indexOf(wanted) === 0 || wanted.indexOf(got) === 0;
-  });
+
+  // What Sefaria calls each part of what it sent back. Some shapes carry a
+  // title and some carry only a book name, and several carry neither.
+  const names = nodes
+    .map((node) => plain(node && (node.title || node.book)))
+    .filter(Boolean);
+
+  // Nothing to compare against. Sefaria answered to the title it was asked
+  // for and said nothing to contradict it, so this is not evidence of a
+  // different sefer -- and refusing here would have silently dropped the
+  // passage from five of the eight, the Tanya among them, on the strength of
+  // a missing field.
+  if (!names.length) return true;
+
+  // "Tanya" answering to "Tanya", or "Noam Elimelech, Bereshit" to
+  // "Noam Elimelech" -- but never "Tanya" answering to "Likutei Amarim".
+  return names.some((got) =>
+    got === wanted || got.indexOf(wanted) === 0 || wanted.indexOf(got) === 0);
 }
 
 /**

@@ -51,8 +51,11 @@ const YAHRZEITS = [
     // would have put the Tanya under the Maggid's name on his yahrzeit.
     // An alias may be another spelling of the same sefer. It may never be
     // another sefer.
-    book: 'Maggid Devarav LeYaakov',
-    aliases: ['Magid Devarav LeYaakov', 'Maggid Devarav LeYa\'akov'],
+    // Sefaria spells it with a small l -- "leYaakov" -- which its own
+    // suggestion service told us when asked. Read off its catalogue rather
+    // than guessed at for a third time.
+    book: 'Maggid Devarav leYaakov',
+    aliases: ['Maggid Devarav LeYaakov', 'Magid Devarav LeYaakov'],
   },
   {
     id: 'alter-rebbe',
