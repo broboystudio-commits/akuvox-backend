@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '48';
+  var BUILD = '49';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -367,13 +367,52 @@
   }
 
   /** Shown when the server could not reach Sefaria. We never invent text. */
-  function unavailableNotice(data, what) {
+  /**
+   * What someone sees when something did not load.
+   *
+   * Not what went wrong -- what to do next. The three places this is used
+   * were passing `err.message` straight onto the screen, so a reader who
+   * lost signal in the middle of the Tikkun was shown "Failed to fetch", or
+   * "Unexpected token < in JSON at position 0", or an HTTP status line. None
+   * of those is addressed to them. They are addressed to me, and they belong
+   * in the console and in /api/diagnostics, which is where they go now.
+   *
+   * And there is a way out of it. A message with no button leaves someone
+   * with nothing to do but reload the whole app and lose their place.
+   */
+  /**
+   * A placeholder shaped like the thing that is coming.
+   *
+   * A spinner says "wait"; this says "a paragraph of Hebrew is about to
+   * appear, roughly this long". The page does not jump when the words land,
+   * because they land on the lines that were already there.
+   */
+  function textSkeleton(lines) {
+    var box = el('div', 'skeleton');
+    box.setAttribute('aria-hidden', 'true');
+    for (var i = 0; i < (lines || 6); i++) box.appendChild(el('span'));
+    return box;
+  }
+
+  function unavailableNotice(what, detail, retry) {
+    if (detail) console.warn('[breslov] ' + what + ' failed:', detail);
+
     var box = el('div', 'notice');
-    box.appendChild(el('strong', null, 'The ' + what + ' could not be loaded.'));
+    box.appendChild(el('strong', null, 'We could not load the ' + what + '.'));
     box.appendChild(document.createTextNode(
-      'Every word here comes from Sefaria, and nothing is shown unless it arrives from there. ' +
-      (data && data.hint ? data.hint : 'Check the connection and try again.')
+      'It comes from Sefaria, and nothing is shown here unless it arrives from ' +
+      'there. Your place in the app is safe.'
     ));
+    if (typeof retry === 'function') {
+      var again = el('button', 'btn notice-retry', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', function () {
+        again.disabled = true;
+        again.textContent = 'Trying…';
+        retry();
+      });
+      box.appendChild(again);
+    }
     return box;
   }
 
@@ -1162,7 +1201,7 @@
       return;
     }
 
-    fillWith('searchResults', el('div', 'skeleton'));
+    fillWith('searchResults', textSkeleton(5));
     setText('searchCount', 'searching…');
 
     api('search?q=' + encodeURIComponent(q) + '&scope=' + searchState.scope)
@@ -1171,7 +1210,9 @@
         renderSearch(data);
       })
       .catch(function (err) {
-        fillWith('searchResults', unavailableNotice({ hint: err.message }, 'search'));
+        fillWith('searchResults', unavailableNotice('search results', err, function () {
+          runSearch(q);
+        }));
         setText('searchCount', '');
       });
   }
@@ -1183,11 +1224,16 @@
       box.appendChild(el('strong', null, 'Search is not working.'));
       box.appendChild(document.createTextNode(
         'The rest of the app is fine — this is the part that asks Sefaria to ' +
-        'search, and it answered in a way it did not used to. '));
-      if (data.reason) {
-        box.appendChild(document.createElement('br'));
-        box.appendChild(el('small', null, data.reason));
-      }
+        'search, and it answered in a way it did not used to.'));
+      // `data.reason` is Sefaria's own error text. It was printed here, under
+      // the message, in small type. It is a note to whoever maintains this,
+      // not to whoever is trying to look something up, so it goes to the
+      // console and stays in /api/diagnostics.
+      if (data.reason) console.warn('[breslov] search failed:', data.reason);
+      var again = el('button', 'btn notice-retry', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', function () { runSearch(searchState.query); });
+      box.appendChild(again);
       fillWith('searchResults', box);
       return;
     }
@@ -1779,7 +1825,10 @@
     if (name === 'tikkun' && !loaded.tikkun) {
       loaded.tikkun = true;
       api('tikkun').then(renderTikkun).catch(function (err) {
-        fill($('tikkunBody'), unavailableNotice({ hint: err.message }, 'Tikkun HaKlali'));
+        fill($('tikkunBody'), unavailableNotice('Tikkun HaKlali', err, function () {
+          fill($('tikkunBody'), textSkeleton(10));
+          showPanel('tikkun');
+        }));
         loaded.tikkun = false;
       });
     }
@@ -1822,7 +1871,10 @@
         if (banner) banner.hidden = false;
         renderToday(saved);
       } else {
-        fill($('verseBody'), unavailableNotice({ hint: err.message }, "day's learning"));
+        fill($('verseBody'), unavailableNotice("day's learning", err, function () {
+          fill($('verseBody'), textSkeleton(6));
+          refresh();
+        }));
       }
     });
   }

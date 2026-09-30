@@ -12,12 +12,20 @@ const library = require('./library');
 const { pickForDay, pickRunForDay, pickForWeek, snippet, dayNumber } = require('./util');
 
 /** A short, uniform "sorry" object so the app never shows invented text. */
+/**
+ * A piece of the day that did not arrive.
+ *
+ * `reason` is the real error and is meant for /api/diagnostics and the log,
+ * never for the page. `hint` used to say "check the server's internet
+ * connection", which is an instruction to whoever runs the server, given to
+ * whoever is trying to say Tehillim. The website does not print either of
+ * them now; it says what it could not load and offers to try again.
+ */
 function unavailable(what, err) {
   return {
     available: false,
     what,
     reason: err ? err.message : 'Text could not be loaded',
-    hint: 'The text comes from sefaria.org. Check the server\'s internet connection.',
   };
 }
 

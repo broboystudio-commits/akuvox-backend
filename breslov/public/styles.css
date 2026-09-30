@@ -786,13 +786,47 @@ body.hide-english .en { display: none; }
 
 /* ------------------------------------------------------------- states */
 
+/* What stands in for the text while it is on its way.
+   It was one shimmering block, which is better than a spinner but still
+   tells you nothing about what is coming. These are lines, ragged at the
+   ends the way a paragraph is, and set to the right because what arrives
+   here is Hebrew. The page does not jump when the words land on them. */
 .skeleton {
+  display: grid;
+  gap: 14px;
+}
+.skeleton span {
+  display: block;
+  width: 100%;
+  height: 15px;
+  margin-left: auto;
+  border-radius: 8px;
+  background: linear-gradient(100deg,
+    var(--rose-50) 28%, var(--rose-100) 48%, var(--gold-100) 62%, var(--rose-50) 78%);
+  background-size: 240% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+/* A line does not end where the one above it did. */
+.skeleton span:nth-child(3n)   { width: 74%; }
+.skeleton span:nth-child(4n)   { width: 91%; }
+.skeleton span:nth-child(5n)   { width: 83%; }
+.skeleton span:last-child      { width: 46%; }
+/* An empty one is still the old single block, so nothing that has not been
+   given lines collapses to nothing. */
+.skeleton:empty {
   height: 96px;
   border-radius: 14px;
   background: linear-gradient(100deg,
     var(--rose-50) 28%, var(--rose-100) 48%, var(--gold-100) 62%, var(--rose-50) 78%);
   background-size: 240% 100%;
   animation: shimmer 1.6s infinite linear;
+}
+
+/* The way out of a failure. */
+.notice-retry {
+  display: block;
+  margin-top: 14px;
+  padding: 10px 20px;
 }
 @keyframes shimmer { to { background-position: -240% 0; } }
 
