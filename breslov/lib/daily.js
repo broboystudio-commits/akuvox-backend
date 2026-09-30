@@ -312,11 +312,39 @@ function answersTo(shape, asked) {
   //
   // Anchored at the start once, which was too strict: a sefer filed with a
   // word in front of its name -- "Sefer Noam Elimelech", "Likutei Amarim
-  // Tanya" -- failed, and Noam Elimelech and the Chofetz Chaim were being
-  // refused on their own yahrzeits by their own titles. Containment keeps
-  // the substitution this guards against out (neither name contains the
-  // other there) and lets a prefix in.
-  return names.some((got) => got.indexOf(wanted) >= 0 || wanted.indexOf(got) >= 0);
+  // Tanya" -- failed. Containment keeps the substitution this guards against
+  // out (neither name contains the other there) and lets a prefix in.
+  if (names.some((got) => got.indexOf(wanted) >= 0 || wanted.indexOf(got) >= 0)) return true;
+
+  // And then, only if that failed, the same comparison on consonants alone.
+  //
+  // Transliterating Hebrew has no right answer, and two spellings of one
+  // sefer differ by a vowel or by which letter got the h. Noam Elimelech is
+  // filed as Noam Elimelekh; the Chofetz Chaim as the Chafetz Chaim. Both
+  // were refused their own Torah on their own yahrzeits, by one letter each.
+  //
+  // Vowels carry almost none of the meaning in a transliteration and almost
+  // all of the disagreement, so they come out; ch, kh and h are one Hebrew
+  // letter argued over, so they become one; so do tz and ts. What is left is
+  // the skeleton of the name, and two different seforim do not share one.
+  // Checked: Tanya is "tny" and Likutei Amarim is "lktmrm" -- the one
+  // substitution this exists to stop still cannot get through.
+  const bones = (text) => plain(text)
+    .replace(/tz|ts/g, 'z')
+    .replace(/kh|ch/g, 'h')
+    .replace(/[aeiou]/g, '')
+    // And a doubled letter is one letter. Sefaria files Likutei Etzot as
+    // Likkutei Etzot; running the whole shelf through this found that one,
+    // which the hand-written tests had not. It is not in the yahrzeit list
+    // today, so nothing was broken by it -- yet.
+    .replace(/(.)\1+/g, '$1');
+  const skeleton = bones(asked);
+  if (skeleton.length < 3) return false;
+  return names.some((got) => {
+    const other = bones(got);
+    return other.length >= 3 &&
+      (other.indexOf(skeleton) >= 0 || skeleton.indexOf(other) >= 0);
+  });
 }
 
 /** What Sefaria calls the thing it sent back, for saying so in a diagnostic. */

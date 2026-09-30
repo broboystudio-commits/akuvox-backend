@@ -134,6 +134,49 @@ async function main() {
   // name contains the other, so widening the match did not let it through.
   check('But the Tanya still does not answer to the Maggid\'s sefer',
     answers([{ title: 'Tanya' }], 'Likutei Amarim') === false);
+  // The two that were refused their own Torah on their own yahrzeits, by one
+  // letter each. Sefaria's spellings, taken from its own answer.
+  check('A sefer spelled with kh instead of ch is the same sefer',
+    answers([{ title: 'Noam Elimelekh' }], 'Noam Elimelech') === true);
+  check('And one spelled with a different vowel',
+    answers([{ title: 'Chafetz Chaim' }], 'Chofetz Chaim') === true);
+  check('A section of it under that spelling counts too',
+    answers([{ title: 'Noam Elimelekh, Bereshit' }], 'Noam Elimelech') === true);
+  // Loosening it to consonants must not loosen it to a different sefer.
+  check('Two different seforim are still two different seforim',
+    answers([{ title: 'Kedushat Levi' }], 'Sefer HaMiddot') === false);
+  check('And a near neighbour is not swallowed',
+    answers([{ title: 'Likutei Halakhot' }], 'Likutei Moharan') === false);
+
+  // Every sefer this app names, against every other one. Written by hand the
+  // cases above all passed while Likkutei Etzot -- which is how Sefaria
+  // actually files Likutei Etzot, with the doubled letter -- was being
+  // refused. Nothing was broken by it, because that sefer is not in the
+  // yahrzeit list; it would have been the next time one was added.
+  const SHELF = [
+    'Likutei Moharan', 'Sichot HaRan', 'Sefer HaMiddot', 'Likutei Etzot',
+    'Likutei Tefilot', 'Sippurei Maasiyot', 'Chayei Moharan', 'Shivchei HaRan',
+    'Likutei Halachot', 'Keter Shem Tov', 'Maggid Devarav leYaakov', 'Tanya',
+    'Noam Elimelech', 'Kedushat Levi', 'Chofetz Chaim',
+  ];
+  // How Sefaria spells the ones it spells differently, read off its answers.
+  const AS_FILED = {
+    'Likutei Etzot': 'Likkutei Etzot',
+    'Likutei Halachot': 'Likutei Halakhot',
+    'Noam Elimelech': 'Noam Elimelekh',
+    'Chofetz Chaim': 'Chafetz Chaim',
+  };
+  const missed = SHELF.filter((title) => !answers([{ title: AS_FILED[title] || title }], title));
+  check('Every sefer on the shelf answers to itself', missed.length === 0,
+    missed.length ? missed.join(', ') : `all ${SHELF.length}`);
+
+  const confused = [];
+  SHELF.forEach((a) => SHELF.forEach((b) => {
+    if (a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return;
+    if (answers([{ title: AS_FILED[a] || a }], b)) confused.push(`${a} → ${b}`);
+  }));
+  check('And to no other sefer on it', confused.length === 0,
+    confused.length ? confused.join('; ') : `${SHELF.length * (SHELF.length - 1)} pairs`);
 
   // And the count of years is right, not off by one.
   const nachman = yahrzeits.yahrzeitsOn({ day: 18, monthName: 'Tishrei', year: 5787 })[0];

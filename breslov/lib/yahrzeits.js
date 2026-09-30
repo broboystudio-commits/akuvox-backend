@@ -151,6 +151,8 @@ const YAHRZEITS = [
     month: 'Adar', day: 21, year: 5547,
     about: 'Author of Noam Elimelech, a talmid of the Maggid of Mezritch and a teacher of much of Polish Chassidus.',
     book: 'Noam Elimelech',
+    // Sefaria's own spelling, read off its answer rather than guessed.
+    aliases: ['Noam Elimelekh'],
   },
   {
     id: 'berditchever',
@@ -167,6 +169,7 @@ const YAHRZEITS = [
     month: 'Elul', day: 24, year: 5693,
     about: 'Rabbi Yisrael Meir Kagan of Radin, author of the Chofetz Chaim on the laws of speech and the Mishnah Berurah.',
     book: 'Chofetz Chaim',
+    aliases: ['Chafetz Chaim'],
   },
 ];
 
