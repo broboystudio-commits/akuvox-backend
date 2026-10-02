@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '53';
+  var BUILD = '54';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -603,6 +603,14 @@
       if (g.minhag) note += '  —  the order of ' + g.minhag;
       row.appendChild(el('div', 'ushpiz-note', note));
       row.appendChild(el('p', 'hint', g.about));
+
+      // The Torah of the day, under the guest it belongs to.
+      if (g.passage && g.passage.available) {
+        row.appendChild(passageBox(g.passage));
+      } else {
+        row.appendChild(el('p', 'hint',
+          'The passage could not be loaded from Sefaria just now.'));
+      }
       wrap.appendChild(row);
     });
 
@@ -639,8 +647,16 @@
       return;
     }
 
-    // An excerpt, with the reference and a way through to the whole piece.
-    // The card is beside the day's learning, not instead of it.
+    fill(body, passageBox(p));
+  }
+
+  /**
+   * An excerpt, with its reference and a way through to the whole piece.
+   *
+   * The yahrzeit card and the Ushpizin card show a passage the same way, so
+   * they draw it with the same function rather than each with its own copy.
+   */
+  function passageBox(p) {
     var box = el('div', 'passage');
     if (p.ref) box.appendChild(el('div', 'passage-label', p.heRef || p.ref));
     if (p.he) box.appendChild(el('div', 'he', p.he));
@@ -663,7 +679,7 @@
       src.appendChild(a);
     }
     box.appendChild(src);
-    fill(body, box);
+    return box;
   }
 
   function renderZmanim(zmanim, cal) {

@@ -429,8 +429,64 @@ async function yahrzeitPassage(titles, date, tried) {
   return null;
 }
 
+/**
+ * The Torah on an Ushpizin card.
+ *
+ * Unlike the yahrzeit passages, nothing is searched for and no shape is
+ * asked about: these are named references, written down by hand, so the only
+ * question is whether Sefaria hands back that exact passage. Two per guest,
+ * so the same day of Sukkos is not the same page every year, and the second
+ * is tried if the first comes back empty.
+ */
+async function ushpizinPassage(refs, date, tried) {
+  const list = (Array.isArray(refs) ? refs : [refs]).filter(Boolean);
+  const note = (ref, why) => { if (Array.isArray(tried)) tried.push({ ref, why }); };
+  if (!list.length) return null;
+
+  // Each reference, and then the chapter it sits in. A range is the part of
+  // a reference most easily got wrong -- a verse that does not exist, a
+  // chapter that ends sooner than I thought -- and the chapter on its own is
+  // still the right passage about the right guest, only longer. The card
+  // shows an excerpt either way.
+  const chapterOf = (ref) => {
+    const cut = ref.indexOf(':');
+    return cut > 0 ? ref.slice(0, cut) : null;
+  };
+  const order = pickRunForDay(list, date, 41, list.length);
+  const attempts = [];
+  order.forEach((ref) => {
+    attempts.push(ref);
+    const chapter = chapterOf(ref);
+    if (chapter && !list.includes(chapter)) attempts.push(chapter);
+  });
+
+  for (const ref of attempts) {
+    let text = null;
+    try {
+      text = await sefaria.getText(ref);
+    } catch (err) {
+      note(ref, `fetch failed: ${err.message}`);
+      continue;
+    }
+    if (!text || !(text.hebrew || []).length) { note(ref, 'no Hebrew in this passage'); continue; }
+
+    const full = present(text, {});
+    note(ref, 'ok');
+    return {
+      available: true,
+      ref: full.ref,
+      heRef: full.heRef,
+      url: full.url,
+      he: full.snippetHe,
+      en: full.snippetEn,
+      credit: full.credit,
+    };
+  }
+  return null;
+}
+
 module.exports = {
-  yahrzeitPassage, answersTo, shapeNames,
+  yahrzeitPassage, ushpizinPassage, answersTo, shapeNames,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

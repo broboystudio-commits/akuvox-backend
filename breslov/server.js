@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '53';
+const BUILD = '54';
 
 app.use(cors());
 
@@ -228,6 +228,19 @@ app.get('/api/diagnostics', route(async (req) => {
       guests.guests.map((g) => g.name + (g.minhag ? ` (${g.minhag})` : '')).join(' / ')
     : 'not Sukkos today');
 
+  // Every reference, not only the ones today happens to need: a passage that
+  // has stopped resolving should show up on a Tuesday in Shevat, not on the
+  // morning of the day it is wanted.
+  const everyGuest = ushpizin.all().zohar;
+  const guestRefs = await Promise.all(everyGuest.map(async (g) => {
+    const tried = [];
+    const got = await daily.ushpizinPassage(g.refs, today, tried);
+    return { name: g.name, refs: g.refs, passage: got ? got.ref : null, tried: got ? undefined : tried };
+  }));
+  record('Ushpizin passages arrive',
+    guestRefs.every((g) => g.passage),
+    `${guestRefs.filter((g) => g.passage).length} of ${guestRefs.length} guests have their Torah`);
+
   record('Yahrzeit seforim on Sefaria',
     yahrzeitBooks.some((b) => b.ok),
     `${yahrzeitBooks.filter((b) => b.ok).length} of ${yahrzeitBooks.length} found`);
@@ -380,6 +393,7 @@ app.get('/api/diagnostics', route(async (req) => {
       : 'The dates and times work, but this server cannot fetch the texts from sefaria.org. ' +
         'Nothing is shown in place of a text it cannot load.',
     checks,
+    ushpizinRefs: guestRefs,
     yahrzeits: {
       total: yahrzeits.all().length,
       today: yahrzeits.yahrzeitsOn(dates.calendarFor(today, place, new Date()).hebrew).map((y) => y.name),
@@ -433,13 +447,31 @@ async function yahrzeitsFor(calendar, date) {
   }));
 }
 
+/**
+ * The day's guests, each with his passage.
+ *
+ * Cached per guest per day like the yahrzeit passages, so a page of Sukkos
+ * costs Sefaria one request per guest per day and not one per visitor.
+ */
+async function ushpizinFor(calendar, date) {
+  const today = ushpizin.ushpizinOn(calendar.hebrew);
+  if (!today) return null;
+
+  const guests = await Promise.all(today.guests.map(async (g) => {
+    const passage = await cached(`ushpizin:${g.id}:${daily.dayKey(date)}`, DAY,
+      () => daily.ushpizinPassage(g.refs, date));
+    return Object.assign({}, g, { passage: passage || null });
+  }));
+  return Object.assign({}, today, { guests });
+}
+
 app.get('/api/calendar', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place, new Date());
   return Object.assign({}, calendar, {
     yahrzeits: await yahrzeitsFor(calendar, date),
-    ushpizin: ushpizin.ushpizinOn(calendar.hebrew),
+    ushpizin: await ushpizinFor(calendar, date),
   });
 }));
 
@@ -494,7 +526,7 @@ app.get('/api/today', route(async (req) => {
     calendar, zmanim, spark, tehillim, weekly,
     yahrzeits: yahrzeitsToday,
     // Null on every day but the seven of Sukkos.
-    ushpizin: ushpizin.ushpizinOn(calendar.hebrew),
+    ushpizin: await ushpizinFor(calendar, date),
   };
 }));
 

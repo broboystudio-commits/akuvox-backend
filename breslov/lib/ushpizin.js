@@ -18,8 +18,13 @@
  * minhag can read past the other; someone shown only the wrong one has no way
  * to know it was a choice.
  *
- * Nothing here is a quotation. The line about each guest is a plain
- * description, not Torah put into anyone's mouth.
+ * The line about each guest is a plain description, not Torah put into
+ * anyone's mouth. The Torah on the card is different: it is a named passage,
+ * fetched from Sefaria and shown with its reference, the way the yahrzeit
+ * passages are. Each one is a place the Torah speaks of that guest -- or, in
+ * Dovid HaMelech's case, speaks in his own voice -- chosen by hand rather
+ * than found by searching for a name, because a search returns the places a
+ * name appears and not the places it matters.
  */
 
 const GUESTS = {
@@ -30,6 +35,8 @@ const GUESTS = {
     sefirah: 'Chesed',
     sefirahHe: 'חֶסֶד',
     about: 'The first of the fathers, whose tent stood open on every side.',
+    // The three guests at the tent: the passage Ushpizin is named for.
+    refs: ['Genesis 18:1-8', 'Genesis 12:1-5'],
   },
   yitzchak: {
     id: 'yitzchak',
@@ -38,6 +45,8 @@ const GUESTS = {
     sefirah: 'Gevurah',
     sefirahHe: 'גְּבוּרָה',
     about: 'Who was bound on the altar, and who dug again his father\'s wells.',
+    // Digging his father's wells again, and the Akeidah.
+    refs: ['Genesis 26:17-25', 'Genesis 22:1-14'],
   },
   yaakov: {
     id: 'yaakov',
@@ -46,6 +55,8 @@ const GUESTS = {
     sefirah: 'Tiferes',
     sefirahHe: 'תִּפְאֶרֶת',
     about: 'Who dreamt of the ladder, and whose children became the nation.',
+    // The ladder at Beis El, and the night he was given his second name.
+    refs: ['Genesis 28:10-22', 'Genesis 32:25-31'],
   },
   moshe: {
     id: 'moshe',
@@ -54,6 +65,8 @@ const GUESTS = {
     sefirah: 'Netzach',
     sefirahHe: 'נֶצַח',
     about: 'Who brought down the Torah, and who is called the faithful shepherd.',
+    // The bush that burned, and the verse about his humility.
+    refs: ['Exodus 3:1-10', 'Numbers 12:1-8'],
   },
   aharon: {
     id: 'aharon',
@@ -62,6 +75,8 @@ const GUESTS = {
     sefirah: 'Hod',
     sefirahHe: 'הוֹד',
     about: 'Who loved peace and pursued it, and brought people back to one another.',
+    // Hillel on being his talmid, and the month the whole house wept.
+    refs: ['Pirkei Avot 1:12', 'Numbers 20:22-29'],
   },
   yosef: {
     id: 'yosef',
@@ -70,6 +85,8 @@ const GUESTS = {
     sefirah: 'Yesod',
     sefirahHe: 'יְסוֹד',
     about: 'Who kept himself in Mitzrayim, and fed his brothers who had sold him.',
+    // Telling his brothers who he was, and the years in Potiphar's house.
+    refs: ['Genesis 45:1-8', 'Genesis 39:1-6'],
   },
   dovid: {
     id: 'dovid',
@@ -78,6 +95,8 @@ const GUESTS = {
     sefirah: 'Malchus',
     sefirahHe: 'מַלְכוּת',
     about: 'Who wrote the Tehillim this app reads every day.',
+    // His own words, which is what makes his different from the rest.
+    refs: ['Psalms 23', 'Psalms 27:1-6'],
   },
 };
 
