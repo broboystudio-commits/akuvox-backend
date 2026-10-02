@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '68';
+  var BUILD = '69';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1791,6 +1791,16 @@
   function closeSuggest() {
     var box = $('searchSuggest');
     var input = $('searchInput');
+    // Closing it has to outrank a reply that is already on its way back.
+    //
+    // The sequence number guarded against an older request overtaking a
+    // newer one, but it was never bumped when the list was closed on
+    // purpose -- so pressing Enter ran the search, closed the suggestions,
+    // and then the reply to the last keystroke landed and reopened them
+    // directly over the results. Cancel the pending request too, or the same
+    // thing happens 180ms later.
+    window.clearTimeout(suggestState.timer);
+    suggestState.seq++;
     if (box) { box.hidden = true; box.textContent = ''; }
     if (input) {
       input.setAttribute('aria-expanded', 'false');
@@ -2125,10 +2135,24 @@
     if (!drop) return;
     if (topbar) topbar.classList.add('is-searching');
     drop.hidden = false;
-    // Restart the animation even if it was opened a moment ago.
+    // Restart the animation even if it was opened a moment ago, and take the
+    // class off again when it has run.
+    //
+    // `field-open` animates `transform` with `fill-mode: both`, so while the
+    // class is on, the element is permanently mid-animation as far as the
+    // browser is concerned -- and an element with a filling transform
+    // animation is its own stacking context. That trapped the suggestion
+    // list: it has `z-index: 25` and the next-zman line under it has none,
+    // but the two were never competing, because the list's z-index only
+    // counted inside the box the class had fenced off. The suggestions came
+    // up with the header's own text printed straight through them.
     drop.classList.remove('is-dropping');
     void drop.offsetWidth;
     drop.classList.add('is-dropping');
+    window.clearTimeout(drop._dropping);
+    drop._dropping = window.setTimeout(function () {
+      drop.classList.remove('is-dropping');
+    }, 320);
     if (btn) {
       btn.setAttribute('aria-expanded', 'true');
       btn.setAttribute('aria-label', 'Close search');
@@ -3056,7 +3080,8 @@
   // on Wednesday -- is not a control, and lighting it up under a finger
   // promises somewhere to go that does not exist.
   var PRESSABLE = '.btn, .pill, .stepper button, .icon-btn, .aa, .resume button,' +
-                  '.tab, .row:not(.is-plain), .wheel-item, .backrow, .nekuda-source';
+                  '.tab, .row:not(.is-plain), .wheel-item, .backrow, .nekuda-source,' +
+                  '.shelf-book, .result, .suggest-item';
 
   /**
    * Mark what is being pressed, rather than leaving it to :active.

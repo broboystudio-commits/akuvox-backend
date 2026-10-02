@@ -1,7 +1,8 @@
 # Breslov Daily
 
-A website, a phone app and iPhone widgets for a daily piece of Rebbe Nachman,
-the day's Tehillim, the Tikkun HaKlali, your zmanim, and a Torah for the week.
+A website, a phone app and iPhone widgets built around one teaching a day —
+the **נקודה ליום**, chosen because it belongs to today — with the day's
+Tehillim, the Tikkun HaKlali, your zmanim, and a Torah for the week around it.
 
 Written to be run by someone who is not a programmer. Everything below is
 copy-and-paste.
@@ -12,14 +13,16 @@ copy-and-paste.
 
 | | |
 |---|---|
-| **Today's teaching** | A piece of Reb Nachman every day, rotating through Likutei Moharan, Likutei Moharan II, Sichot HaRan, Sefer HaMiddot and Likutei Etzot |
+| **Daily Inspiration** | The נקודה ליום: one teaching, from a closed list of seven rebbes, chosen for what today actually is — a yom tov, a fast, Rosh Chodesh, a day of the Omer, or the week's parsha. It is the home screen |
+| **Quick Torah** | A short piece of Reb Nachman, rotating through Likutei Moharan, Likutei Moharan II, Sichot HaRan, Sefer HaMiddot and Likutei Etzot |
 | **Today's Tehillim** | The standard monthly cycle, by the day of the Hebrew month |
-| **Tikkun HaKlali** | All ten psalms — 16, 32, 41, 42, 59, 77, 90, 105, 137, 150 — in order, with a tab for each |
+| **Tikkun HaKlali** | All ten psalms — 16, 32, 41, 42, 59, 77, 90, 105, 137, 150 — in order, with a wheel to pick one and a note of where you stopped |
 | **Zmanim** | Every time for wherever you are: alos, misheyakir, netz, sof zman shema and tefilla (GRA and MGA), chatzos, mincha gedola and ketana, plag, shkia, tzais |
 | **Your minhag** | Pick how you hold — Standard, **Rabbeinu Tam (72 minutes)**, Rabbeinu Tam zmaniyos, Magen Avraham (16.1°) or Geonim — or set any single line yourself. The whole app follows, including the countdown and the phone widget. "Show every opinion" lists them all side by side |
 | **Shabbos** | The parsha, candle lighting and havdalah for your location |
 | **Fonts** | Read in Frank Ruhl, David, Heebo, or whatever your device already has. The webfonts are only fetched if you pick one, and fall back to a device font if they cannot be reached |
-| **About page** | What the app is, how the daily teaching is chosen, and every source it draws on |
+| **The Omer and the fasts** | The day of the Omer, counted in weeks and days, and when a fast begins and ends — shown only on the days they are true |
+| **About and Sources** | What the app is and where the daily teaching comes from, kept apart from Sources, which is about the libraries the words are fetched from |
 | **Search** | Find any teaching by word or idea, across all the seforim, with the option to widen it to the whole of Sefaria |
 | **Daily reminder** | Subscribe in your phone's Calendar app and it reminds you each day, carrying that day's Tehillim. Set the time in Reminders & about |
 | **Torah of the week** | One lesson, the same all week. It looks for a lesson where Reb Nachman darshans a verse from that week's parsha, and if there isn't one it gives a featured lesson instead |
@@ -240,6 +243,10 @@ breslov/
 │   ├── sefaria.js         downloads the texts, and saves them
 │   ├── library.js         which seforim, and the Tehillim divisions
 │   ├── daily.js           decides what today and this week get
+│   ├── teachers.js        the seven approved rebbes, and the Rambam
+│   ├── inspiration.js     chooses the day's נקודה
+│   ├── history.js         what has been shown, so it is not shown again
+│   ├── yahrzeits.js       the yahrzeits of the month
 │   └── util.js            the rotation maths, text tidying
 ├── public/                the website itself
 │   ├── index.html  styles.css  app.js
@@ -255,13 +262,55 @@ breslov/
 └── data/cache/            downloaded texts live here
 ```
 
-### How "today's teaching" is chosen
+### The five pages
 
-It is not random each time you open it — everyone sees the same thing on the
-same day, and it does not repeat. The day number is used to pick a spot in a
-fixed shuffled order of all the lessons, so every lesson comes up exactly once
-before any comes up again. The weekly Torah works the same way but changes
-only on Sunday.
+| Tab | What is under it |
+|---|---|
+| **Today** | The נקודה, the date, what there is to read today, and anything true only of today — the Omer, a fast's times, a yahrzeit, the Ushpizin |
+| **Read** | Today's Tehillim, the Tikkun HaKlali, the Quick Torah |
+| **This week** | The Dvar Torah, Shabbos and the parsha, the month's yahrzeits |
+| **Zmanim** | The next zman, large; then the whole day; then which opinion each line follows |
+| **More** | Search, Settings, About, Sources, Privacy, Terms |
+
+Three of those are hubs rather than pages: Read, This week and More each open
+onto a short list of rows. That is how everything which used to be a tab of
+its own still has a place without putting nine things in a row meant for five.
+Every page has its own web address, so the phone's back gesture works and a
+page can be sent to somebody.
+
+### How the daily נקודה is chosen
+
+Not by a number, and not at random. Everyone opening the app on the same day
+sees the same teaching, and once chosen a day's teaching does not change.
+
+**Who it can come from.** A closed list of seven: Rebbe Nachman, Reb Noson,
+the Arizal, Rabbi Chaim Vital, the Baal Shem Tov, the Maggid of Mezritch and
+the Satmar Rav. Nobody is added to that list by accident — adding a teacher
+means editing `lib/teachers.js` on purpose. Where none of the seven has
+something for the day, the **Rambam** fills the gap. He is a fallback, not an
+eighth name: he never takes a turn, he fills a hole.
+
+**What the day is.** The Hebrew calendar is read first — a yom tov, a fast,
+Rosh Chodesh, a day of the Omer — and only for *today*, not for the week
+ahead, so an ordinary Tuesday in Adar does not call itself Purim for a week
+and a half. If nothing is doing, the week's parsha is the subject.
+
+**What wins.** Relevance, then rotation, in that order. Each teacher gets a
+turn over time, but a turn never beats the teaching: a weaker piece is never
+put up to even out the rotation. A piece shown in the last few months does not
+come round again — `lib/history.js` keeps that record.
+
+**How it is attributed.** Where a rebbe wrote his own sefer the words are his,
+and are shown as a quotation. Where his talmidim wrote them down — the Baal
+Shem Tov and the Maggid — it is marked *based on*, because that is what it is.
+The exact sefer and place are always named.
+
+If nothing fits anywhere, the app says so rather than showing a teaching that
+has nothing to do with the day.
+
+The Quick Torah and the weekly Torah still work the older way: the day number
+picks a spot in a fixed shuffled order, so every lesson comes up once before
+any repeats, and the weekly one changes only on Sunday.
 
 ---
 
@@ -276,7 +325,9 @@ Handy if you want to build something else on top of it.
 | `/api/zmanim` | The times, with the next one marked |
 | `/api/zmanim?minhag=rabbeinu-tam` | The same, following that minhag. Also `standard`, `rabbeinu-tam-zmanis`, `magen-avraham`, `geonim`, or per-line such as `?tzais=72`, plus `&showAll=true` |
 | `/api/calendar` | Hebrew date, parsha, candles, yomim tovim |
-| `/api/daily` | Today's teaching |
+| `/api/inspiration` | The day's נקודה: the teaching, who said it, where it is from, and why today |
+| `/api/yahrzeits` | The yahrzeits of the Hebrew month, in day order |
+| `/api/daily` | The Quick Torah |
 | `/api/tehillim` | Today's Tehillim |
 | `/api/tikkun` | All ten psalms of the Tikkun HaKlali |
 | `/api/weekly` | This week's Torah |

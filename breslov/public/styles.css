@@ -4906,3 +4906,295 @@ button.row.is-pressed { background: var(--surface-2); }
 .zman.is-next .he-label { color: var(--accent); }
 .zman.is-next .t { color: var(--accent); font-weight: 700; }
 .zman.is-next .note { margin-top: 3px; font-size: 0.75rem; color: var(--text-3); }
+
+/* And the belt as well as the braces: the search field's strip is lifted
+   above the rest of the header outright, so the suggestion list is in front
+   of the next-zman line whatever stacking context it happens to be in. A
+   z-index that depends on nothing above it having an animation is not a
+   z-index you can rely on. */
+.searchdrop { position: relative; z-index: 40; }
+
+/* ---------------------------------------------------------------------------
+   Search, in the same language as the rest of the app.
+
+   It was the last page still built the old way: a card inside the panel, ten
+   bordered-and-shadowed capsules for the suggestions, every sefer on the
+   shelf its own little raised tile, and every result a floating card. Eleven
+   shadows before you had typed anything. The content was right; only the
+   dressing was from the previous design.
+
+   Rows and hairlines, like everywhere else.
+--------------------------------------------------------------------------- */
+
+/* The field. A plain surface with a hairline, and the ring only when it has
+   the keyboard -- a permanent rose outline reads as an error state. */
+.search-field {
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.search-field input { background: none; }
+/* Chromium draws its own clear button on `type="search"`: a bright blue ✕
+   that belongs to no palette in this app and sits two centimetres from the
+   close button that actually closes search. */
+.search-field input::-webkit-search-cancel-button,
+.search-field input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+
+/* The suggestions. Opaque, flat, and above everything in the header. */
+.suggest,
+:root[data-theme="dark"] .suggest {
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface);
+  background-image: none;
+  border: 1px solid var(--hair);
+  box-shadow: 0 10px 30px rgba(32, 26, 30, 0.14);
+}
+.suggest-item { border-radius: 10px; color: var(--text); }
+.suggest-item .s-note { color: var(--text-3); }
+
+/* What the page offers before it has been asked anything. */
+.search-lead {
+  margin: 0 0 18px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-2);
+  max-width: 48ch;
+}
+.search-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.search-ideas .pill,
+.search-ideas .pill.small {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  box-shadow: none;
+  font-size: 0.875rem;
+  font-weight: 450;
+  color: var(--text);
+  min-width: 0;
+}
+.search-ideas .pill.is-pressed { background: var(--accent-bg); }
+
+.shelf-title {
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.shelf-list { display: block; }
+/* Each sefer is a row, not a tile. */
+.shelf-book {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 2px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hair-soft);
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 450;
+  color: var(--text);
+}
+.shelf-book:first-child { border-top: 0; }
+.shelf-book.is-pressed { background: var(--surface-2); }
+.shelf-he {
+  font-family: var(--hebrew);
+  font-size: 0.9375rem;
+  color: var(--text-3);
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+
+/* Results. A list, hairline-separated. The reference leads; the passage is
+   the body text under it.
+
+   On a wide screen it stays a grid -- two columns, then three -- because a
+   single column of short results down the middle of a monitor is a phone
+   layout stretched. `display: block` here undid that and the whole page went
+   back to one column, which is what the column check caught. */
+.results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+@media (min-width: 900px) {
+  .results { grid-template-columns: 1fr 1fr; column-gap: 32px; }
+  /* In a grid the first row's top hairline has to come off every column, not
+     just the first child. */
+  .result:nth-child(-n+2) { border-top: 0; }
+}
+@media (min-width: 1500px) {
+  .results { grid-template-columns: repeat(3, 1fr); }
+  .result:nth-child(-n+3) { border-top: 0; }
+}
+.result {
+  display: block;
+  padding: 16px 2px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hair-soft);
+  border-radius: 0;
+  box-shadow: none;
+  text-decoration: none;
+  color: inherit;
+}
+.result:first-child { border-top: 0; }
+.result.is-pressed { background: var(--surface-2); }
+.r-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+.r-ref {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--accent);
+  unicode-bidi: plaintext;
+}
+.r-book { font-size: 0.75rem; color: var(--text-3); }
+.r-text {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-2);
+  /* Four lines is enough to tell whether it is the one you wanted. */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.r-text.is-he {
+  font-family: var(--hebrew);
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+/* The scope pills above the results: the same quiet chip, with the chosen
+   one filled in the accent rather than raised. */
+#searchScope .pill {
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  box-shadow: none;
+  color: var(--text);
+}
+#searchScope .pill.is-active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.search-empty {
+  margin: 20px 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+/* The scope pills above the results, at the size of the suggestion chips
+   rather than two capsules the width of the screen. */
+#searchScope { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+#searchScope .pill {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  min-width: 0;
+}
+
+/* The header's date block, with the emphasis the other way up: the civil date
+   and the place lead, the Hebrew date is the quiet second line. The Today
+   page sets the Hebrew date large itself, in its daystamp, and two headings
+   saying the same thing within one screen is the sort of thing you keep
+   seeing without being able to name. */
+.topbar .dateblock { min-width: 0; }
+.topbar .subline {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar .subline .sep { color: var(--text-3); margin: 0 5px; }
+.topbar .subline .linkish { font-weight: 500; color: var(--accent); }
+.topbar .hebdate {
+  margin: 1px 0 0;
+  font-family: var(--hebrew);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-3);
+  direction: rtl;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The next zman under the bar: one line. It wrapped to two on a phone, which
+   made the header grow and shrink as the wording changed through the day
+   ("in 48 min" fits, "in 1 hr 12 min" does not) -- the page under it moved
+   every time. */
+.nextzman {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* On a narrow phone the one line has to give something up, and the thing it
+   gives up is the Hebrew name -- not the countdown, which is the only part
+   of it anybody is reading. Truncating from the right cut "in 48 min" to
+   "in 4…", which is the exact opposite of useful. The Hebrew names are all
+   on the Zmanim page, set properly. */
+@media (max-width: 430px) {
+  .nextzman .label { font-weight: 600; }
+  .nextzman .he { display: none; }
+}
+
+/* A section heading inside a card needs air under it; it was sitting on the
+   first row of the list it names. */
+.card > .rows-head { margin: 0 0 10px; }
+
+/* The header grew by 2px when search opened, and everything under it stepped
+   down by 2px with it.
+   
+   The date block and the search field share one grid cell, and the date block
+   is kept in the layout while searching (`visibility: hidden`, not removed)
+   precisely so the cell cannot change height. But the search field WAS
+   removed when shut -- `[hidden] { display: none }` -- so while it was shut
+   the cell was the height of the date block alone, and opening it made the
+   cell the height of the taller of the two. The trick only worked in one
+   direction. Both of them stay in the layout now, and the cell is the same
+   height whichever is showing.
+   
+   Only the one in the bar: the `[hidden]` rule still applies anywhere else
+   this markup is used. */
+/* `!important` because there is a global `[hidden] { display: none !important }`
+   further up, and !important beats specificity however specific you get. The
+   first attempt at this rule was more specific than everything it was up
+   against and still lost; only asking the browser which rules actually
+   matched showed why. `visibility: hidden` keeps it out of the accessibility
+   tree and out of the tab order, so nothing is exposed by keeping the box. */
+.bar-slot > .searchdrop[hidden] {
+  display: block !important;
+  visibility: hidden;
+  pointer-events: none;
+}

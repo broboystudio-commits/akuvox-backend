@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="68">
+<html lang="en" data-build="69">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=68" />
+<link rel="stylesheet" href="/styles.css?v=69" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -45,13 +45,21 @@
          the header, and therefore everything below it -- stays exactly the
          height it was. -->
     <div class="bar-slot">
+    <!-- The civil date leads up here and the Hebrew date sits under it, small.
+         It used to be the other way round: the bar set the Hebrew date at
+         heading size, and the home screen's own daystamp set the same string
+         at heading size again two centimetres below it. The same words twice
+         is not emphasis, it is a mistake you keep noticing. The daystamp is
+         the deliberate one -- it is part of the page; this is chrome, and it
+         is what you see on every other page, where the full date is not
+         written anywhere else. -->
     <div class="dateblock" id="dateBlock">
-      <p class="hebdate" id="hebDate" aria-hidden="true">&nbsp;</p>
       <p class="subline">
         <span id="gregDate">Loading…</span>
         <span class="sep">·</span>
         <button class="linkish" id="placeBtn" type="button">Brooklyn, NY</button>
       </p>
+      <p class="hebdate" id="hebDate" aria-hidden="true">&nbsp;</p>
     </div>
 
     <div class="searchdrop" id="searchDrop" hidden>
@@ -412,26 +420,33 @@
   </section>
 
   <!-- ---------------------------------------------------------- SEARCH -->
+  <!-- No card around this. The page IS the search: wrapping it in a panel
+       inside a panel put a second border and a second shadow round a list
+       that is already the only thing on the screen. -->
   <section class="panel" id="panel-search" role="region" aria-label="Search the seforim" hidden>
-    <article class="card">
-      <header class="card-head">
-        <h2>Search</h2>
-        <span class="ref" id="searchCount"></span>
-      </header>
-      <div class="pills" id="searchScope"></div>
-      <div id="searchResults"></div>
-    </article>
+    <header class="hubhead">
+      <h1>Search</h1>
+      <p class="hubsub" id="searchCount"></p>
+    </header>
+    <div class="pills" id="searchScope"></div>
+    <div id="searchResults"></div>
   </section>
 
   <!-- ---------------------------------------------------------- ABOUT -->
   <section class="panel" id="panel-about" role="region" aria-label="Reminders and about" hidden>
+    <button class="backrow" data-goto="more" type="button"><span aria-hidden="true"></span>More</button>
+    <header class="hubhead">
+      <h1>About</h1>
+      <p class="hubsub">One teaching a day, and the day it belongs to.</p>
+    </header>
 
     <article class="card">
       <header class="card-head"><h2>What this is</h2></header>
       <p class="hint">
-        A daily piece of Rebbe Nachman, the day's Tehillim, the Tikkun HaKlali,
-        the zmanim where you are, and a Torah for the week. It is meant to be
-        opened once a day and read, not browsed.
+        One teaching a day — the נקודה ליום — chosen because it belongs to
+        today rather than because today's number came up. Around it: the day's
+        Tehillim, the Tikkun HaKlali, the zmanim where you are, and a Torah for
+        the week. It is meant to be opened once a day and read, not browsed.
       </p>
       <p class="hint">
         Everything here is free, there is nothing to sign up for, no account
@@ -442,20 +457,38 @@
     </article>
 
     <article class="card">
-      <header class="card-head"><h2>How today's teaching is chosen</h2></header>
+      <header class="card-head"><h2>Where the daily teaching comes from</h2></header>
       <p class="hint">
-        It is not random. The day's number picks a place in a fixed shuffled
-        order of every lesson, so everyone opening the app on the same day sees
-        the same teaching, and every lesson comes up once before any repeats.
-        The Torah of the week works the same way but changes only on Sunday.
-        On a week with a yom tov in it, it looks for a lesson about the yom tov;
-        otherwise for one where Rebbe Nachman or Reb Noson darshans a verse
-        from that week's parsha. If it finds neither, the card says so rather
-        than showing a lesson that has nothing to do with the week.
+        From a short, closed list of rebbes: Rebbe Nachman and Reb Noson, the
+        Arizal and Rabbi Chaim Vital, the Baal Shem Tov and the Maggid of
+        Mezritch, and the Satmar Rav. Nobody is added to that list without
+        being put there on purpose. Where none of them has something for the
+        day, the Rambam fills the gap — he is a fallback, not an eighth name
+        in the rotation.
+      </p>
+      <p class="hint">
+        The day is looked at first: a yom tov, a fast, Rosh Chodesh, a day of
+        the Omer, otherwise the week's parsha. If a teaching genuinely belongs
+        to that day, it is the one shown, and the line above it says why. If
+        nothing does, the parsha's own teaching is shown rather than a yom tov
+        that is still a week away. Each teacher gets a turn over time, but a
+        turn never outranks the teaching: a weaker piece is not put up to even
+        out the rotation, and a piece shown in the last few months does not
+        come round again.
+      </p>
+      <p class="hint">
+        Where a rebbe wrote his own sefer, the words are his and are shown as
+        a quotation. Where his talmidim wrote them down — the Baal Shem Tov
+        and the Maggid — it is marked "based on", because that is what it is.
+        The exact sefer and place are always named, and tapping them opens the
+        passage on Sefaria.
       </p>
       <p class="hint">
         The Tehillim follow the usual monthly division, by the day of the
         Hebrew month. In a 29-day month the 29th and 30th are said together.
+        The Torah for the week changes on Sunday and looks for a yom tov in
+        the week first, then for a piece on that week's parsha; if it finds
+        neither it says so rather than showing something unrelated.
       </p>
     </article>
 
@@ -852,6 +885,6 @@
 
 </main>
 
-<script src="/app.js?v=68"></script>
+<script src="/app.js?v=69"></script>
 </body>
 </html>
