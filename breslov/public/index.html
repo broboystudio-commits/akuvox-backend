@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="66">
+<html lang="en" data-build="67">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=66" />
+<link rel="stylesheet" href="/styles.css?v=67" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -78,97 +78,43 @@
         <svg class="glyph-search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
         <svg class="glyph-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
-      <!-- Everything that used to be three buttons and a popover: the theme,
-           the translation, the font, the text size and the about page. -->
-      <button class="icon-btn" id="menuBtn" type="button"
-              aria-label="Settings and about" aria-expanded="false" aria-controls="sideMenu">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
-      </button>
     </div>
   </div>
 
   <div class="nextzman" id="nextZman" role="status" aria-live="polite" hidden></div>
 </header>
 
-<!-- The sidebar, and the dimmed page behind it. -->
-<div class="scrim" id="menuScrim" hidden></div>
-<aside class="sidebar" id="sideMenu" aria-label="Settings" role="dialog" aria-modal="true" hidden>
-  <div class="side-head">
-    <div class="side-title">
-      <h2>Settings</h2>
-      <p class="side-sub">How this app reads</p>
-    </div>
-    <button class="icon-btn" id="menuClose" type="button" aria-label="Close">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-  </div>
+<!-- The settings drawer that used to hang off a button up here is gone.
+     Settings is a page now, under More, which is where a phone keeps them
+     and where somebody looks. Nothing it held was lost: every control is on
+     that page, grouped. -->
 
-  <!-- The words beside each switch are what names it. Without the
-       aria-labelledby a screen reader reached a switch with no name at all
-       and could only say "switch, off" -- which of the two, it had no way of
-       telling you. -->
-  <div class="sheet-row">
-    <span id="labelDarkMode">Dark mode</span>
-    <button class="switch" id="themeBtn" type="button" role="switch"
-            aria-checked="false" aria-labelledby="labelDarkMode"></button>
-  </div>
-  <div class="sheet-row">
-    <span id="labelEnglish">English translation</span>
-    <button class="switch" id="toggleEnglish" type="button" role="switch"
-            aria-checked="true" aria-labelledby="labelEnglish"></button>
-  </div>
-  <div class="sheet-row">
-    <span>Font</span>
-    <select class="choice" id="fontChoice"></select>
-  </div>
-  <div class="sheet-row">
-    <span>Text size</span>
-    <div class="stepper">
-      <button id="fontSmaller" type="button" aria-label="Smaller text">A</button>
-      <button id="fontLarger" type="button" aria-label="Larger text">A</button>
-    </div>
-  </div>
-  <div class="sheet-row">
-    <span>Reminders &amp; about</span>
-    <button class="pill small" data-goto="about" type="button">Open</button>
-  </div>
-
-  <!-- Keeps the last row clear of the home bar on a phone, where the sheet
-       now reaches the bottom edge of the screen. -->
-  <div class="sheet-floor" aria-hidden="true"></div>
-</aside>
-
+<!-- Five destinations and no more. Three of them are hubs: Read, This week
+     and More each open onto a short list of rows rather than being a page in
+     themselves, which is how everything that used to be a tab of its own --
+     Tehillim, Tikkun, the weekly Torah, search, about, the policies -- still
+     has a place without putting nine things in a row meant for five.
+     The bar is flush to the bottom edge with a hairline over it. -->
 <nav class="tabs" id="tabs" aria-label="Sections">
   <button class="tab is-active" data-panel="today" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4c-2.1 2.4-3.4 4.5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-2.1-1.3-4.2-3.4-6.6z"/><path d="M6.6 20.4c1.6-1.3 3.4-2 5.4-2s3.8.7 5.4 2"/></svg>
     <span>Today</span>
   </button>
-  <button class="tab" data-panel="tehillim" type="button">
+  <button class="tab" data-panel="read" type="button">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5S10.2 5 7 5H3.5v12.5H7c3.2 0 5 1.5 5 1.5s1.8-1.5 5-1.5h3.5V5H17c-3.2 0-5 1.5-5 1.5z"/><path d="M12 6.5V19"/></svg>
-    <span>Tehillim</span>
+    <span>Read</span>
   </button>
-  <button class="tab" data-panel="tikkun" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>
-    <span>Tikkun</span>
-  </button>
-  <button class="tab" data-panel="weekly" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-11"/><path d="M6.5 3a2.5 2.5 0 0 0 0 5H9V5.5A2.5 2.5 0 0 0 6.5 3z"/><path d="M6.5 21a2.5 2.5 0 0 0 0-5H9v2.5A2.5 2.5 0 0 1 6.5 21z"/><path d="M12 9h4.5M12 13h4.5"/></svg>
-    <span>Weekly</span>
+  <button class="tab" data-panel="week" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.6h17M8.4 3.5v3M15.6 3.5v3"/></svg>
+    <span>Week</span>
   </button>
   <button class="tab" data-panel="zmanim" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4v4.8l3 1.9"/></svg>
     <span>Zmanim</span>
   </button>
-  <!-- On a phone these two live in the header: the magnifying glass, and
-       "Reminders & about" under Aa. On a desktop the row has room, and a
-       page nobody can find may as well not be there. -->
-  <button class="tab wide-only" data-panel="search" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
-    <span>Search</span>
-  </button>
-  <button class="tab wide-only" data-panel="about" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.6"/></svg>
-    <span>About</span>
+  <button class="tab" data-panel="more" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+    <span>More</span>
   </button>
 </nav>
 
@@ -177,30 +123,42 @@
   <p class="offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>Showing saved learning — you are offline.</p>
 
   <!-- ---------------------------------------------------------- TODAY -->
+  <!-- The order is the whole argument of this screen: today's נקודה, then
+       what there is to do today, then the week, then everything else. The
+       date is a line of type above the teaching, not a hero. -->
   <section class="panel" id="panel-today" role="region" aria-label="Today">
 
-    <article class="hero">
-      <p class="hero-greg" id="heroGreg">&nbsp;</p>
-      <h1 class="hero-heb" id="heroHeb">&nbsp;</h1>
-      <div class="chips" id="heroChips"></div>
+    <header class="daystamp">
+      <p class="daystamp-greg" id="heroGreg">&nbsp;</p>
+      <h1 class="daystamp-heb he" id="heroHeb">&nbsp;</h1>
+      <p class="daystamp-of" id="heroChips"></p>
+    </header>
+
+    <!-- ---- the נקודה. Text first, and no container fighting it. -->
+    <article class="nekuda" id="nekudaCard" aria-labelledby="nekudaLabel">
+      <div class="nekuda-head">
+        <h2 class="nekuda-label" id="nekudaLabel">Daily Inspiration</h2>
+        <span class="nekuda-he he">נְקֻדָּה לַיּוֹם</span>
+      </div>
+      <p class="nekuda-why" id="nekudaWhy"></p>
+      <div id="nekudaBody"><div class="skeleton tall" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div></div>
+      <!-- The source sits under the teaching and stays under it: quiet, and
+           tappable only because there is somewhere to go. -->
+      <button class="nekuda-source" id="nekudaSource" type="button" hidden></button>
+      <div class="nekuda-full" id="nekudaFull" hidden></div>
     </article>
 
-    <article class="card verse-card">
-      <header class="card-head">
-        <h2>A word for today</h2>
-        <span class="ref" id="verseRef"></span>
-      </header>
-      <div id="verseBody"><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
-      <div class="full" id="sparkFull" hidden></div>
-      <button class="btn" id="openFull" type="button" hidden>Read the whole lesson</button>
-    </article>
+    <!-- ---- what there is to do today. Rows, not a wall of cards. -->
+    <nav class="rows" id="todayRows" aria-label="Today at a glance"></nav>
 
-    <!-- After the lesson, not before it.
-         On a wide screen the lesson is told to stand beside three cards in
-         the right-hand column. Putting this one ahead of it in the markup
-         sent the grid past column one before the lesson asked for it, so the
-         lesson dropped to the next row and left the whole left-hand side of
-         the page empty. Order in the markup is the order down that column. -->
+    <!-- ---- at most two more, and only when they are worth it. -->
+    <section class="more-today" id="moreToday" hidden>
+      <h2 class="rows-head">More for today</h2>
+      <div id="moreTodayBody"></div>
+    </section>
+
+    <!-- ---- Ushpizin and yahrzeit keep their own places. A yahrzeit never
+             replaces the נקודה; it sits below it as its own thing. -->
     <article class="card" id="ushpizinCard" hidden>
       <header class="card-head">
         <h2 id="ushpizinTitle">Ushpizin</h2>
@@ -219,38 +177,148 @@
       <div id="yahrzeitBody"></div>
     </article>
 
-    <article class="card">
-      <header class="card-head">
-        <h2>Coming up</h2>
-        <span class="ref" id="upcomingPlace"></span>
-      </header>
+    <!-- Kept from the old home screen, and kept because it earns its place:
+         the next few zmanim and when Shabbos comes in. Quieter now. -->
+    <section class="strip">
+      <h2 class="rows-head">
+        Coming up
+        <button class="rows-more" data-goto="zmanim" type="button">All zmanim</button>
+      </h2>
       <div class="upcoming" id="upcoming"></div>
-      <button class="btn ghost" data-goto="zmanim" type="button">All zmanim</button>
-    </article>
+    </section>
 
-    <div class="quick">
-      <button class="quick-card" data-goto="tehillim" type="button">
-        <span class="quick-title">Tehillim</span>
-        <span class="quick-sub" id="quickTehillim">today's portion</span>
-      </button>
-      <button class="quick-card" data-goto="tikkun" type="button">
-        <span class="quick-title">Tikkun HaKlali</span>
-        <span class="quick-sub">ten psalms</span>
-      </button>
-      <button class="quick-card wide" data-goto="weekly" type="button">
-        <span class="quick-title">Torah of the week</span>
-        <span class="quick-sub" id="quickWeekly">a lesson for the parsha</span>
-      </button>
-    </div>
-
-    <article class="card">
-      <header class="card-head">
-        <h2>Shabbos</h2>
-        <span class="ref" id="parshaTag"></span>
-      </header>
+    <section class="strip" id="shabbosStrip">
+      <h2 class="rows-head">Shabbos <span class="rows-tag" id="parshaTag"></span></h2>
       <div class="kv" id="shabbosTimes"></div>
-    </article>
+    </section>
 
+    <!-- The whole lesson, kept so nothing that worked is lost: the old Today
+         screen could open the day's teaching in full and this still can. -->
+    <div class="full" id="sparkFull" hidden></div>
+    <span id="verseRef" hidden></span>
+    <span id="verseBody" hidden></span>
+    <span id="quickTehillim" hidden></span>
+    <span id="quickWeekly" hidden></span>
+    <button id="openFull" type="button" hidden></button>
+
+  </section>
+
+  <!-- ----------------------------------------------------------- READ -->
+  <section class="panel" id="panel-read" role="region" aria-label="Read" hidden>
+    <header class="hubhead"><h1>Read</h1></header>
+    <nav class="rows" aria-label="Reading">
+      <button class="row" data-goto="tehillim" type="button">
+        <span class="row-main"><span class="row-title">Today&rsquo;s Tehillim</span>
+          <span class="row-sub" id="rowTehillim">the day&rsquo;s portion</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="tikkun" type="button">
+        <span class="row-main"><span class="row-title">Tikkun HaKlali</span>
+          <span class="row-sub">ten psalms, in order</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="torah" type="button">
+        <span class="row-main"><span class="row-title">Torah</span>
+          <span class="row-sub" id="rowTorah">a short piece, and the shelf it comes from</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ----------------------------------------------------------- TORAH -->
+  <!-- Quick Torah: short, sharp, sourced. The piece that used to be the
+       whole of the Today screen, now one thing among several. -->
+  <section class="panel" id="panel-torah" role="region" aria-label="Torah" hidden>
+    <button class="backrow" data-goto="read" type="button"><span aria-hidden="true"></span>Read</button>
+    <header class="hubhead">
+      <h1>Quick Torah</h1>
+      <p class="hubsub" id="torahRef"></p>
+    </header>
+    <div id="torahBody"><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span><span></span></div></div>
+    <button class="btn" id="torahFullBtn" type="button" hidden>Read the whole lesson</button>
+    <div class="full" id="torahFull" hidden></div>
+  </section>
+
+  <!-- ----------------------------------------------------------- WEEK -->
+  <section class="panel" id="panel-week" role="region" aria-label="This week" hidden>
+    <header class="hubhead">
+      <h1>This week</h1>
+      <p class="hubsub" id="weekSub"></p>
+    </header>
+    <nav class="rows" aria-label="This week">
+      <button class="row" data-goto="weekly" type="button">
+        <span class="row-main"><span class="row-title">Dvar Torah</span>
+          <span class="row-sub" id="rowWeekly">short and sharp, for this week</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="shabbos" type="button">
+        <span class="row-main"><span class="row-title">Shabbos &amp; the parsha</span>
+          <span class="row-sub" id="rowShabbos">candle lighting and havdalah</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="yahrzeit" type="button">
+        <span class="row-main"><span class="row-title">Yahrzeits</span>
+          <span class="row-sub" id="rowYahrzeit">this month</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ------------------------------------------------------- SHABBOS -->
+  <section class="panel" id="panel-shabbos" role="region" aria-label="Shabbos and the parsha" hidden>
+    <button class="backrow" data-goto="week" type="button"><span aria-hidden="true"></span>This week</button>
+    <header class="hubhead">
+      <h1>Shabbos</h1>
+      <p class="hubsub" id="shabbosParsha"></p>
+    </header>
+    <div class="kv" id="shabbosFull"></div>
+    <section class="strip" id="yomTovStrip" hidden>
+      <h2 class="rows-head">Coming up in the calendar</h2>
+      <div class="rows" id="yomTovList"></div>
+    </section>
+  </section>
+
+  <!-- ------------------------------------------------------ YAHRZEIT -->
+  <section class="panel" id="panel-yahrzeit" role="region" aria-label="Yahrzeits" hidden>
+    <button class="backrow" data-goto="week" type="button"><span aria-hidden="true"></span>This week</button>
+    <header class="hubhead"><h1>Yahrzeits</h1></header>
+    <div id="yahrzeitMonth"></div>
+  </section>
+
+  <!-- ------------------------------------------------------------ MORE -->
+  <section class="panel" id="panel-more" role="region" aria-label="More" hidden>
+    <header class="hubhead"><h1>More</h1></header>
+    <nav class="rows" aria-label="More">
+      <button class="row" data-goto="search" type="button">
+        <span class="row-main"><span class="row-title">Search</span>
+          <span class="row-sub">every sefer at once</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="settings" type="button">
+        <span class="row-main"><span class="row-title">Settings</span>
+          <span class="row-sub">reading, times, reminders</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+    </nav>
+    <nav class="rows" aria-label="About this app">
+      <button class="row" data-goto="about" type="button">
+        <span class="row-main"><span class="row-title">About</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="sources" type="button">
+        <span class="row-main"><span class="row-title">Sources</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="privacy" type="button">
+        <span class="row-main"><span class="row-title">Privacy</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+      <button class="row" data-goto="terms" type="button">
+        <span class="row-main"><span class="row-title">Terms of use</span></span>
+        <span class="row-go" aria-hidden="true"></span>
+      </button>
+    </nav>
+    <p class="hubfoot" id="moreBuild"></p>
   </section>
 
   <!-- ---------------------------------------------------------- TEHILLIM -->
@@ -419,9 +487,90 @@
       </p>
     </article>
 
-    <!-- ------------------------------------------------ sources -->
-    <article class="card">
-      <header class="card-head"><h2>Sources</h2></header>
+  </section>
+
+  <!-- -------------------------------------------------------- SETTINGS -->
+  <!-- Every control the drawer had, in groups, on a page. Nothing was
+       dropped because it did not suit the new look. -->
+  <section class="panel" id="panel-settings" role="region" aria-label="Settings" hidden>
+    <button class="backrow" data-goto="more" type="button"><span aria-hidden="true"></span>More</button>
+    <header class="hubhead"><h1>Settings</h1></header>
+
+    <h2 class="rows-head">Reading</h2>
+    <div class="rows rows-form">
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title" id="labelEnglish">English translation</span>
+          <span class="row-sub">Shown under the Hebrew, where there is one</span></span>
+        <button class="switch" id="toggleEnglish" type="button" role="switch"
+                aria-checked="true" aria-labelledby="labelEnglish"></button>
+      </div>
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title" id="labelDarkMode">Dark mode</span>
+          <span class="row-sub">Follows your phone until you change it</span></span>
+        <button class="switch" id="themeBtn" type="button" role="switch"
+                aria-checked="false" aria-labelledby="labelDarkMode"></button>
+      </div>
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Hebrew font</span></span>
+        <select class="choice" id="fontChoice" aria-label="Hebrew font"></select>
+      </div>
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Text size</span></span>
+        <div class="stepper">
+          <button id="fontSmaller" type="button" aria-label="Smaller text">A</button>
+          <button id="fontLarger" type="button" aria-label="Larger text">A</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="rows-head">Times</h2>
+    <div class="rows rows-form">
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Location</span>
+          <span class="row-sub" id="settingsPlace">—</span></span>
+        <button class="pill small" id="aboutLocation" type="button">Use mine</button>
+      </div>
+    </div>
+    <p class="rows-note">Which opinion each zman follows is set on the Zmanim
+       page, where you can see the times change as you choose.</p>
+
+    <h2 class="rows-head">Daily reminder</h2>
+    <div class="rows rows-form">
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Remind me at</span>
+          <span class="row-sub">A calendar subscription, not email</span></span>
+        <select class="choice" id="reminderTime" aria-label="Reminder time"></select>
+      </div>
+    </div>
+    <button class="btn" id="reminderAdd" type="button">Add to my calendar</button>
+    <p class="rows-note" id="reminderNote"></p>
+
+    <h2 class="rows-head">This device</h2>
+    <div class="rows rows-form">
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Version</span></span>
+        <span class="row-value" id="aboutBuild">—</span>
+      </div>
+      <div class="row row-static">
+        <span class="row-main"><span class="row-title">Today&rsquo;s teaching</span></span>
+        <span class="row-value" id="aboutSpark">—</span>
+      </div>
+    </div>
+    <p class="rows-note">Everything saved here stays on this device. You can
+       clear it on the <button class="linkish" data-goto="privacy" type="button">privacy page</button>.</p>
+  </section>
+
+  <!-- --------------------------------------------------------- SOURCES -->
+  <!-- What this app reads from. Deliberately only that: it is not the place
+       to explain how a teaching is chosen. -->
+  <section class="panel" id="panel-sources" role="region" aria-label="Sources" hidden>
+    <button class="backrow" data-goto="more" type="button"><span aria-hidden="true"></span>More</button>
+    <header class="hubhead">
+      <h1>Sources</h1>
+      <p class="hubsub">The libraries this app reads from. Every passage shows
+         its own edition and translator underneath it.</p>
+    </header>
+    <div class="sources">
 
       <p class="hint">
         Every word of Torah in this app is fetched from Sefaria as you read it.
@@ -507,8 +656,7 @@
       </div>
 
       <p class="hint" style="margin-top:20px" id="aboutBuild"></p>
-    </article>
-
+    </div>
   </section>
 
   <!-- -------------------------------------------------------- PRIVACY -->
@@ -688,6 +836,6 @@
 
 </main>
 
-<script src="/app.js?v=66"></script>
+<script src="/app.js?v=67"></script>
 </body>
 </html>

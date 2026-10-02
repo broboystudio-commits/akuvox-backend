@@ -3848,3 +3848,659 @@ body.no-scroll {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }
+
+
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  THE REDESIGN                                                        ║
+   ║  Everything below is the app as it is now. What is above it is the   ║
+   ║  layout, the typography and the reading view, which still hold --    ║
+   ║  and a glass system that this replaces.                              ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   The old surface was Liquid Glass: every bar frosted, every card floating
+   on two shadows, a capsule round the psalm numbers, a lozenge under the
+   tab you were on. It was built carefully and it was the wrong thing for
+   this app. A siddur is not made of glass. What a daily companion wants is
+   the opposite: get out of the way of the words.
+
+   So: one accent, hairlines instead of shadows, surfaces instead of cards,
+   and translucency kept for the one place it does real work -- a bar with a
+   page moving under it.
+
+   The rules are grouped by what they are for, and they are last in the file
+   because in this file the last rule wins.                                */
+
+
+/* ── the palette ─────────────────────────────────────────────────────── */
+
+:root {
+  /* A warm off-white, not white: paper rather than screen. */
+  --page:      #faf7f4;
+  --surface:   #ffffff;
+  --surface-2: #f3eeea;
+  /* Hairlines do the work shadows used to. */
+  --hair:      rgba(32, 26, 30, 0.10);
+  --hair-soft: rgba(32, 26, 30, 0.06);
+
+  --text:      #1d1a1f;
+  --text-2:    #5d5663;
+  --text-3:    #837c8a;
+
+  /* One accent. It is the rose this app has always used, and nothing else
+     competes with it: no gold for emphasis, no second hue for state. */
+  --accent:    #8a545c;
+  --accent-sub: #a8757c;
+  --accent-bg: #f6ecea;
+
+  --radius:    14px;
+  --radius-lg: 18px;
+}
+
+:root[data-theme="dark"] {
+  /* Near-black with a little warmth in it, and surfaces that step up from
+     it rather than an inverted light theme. Pure #000 was what the old dark
+     mode used and it makes every edge a cliff. */
+  --page:      #121013;
+  --surface:   #1b181c;
+  --surface-2: #232026;
+  --hair:      rgba(255, 252, 255, 0.12);
+  --hair-soft: rgba(255, 252, 255, 0.07);
+
+  --text:      #f2eef3;
+  --text-2:    #b3abb6;
+  --text-3:    #8d8592;
+
+  --accent:    #e0aeb5;
+  --accent-sub: #c9949c;
+  --accent-bg: #2a2126;
+}
+
+body {
+  background: var(--page);
+  color: var(--text);
+  /* No gradient. The page was a three-stop wash that moved as you scrolled;
+     paper does not do that. */
+  background-image: none;
+}
+:root[data-theme="dark"] body { background: var(--page); background-image: none; }
+
+
+/* ── the bars ────────────────────────────────────────────────────────── */
+
+/* The header is a surface with a hairline under it, and it is translucent
+   only because a page genuinely moves underneath it -- which is the one
+   place translucency earns its keep. No saturation boost, no brightness
+   trick, no inner light along the edge. */
+.topbar {
+  background: color-mix(in srgb, var(--page) 86%, transparent);
+  -webkit-backdrop-filter: saturate(118%) blur(14px);
+  backdrop-filter: saturate(118%) blur(14px);
+  box-shadow: none;
+  border-bottom: 1px solid var(--hair-soft);
+}
+:root[data-theme="dark"] .topbar {
+  background: color-mix(in srgb, var(--page) 84%, transparent);
+  box-shadow: none;
+  border-bottom: 1px solid var(--hair-soft);
+}
+
+/* The tab bar is flush to the bottom edge of the screen with a hairline
+   over it, the way a phone's own tab bars are. It was a floating capsule
+   with a sliding pill in it: an object sitting on the page rather than an
+   edge of the app. */
+@media (max-width: 899px) {
+  .tabs {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 6px 4px calc(var(--safe-bottom) + 4px);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--page) 88%, transparent);
+    -webkit-backdrop-filter: saturate(118%) blur(16px);
+    backdrop-filter: saturate(118%) blur(16px);
+    border-top: 1px solid var(--hair-soft);
+    box-shadow: none;
+    gap: 0;
+  }
+  :root[data-theme="dark"] .tabs {
+    background: color-mix(in srgb, var(--page) 86%, transparent);
+    border-top: 1px solid var(--hair-soft);
+    box-shadow: none;
+  }
+  /* The pill is gone. The tab you are on is marked by its colour and the
+     weight of its label, which is what a native tab bar does. */
+  .tabs .bar-lens { display: none !important; }
+  .tab::after { display: none !important; }
+}
+
+.tab {
+  gap: 5px;
+  padding: 7px 2px 5px;
+  border-radius: 10px;
+  color: var(--text-3);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+.tab svg { width: 23px; height: 23px; stroke-width: 1.7; }
+:root .tab,
+:root .tabs .tab { color: var(--text-3); }
+:root .tab.is-active,
+:root .tabs .tab.is-active { color: var(--accent); font-weight: 600; }
+:root .tab.is-active svg { stroke-width: 2; filter: none; transform: none; }
+.tabs .tab.is-under,
+.tabs .tab.is-passing { color: var(--text-3); }
+.tabs .tab.is-active.is-under,
+.tabs .tab.is-active.is-passing { color: var(--accent); }
+/* The page needs room above the bar, and the bar is flush now so it needs
+   its own height plus the home indicator. */
+body { padding-bottom: calc(66px + var(--safe-bottom)); }
+
+
+/* ── surfaces ────────────────────────────────────────────────────────── */
+
+/* A card is a surface with a hairline. Not a floating object: no shadow, no
+   inner highlight, no translucent fill over a gradient. */
+.card,
+:root .card,
+:root[data-theme="dark"] .card {
+  background: var(--surface);
+  border: 1px solid var(--hair-soft);
+  border-radius: var(--radius);
+  box-shadow: none;
+  margin-bottom: 12px;
+}
+.card::before, .card::after { display: none !important; }
+
+/* A heading inside a card is a heading, not a label on a machine. */
+.card-head h2,
+.hubhead h1 { letter-spacing: -0.01em; }
+.card-head h2 { font-size: 1rem; font-weight: 600; color: var(--text); }
+.card-head .ref { color: var(--text-3); font-weight: 400; }
+
+
+/* ── the date, as a line of type ─────────────────────────────────────── */
+
+.daystamp { padding: 6px 2px 20px; }
+.daystamp-greg {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.daystamp-heb {
+  margin: 5px 0 0;
+  font-family: var(--hebrew);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--text);
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: left;
+}
+.daystamp-of {
+  margin: 7px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+.daystamp-of:empty { display: none; }
+
+
+/* ── the נקודה ───────────────────────────────────────────────────────── */
+
+/* No card. The teaching is the page at this point, and a container round it
+   would only say "this is a widget". What marks it off is a rule above and
+   the size of the type, which is how a book does it. */
+.nekuda {
+  margin: 0 0 28px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--hair);
+}
+.nekuda-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+.nekuda-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.nekuda-he {
+  font-family: var(--hebrew);
+  font-size: 0.9375rem;
+  color: var(--accent-sub);
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+.nekuda-why {
+  margin: 0 0 16px;
+  font-size: 0.8125rem;
+  color: var(--text-3);
+}
+.nekuda-why:empty { display: none; }
+
+/* The Hebrew is the teaching, so the Hebrew is what is set large. Important
+   without being gigantic: 1.375rem, a 1.95 line height for the nekudos, and
+   a measure that stops before the line gets hard to track back from. */
+.nekuda p.nekuda-he {
+  margin: 0;
+  font-family: var(--hebrew);
+  font-size: 1.375rem;
+  line-height: 1.95;
+  font-weight: 400;
+  color: var(--text);
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: right;
+  text-wrap: pretty;
+}
+.nekuda .nekuda-en {
+  margin: 16px 0 0;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.68;
+  color: var(--text-2);
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+body.hide-english .nekuda .nekuda-en { display: none; }
+
+/* The source: quiet, under the teaching, and it does not compete with it. */
+.nekuda-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 7px 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-align: left;
+}
+.nekuda-source::after {
+  content: "";
+  width: 6px; height: 6px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 220ms var(--glide);
+  opacity: 0.7;
+}
+.nekuda-source[aria-expanded="true"]::after { transform: rotate(-135deg) translateY(2px); }
+.nekuda-full { margin-top: 10px; }
+
+
+/* ── rows: the native list ───────────────────────────────────────────── */
+
+/* One grouped surface with hairlines between the rows, which is the control
+   a phone uses for a list of places to go. It replaces a grid of tappable
+   cards -- four objects where one list was wanted. */
+.rows {
+  display: block;
+  margin: 0 0 22px;
+  background: var(--surface);
+  border: 1px solid var(--hair-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.rows:empty { display: none; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hair-soft);
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+  color: var(--text);
+}
+.row:first-child { border-top: 0; }
+.row-main { flex: 1 1 auto; min-width: 0; display: block; }
+.row-title {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text);
+}
+.row-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--text-3);
+}
+.row-value { flex: 0 0 auto; font-size: 0.875rem; color: var(--text-3); }
+
+/* The chevron, drawn rather than imported, at the stroke weight everything
+   else here uses. */
+.row-go {
+  flex: 0 0 auto;
+  width: 8px; height: 8px;
+  border-right: 1.8px solid var(--text-3);
+  border-top: 1.8px solid var(--text-3);
+  transform: rotate(45deg);
+  opacity: 0.55;
+}
+/* A row that holds a control is not a place to go, so it has no chevron and
+   does not press. */
+.row-static { cursor: default; }
+.row-static:active { transform: none; }
+
+button.row { transition: background 140ms var(--glide); }
+button.row:active, button.row.is-pressed {
+  background: var(--surface-2);
+  transform: none;              /* a list row highlights; it does not shrink */
+}
+@media (hover: hover) and (pointer: fine) {
+  button.row:hover { background: var(--surface-2); }
+}
+
+/* A heading over a group of rows: small, quiet, and in the margin rather
+   than inside the group -- the way a phone's settings are laid out. */
+.rows-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 26px 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.rows-head:first-child { margin-top: 4px; }
+.rows-tag { text-transform: none; letter-spacing: 0; color: var(--text-3); font-weight: 500; }
+.rows-more {
+  background: none; border: 0; padding: 4px 0;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+  text-transform: none; color: var(--accent);
+}
+.rows-note {
+  margin: -12px 4px 24px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+
+/* ── hubs and back ───────────────────────────────────────────────────── */
+
+.hubhead { padding: 4px 2px 18px; }
+.hubhead h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+.hubsub {
+  margin: 7px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+.hubfoot {
+  margin: 28px 2px 0;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+/* Every page inside a hub has a way back, said in words rather than left to
+   a gesture nobody is told about. */
+.backrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px -4px;
+  padding: 8px 4px;
+  background: none;
+  border: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+.backrow > span:first-child {
+  width: 8px; height: 8px;
+  border-left: 1.9px solid currentColor;
+  border-bottom: 1.9px solid currentColor;
+  transform: rotate(45deg);
+}
+
+
+/* ── strips: a heading and some lines, with no box ───────────────────── */
+
+.strip { margin: 0 0 26px; }
+.strip .kv,
+.strip .upcoming { margin: 0; }
+.strip .kv-row { border-top: 1px solid var(--hair-soft); padding: 11px 2px; }
+.strip .kv-row:first-child { border-top: 0; }
+
+
+/* ── everything that was made of glass ───────────────────────────────── */
+
+/* The round header buttons were discs of frosted glass with a rim and a
+   specular arc. They are a button. */
+:root .icon-btn,
+:root[data-theme="dark"] .icon-btn {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--text-2);
+}
+:root .icon-btn::before,
+:root .icon-btn::after { display: none !important; }
+.icon-btn svg { width: 21px; height: 21px; stroke-width: 1.8; }
+
+/* The pill buttons keep their shape -- a pill is right for an action -- but
+   lose the gradient, the shadow and the lit edge. */
+.btn, .pill, :root .btn, :root .pill {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 500;
+}
+.btn { border-radius: 10px; }
+:root .btn.ghost { background: none; border-color: var(--hair); color: var(--accent); }
+:root .pill.is-active {
+  background: var(--accent-bg);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: var(--accent);
+  box-shadow: none;
+}
+.chapters .chapter-track .bar-lens::after { display: none; }
+
+/* The search field was glass with a blur behind it. It is a field. */
+:root .searchbar input,
+:root[data-theme="dark"] .searchbar input {
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--text);
+}
+:root .searchbar input:focus { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+
+/* ── dead weight ─────────────────────────────────────────────────────── */
+
+/* Gone with the screens they belonged to: the hero block, the grid of quick
+   cards, the coloured chips under the date, the settings drawer and its
+   scrim. The rules are turned off here rather than hunted out of fourteen
+   hundred lines above, where several of them are tangled with rules that are
+   still wanted. */
+.hero, .quick, .quick-card, .chip-tag,
+.sidebar, .scrim, .sheet-grabber, .sheet-floor { display: none !important; }
+
+
+/* ── the controls, in one accent ─────────────────────────────────────── */
+
+/* The switch was a rose-to-gold gradient with a shadowed knob. One accent,
+   no gradient: the only thing it has to say is on or off. */
+:root .switch,
+:root[data-theme="dark"] .switch {
+  width: 50px; height: 30px;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  box-shadow: none;
+}
+:root .switch::after {
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+:root .switch[aria-checked="true"],
+:root[data-theme="dark"] .switch[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+:root .switch[aria-checked="true"]::after {
+  background: #fff;
+  transform: translateX(20px);
+}
+:root[data-theme="dark"] .switch[aria-checked="true"]::after { background: #1b181c; }
+
+/* A menu is a menu. It was a frosted pill with a shadow under it. */
+:root .choice,
+:root[data-theme="dark"] .choice {
+  flex: 0 1 auto;
+  max-width: 58%;
+  padding: 9px 30px 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--hair);
+  background-color: var(--surface);
+  box-shadow: none;
+  color: var(--text);
+  font-size: 0.9375rem;
+  background-position: right 9px center;
+  background-size: 14px;
+}
+
+/* Aa, as two plain keys. */
+:root .stepper button {
+  width: 44px; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  box-shadow: none;
+  color: var(--text);
+}
+:root .stepper button:active { background: var(--surface-2); }
+
+/* The Hebrew date in the header was painted with a gold-to-rose gradient
+   through a text clip. It is a date. */
+:root .hebdate,
+:root[data-theme="dark"] .hebdate {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text);
+  font-weight: 500;
+}
+.subline { color: var(--text-3); }
+.subline .linkish { color: var(--accent); border-bottom-color: transparent;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px; background-position: 0 calc(100% - 12px);
+  opacity: 0.95; }
+.nextzman { color: var(--text-2); font-size: 0.875rem; }
+.nextzman .label { color: var(--text); }
+
+/* The bars have to be opaque enough to read a label on. At 86% the page
+   showed through the tab bar and the words of the psalm crossed the word
+   "Today" -- a bar you can see through is only glass if what is behind it
+   stays behind it. */
+@media (max-width: 899px) {
+  .tabs {
+    background: color-mix(in srgb, var(--page) 96%, transparent);
+    -webkit-backdrop-filter: saturate(130%) blur(22px);
+    backdrop-filter: saturate(130%) blur(22px);
+  }
+  :root[data-theme="dark"] .tabs {
+    background: color-mix(in srgb, var(--page) 95%, transparent);
+  }
+}
+.topbar {
+  background: color-mix(in srgb, var(--page) 94%, transparent);
+  -webkit-backdrop-filter: saturate(130%) blur(20px);
+  backdrop-filter: saturate(130%) blur(20px);
+}
+:root[data-theme="dark"] .topbar {
+  background: color-mix(in srgb, var(--page) 93%, transparent);
+}
+
+/* The psalm numbers: the lens keeps its job and loses its colour wash. One
+   accent here too. */
+.chapters .chapter-track .bar-lens {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+:root[data-theme="dark"] .chapters .chapter-track .bar-lens {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+:root .chapters .chapter-track button.is-active,
+:root[data-theme="dark"] .chapters .chapter-track button.is-active { color: var(--accent); }
+:root .chapters .chapter-track button:not(.is-active),
+:root[data-theme="dark"] .chapters .chapter-track button:not(.is-active) { color: var(--text-3); }
+.card > .chapters::before { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+
+/* The focus ring takes the accent, like everything else that is not text. */
+:focus-visible { outline-color: var(--accent); }
+:root[data-theme="dark"] :focus-visible { outline-color: var(--accent); }
+
+
+/* ── a label on a bar has to be readable ─────────────────────────────── */
+
+/* Measured at 2.20:1 -- the quiet grey on a bar the page was showing
+   through, which is two faults at once. Both are fixed here rather than by
+   splitting the difference: the bar stops being see-through, and the labels
+   step up a tier.
+
+   Translucency on a bottom bar buys almost nothing anyway. The header has a
+   page scrolling under it all day and the effect is worth having there; the
+   tab bar has four pixels of content under it and a word that has to be
+   legible on top. */
+@media (max-width: 899px) {
+  .tabs,
+  :root[data-theme="dark"] .tabs {
+    background: var(--page);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+:root .tab,
+:root .tabs .tab { color: var(--text-2); }
+:root[data-theme="dark"] .tab,
+:root[data-theme="dark"] .tabs .tab { color: var(--text-2); }

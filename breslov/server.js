@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '66';
+const BUILD = '67';
 
 app.use(cors());
 

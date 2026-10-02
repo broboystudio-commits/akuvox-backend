@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '66';
+  var BUILD = '67';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -540,55 +540,29 @@
       nz.hidden = true;
     }
 
-    // ---- the hero
+    // ---- the date, as a line of type above the teaching
     setText('heroGreg', cal.gregorian.long || cal.gregorian.display);
     setText('heroHeb', cal.hebrew.gematriya || cal.hebrew.en);
 
     // Only what is true of *today*. The calendar hands back a week or so of
     // upcoming yomim tovim, and showing all of them buried the date under a
     // wall of chips; the ones still to come belong on the Shabbos card.
+    // One line of words, not a row of coloured pills. What today is, said
+    // the way you would say it: "Sukkos · Parashas Bereishis".
     var today = cal.gregorian.iso;
-    var chips = document.createDocumentFragment();
-    if (cal.parsha) {
-      chips.appendChild(el('span', 'chip-tag', cal.parsha.he || cal.parsha.en));
-    }
-    if (cal.hebrew.isRoshChodesh) {
-      chips.appendChild(el('span', 'chip-tag is-gold', 'Rosh Chodesh'));
-    }
-    (cal.holidays || [])
+    var saying = [];
+    (cal.today || [])
       .filter(function (h) {
-        return h.date === today &&
-               h.en.indexOf('Candle') !== 0 &&
-               h.en.indexOf('Havdalah') !== 0;
+        return h.en.indexOf('Candle') !== 0 && h.en.indexOf('Havdalah') !== 0;
       })
       .slice(0, 2)
-      .forEach(function (h) {
-        chips.appendChild(el('span', 'chip-tag is-gold', h.en));
-      });
-    fillWith('heroChips', chips);
+      .forEach(function (h) { saying.push(h.en); });
+    if (cal.parsha) saying.push('Parashas ' + cal.parsha.en);
+    setText('heroChips', saying.join(' · '));
 
-    // ---- the small verse, with the full lesson folded away behind a button
-    var spark = data.spark;
-    if (spark && spark.available) {
-      setText('verseRef', spark.heading || spark.ref);
-      var v = document.createDocumentFragment();
-      if (spark.snippetHe) v.appendChild(el('p', 'verse-he', spark.snippetHe));
-      if (spark.snippetEn) v.appendChild(el('p', 'verse-en', spark.snippetEn));
-      else if (wantsEnglish(spark)) v.appendChild(noTranslation());
-      fillWith('verseBody', v);
-
-      fill($('sparkFull'), passage(spark));
-      setHidden('sparkFull', true);
-      var btn = $('openFull');
-      btn.hidden = false;
-      btn.textContent = 'Read the whole lesson';
-      setText('aboutSpark', spark.heading || spark.ref);
-    } else {
-      setText('verseRef', '');
-      fill($('verseBody'), unavailableNotice('daily teaching', spark && spark.reason, refresh));
-      setHidden('openFull', true);
-      setHidden('sparkFull', true);
-    }
+    // ---- the נקודה, and the Quick Torah that used to sit here
+    renderNekuda(data.inspiration);
+    renderQuickTorah(data.spark);
 
     // ---- the next few zmanim
     setText('upcomingPlace', cal.place.name);
@@ -614,18 +588,11 @@
     });
     fillWith('upcoming', up);
 
-    // ---- the quick links
-    if (data.tehillim && data.tehillim.available) {
-      setText('quickTehillim', data.tehillim.label);
-    }
-    if (data.weekly && data.weekly.available) {
-      setText('quickWeekly', data.weekly.parsha
-        ? 'Parashas ' + data.weekly.parsha
-        : data.weekly.ref);
-    }
+    // ---- what there is to do today, as rows
+    renderTodayRows(data);
 
     // ---- Shabbos
-    setText('parshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
+    setText('parshaTag', cal.parsha ? cal.parsha.en : '');
     var rows = [];
     if (cal.parsha) rows.push(['Parsha', cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '')]);
     if (cal.candles) rows.push(['Candle lighting', clock(cal.candles.time) + ' · ' + prettyDate(cal.candles.date)]);
@@ -649,6 +616,12 @@
     }
     fillWith('shabbosTimes', shabbosRows());
     fillWith('weeklyShabbos', shabbosRows());
+    fillWith('shabbosFull', shabbosRows());
+    setText('shabbosParsha', cal.parsha
+      ? 'Parashas ' + cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '') : '');
+    setText('weekSub', cal.parsha ? 'Parashas ' + cal.parsha.en : '');
+    setText('rowShabbos', cal.candles
+      ? 'Candles ' + clock(cal.candles.time) : 'candle lighting and havdalah');
     setText('weeklyParshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
 
     renderYahrzeits(data.yahrzeits);
@@ -675,6 +648,141 @@
    * the one thing it must not do: somebody holding the other has no way to
    * know a choice was made on their behalf.
    */
+  /**
+   * The נקודה: the first meaningful thing on the screen, and text first.
+   *
+   * The Hebrew is the teaching, so the Hebrew is what is set large. The
+   * English sits under it when the reader has asked for it -- that switch is
+   * in Settings and there is deliberately no second one here, because two
+   * controls for one thing is how people stop trusting either.
+   *
+   * Under the teaching, a quiet line saying where it is from. It is a button
+   * only when there is somewhere to go.
+   */
+  function renderNekuda(nekuda) {
+    var body = $('nekudaBody');
+    var source = $('nekudaSource');
+    if (!body) return;
+
+    if (!nekuda || !nekuda.available) {
+      setText('nekudaWhy', '');
+      setHidden('nekudaSource', true);
+      fill(body, unavailableNotice('today\'s teaching', nekuda && nekuda.reason, refresh));
+      return;
+    }
+
+    // Why this, today. One line, and only when there is a reason worth
+    // giving -- an ordinary weekday says nothing rather than saying
+    // "an ordinary weekday".
+    var ctx = nekuda.context || {};
+    setText('nekudaWhy', ctx.kind === 'yomtov' || ctx.kind === 'occasion'
+      ? 'For ' + ctx.label
+      : (ctx.parsha ? 'From the week of ' + ctx.parsha.en : ''));
+
+    var wrap = document.createDocumentFragment();
+    if (nekuda.snippetHe) wrap.appendChild(el('p', 'nekuda-he he', nekuda.snippetHe));
+    if (nekuda.snippetEn) wrap.appendChild(el('p', 'nekuda-en', nekuda.snippetEn));
+    else if (wantsEnglish(nekuda)) wrap.appendChild(noTranslation());
+    fill(body, wrap);
+
+    // "Based on Keter Shem Tov · 84" when a talmid wrote it down,
+    // "Likutei Moharan · Torah 24" when the rebbe wrote it himself.
+    var where = nekuda.source || {};
+    var line = [];
+    if (nekuda.quoting === 'based-on') line.push('Based on');
+    if (where.sefer) line.push(where.sefer);
+    var tail = where.place ? ' · ' + where.place : '';
+    if (source) {
+      source.textContent = (line.join(' ') || nekuda.ref) + tail;
+      source.hidden = false;
+      source.disabled = false;
+    }
+
+    // The whole piece, folded away until it is asked for.
+    fill($('nekudaFull'), passage(nekuda));
+    setHidden('nekudaFull', true);
+  }
+
+  /** Quick Torah, which is what the old "a word for today" became. */
+  function renderQuickTorah(spark) {
+    if (!spark || !spark.available) {
+      setText('torahRef', '');
+      fill($('torahBody'), unavailableNotice('Quick Torah', spark && spark.reason, refresh));
+      setHidden('torahFullBtn', true);
+      return;
+    }
+    setText('torahRef', spark.heading || spark.ref);
+    setText('rowTorah', spark.heading || spark.ref);
+    setText('aboutSpark', spark.heading || spark.ref);
+
+    var v = document.createDocumentFragment();
+    if (spark.snippetHe) v.appendChild(el('p', 'verse-he he', spark.snippetHe));
+    if (spark.snippetEn) v.appendChild(el('p', 'verse-en', spark.snippetEn));
+    else if (wantsEnglish(spark)) v.appendChild(noTranslation());
+    fill($('torahBody'), v);
+
+    fill($('torahFull'), passage(spark));
+    setHidden('torahFull', true);
+    var btn = $('torahFullBtn');
+    if (btn) { btn.hidden = false; btn.textContent = 'Read the whole lesson'; }
+
+    // The old home screen could open it in full and so can this one.
+    fill($('sparkFull'), passage(spark));
+  }
+
+  /**
+   * Today at a glance: four rows, not a wall of cards.
+   *
+   * Each one says what it is and what is actually in it today -- "Tehillim
+   * 104–105", not "today's portion" -- because a row that cannot tell you
+   * anything before you tap it is a button with extra steps.
+   */
+  function renderTodayRows(data) {
+    var into = $('todayRows');
+    if (!into) return;
+
+    var rows = [];
+    if (data.tehillim && data.tehillim.available) {
+      rows.push(['tehillim', "Today's Tehillim", data.tehillim.label]);
+      setText('rowTehillim', data.tehillim.label);
+    } else {
+      rows.push(['tehillim', "Today's Tehillim", 'the day\'s portion']);
+    }
+    rows.push(['tikkun', 'Tikkun HaKlali', resumeLine()]);
+    if (data.spark && data.spark.available) {
+      rows.push(['torah', 'Quick Torah', data.spark.heading || data.spark.ref]);
+    }
+    if (data.weekly && data.weekly.available) {
+      rows.push(['weekly', 'Dvar Torah', data.weekly.mode === 'yomtov'
+        ? 'for ' + data.weekly.yomTov
+        : 'for Parashas ' + (data.weekly.parsha || '')]);
+      setText('rowWeekly', data.weekly.mode === 'yomtov'
+        ? 'for ' + data.weekly.yomTov : 'for Parashas ' + (data.weekly.parsha || ''));
+    }
+
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r) {
+      var b = el('button', 'row');
+      b.type = 'button';
+      b.setAttribute('data-goto', r[0]);
+      var main = el('span', 'row-main');
+      main.appendChild(el('span', 'row-title', r[1]));
+      if (r[2]) main.appendChild(el('span', 'row-sub', r[2]));
+      b.appendChild(main);
+      b.appendChild(el('span', 'row-go'));
+      b.addEventListener('click', function () { showPanel(r[0]); });
+      frag.appendChild(b);
+    });
+    fill(into, frag);
+  }
+
+  /** Where the Tikkun was left, said in words. */
+  function resumeLine() {
+    var at = load(STORE.tikkunPlace, null);
+    if (at && at.index > 0) return 'you stopped at ' + (at.index + 1) + ' of 10';
+    return 'ten psalms, in order';
+  }
+
   function renderUshpizin(data) {
     var card = $('ushpizinCard');
     if (!card) return;
@@ -876,7 +984,7 @@
     var sw = el('button', 'switch');
     sw.type = 'button';
     sw.setAttribute('role', 'switch');
-    // Named, like the two in the sidebar. An empty button with role="switch"
+    // Named, like the two in Settings. An empty button with role="switch"
     // is announced as "switch, off" and nothing else, which tells a screen
     // reader user there is a control and not what it does.
     sw.setAttribute('aria-label', 'Show every opinion');
@@ -1205,7 +1313,7 @@
       var on = document.activeElement;
       var typing = !!on && bar.contains(on) &&
         /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName);
-      var busy = searchBarOpen() || sidebarOpen() || typing || stillness();
+      var busy = searchBarOpen() || typing || stillness();
       var tall = bar.offsetHeight || 120;
 
       var wantHidden = !busy && dy > 0 && y > tall;
@@ -1736,159 +1844,10 @@
     });
   }
 
-  // ---------------------------------------------------------- the sidebar
-
-  /**
-   * One button for everything that is not reading: the theme, the English,
-   * the font, the text size and the way to the about page. It used to be
-   * three buttons in the corner and a popover hanging off one of them.
-   *
-   * While it is open the page behind it does not scroll -- on a phone a
-   * drawer over a page that keeps moving underneath is horrible.
-   */
-  function sidebarOpen() {
-    var menu = $('sideMenu');
-    return !!(menu && !menu.hidden);
-  }
-
-  function openSidebar() {
-    var menu = $('sideMenu');
-    var scrim = $('menuScrim');
-    var btn = $('menuBtn');
-    if (!menu) return;
-    // Anything a half-finished drag left behind goes before it comes back up.
-    menu.style.transform = '';
-    menu.style.transition = '';
-    if (scrim) { scrim.style.opacity = ''; scrim.style.transition = ''; }
-    menu.hidden = false;
-    if (scrim) scrim.hidden = false;
-    // Two frames: hidden is dropped first, then the class that slides it in,
-    // or the browser has nothing to animate from.
-    requestAnimationFrame(function () {
-      menu.classList.add('is-open');
-      if (scrim) scrim.classList.add('is-open');
-    });
-    if (btn) btn.setAttribute('aria-expanded', 'true');
-    document.body.classList.add('no-scroll');
-    var first = $('menuClose');
-    if (first) first.focus();
-  }
-
-  function closeSidebar(giveBackFocus) {
-    var menu = $('sideMenu');
-    var scrim = $('menuScrim');
-    var btn = $('menuBtn');
-    if (!menu || menu.hidden) return;
-    menu.classList.remove('is-open');
-    if (scrim) scrim.classList.remove('is-open');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-    document.body.classList.remove('no-scroll');
-    // Let it slide out before it is taken away.
-    setTimeout(function () {
-      menu.hidden = true;
-      if (scrim) scrim.hidden = true;
-    }, 220);
-    if (giveBackFocus && btn) btn.focus();
-  }
-
-  function wireSidebar() {
-    on('menuBtn', 'click', function (e) {
-      e.stopPropagation();
-      if (sidebarOpen()) closeSidebar(true); else openSidebar();
-    });
-    on('menuClose', 'click', function () { closeSidebar(true); });
-    on('menuScrim', 'click', function () { closeSidebar(false); });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && sidebarOpen()) closeSidebar(true);
-    });
-    dragToDismiss();
-  }
-
-  /**
-   * Push the menu back into the corner it came out of.
-   *
-   * A panel that can only be dismissed by finding a small cross in its corner
-   * is a dialog. This one follows the finger: it goes up, towards the button
-   * that opened it, as far as it is pushed; the page behind it dims less the
-   * further it travels; and letting go either sends it the rest of the way or
-   * springs it back.
-   *
-   * Up, because the panel hangs off a button in the top right and that is
-   * where it belongs. For one build it was a sheet rising from the floor and
-   * pushed back down, which put the whole height of a phone between the thing
-   * you touched and the thing that answered.
-   *
-   * It goes on a long push -- past a quarter of its own height -- or on a
-   * short fast flick, because those are two different ways of saying the same
-   * thing and an iPhone honours both. The flick is measured over the last few
-   * frames, not the whole gesture, so a slow drag that ends in a flick counts
-   * as one.
-   */
-  function dragToDismiss() {
-    var menu = $('sideMenu');
-    var scrim = $('menuScrim');
-    if (!menu || !window.PointerEvent) return;
-
-    var startY = 0, lastY = 0, lastAt = 0, travelled = 0, dragging = false;
-
-    var isSheet = function () {
-      try { return window.matchMedia('(max-width: 899px)').matches; } catch (e) { return true; }
-    };
-
-    menu.addEventListener('pointerdown', function (e) {
-      if (!isSheet() || e.button) return;
-      // Not from inside something that scrolls, or that the finger is meant
-      // to be operating: dragging a sheet away by its font menu is not what
-      // anybody reaching for the font menu wanted.
-      if (e.target.closest('button, select, input, a, [role="switch"]')) return;
-      if (menu.scrollTop > 0) return;
-      dragging = true;
-      travelled = 0;
-      startY = lastY = e.clientY;
-      lastAt = e.timeStamp;
-      menu.style.transition = 'none';
-      if (scrim) scrim.style.transition = 'none';
-      menu.setPointerCapture(e.pointerId);
-    });
-
-    menu.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
-      travelled = Math.max(0, startY - e.clientY);   // up only
-      // Rubber band: the first eighty pixels are one to one, and past that it
-      // gets heavier, the way every list on an iPhone does at its end.
-      var shown = travelled <= 80 ? travelled : 80 + (travelled - 80) * 0.45;
-      menu.style.transform = 'translate3d(0,' + (-shown).toFixed(1) + 'px,0)';
-      if (scrim) {
-        var height = menu.offsetHeight || 1;
-        scrim.style.opacity = String(Math.max(0, 1 - (travelled / height) * 0.9));
-      }
-      if (e.timeStamp - lastAt > 16) { lastY = e.clientY; lastAt = e.timeStamp; }
-    });
-
-    var letGo = function (e) {
-      if (!dragging) return;
-      dragging = false;
-      try { menu.releasePointerCapture(e.pointerId); } catch (err) { /* already gone */ }
-
-      var over = e.timeStamp - lastAt;
-      var speed = over > 0 ? (lastY - e.clientY) / over : 0;   // px per ms, up is +
-      var far = travelled > (menu.offsetHeight || 1) * 0.25;
-      var flicked = speed > 0.5;
-
-      menu.style.transition = '';
-      if (scrim) { scrim.style.transition = ''; scrim.style.opacity = ''; }
-
-      if (far || flicked) {
-        // Let the class take it the rest of the way, from where it is.
-        menu.style.transform = '';
-        closeSidebar(false);
-      } else {
-        menu.style.transform = '';     // springs back on its own transition
-      }
-    };
-    menu.addEventListener('pointerup', letGo);
-    menu.addEventListener('pointercancel', letGo);
-  }
+  // The settings drawer that used to live here is gone, and so is the code
+  // that opened it, dragged it and put it away. Settings is a page under
+  // More now. Everything it held is on that page; nothing it did is left
+  // behind as a function nobody calls.
 
   // ------------------------------------------------------------- the lens
 
@@ -2220,8 +2179,27 @@
 
   // ------------------------------------------------------------- navigation
 
-  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about',
-                'privacy', 'terms'];
+  /**
+   * Every page, and which of them the tab bar shows.
+   *
+   * Five destinations: Today, Read, Week, Zmanim, More. The other nine are
+   * reached from one of the three hubs, and each keeps the address it always
+   * had -- /tehillim is still /tehillim -- so nothing anybody bookmarked has
+   * moved.
+   */
+  var PANELS = ['today',
+                'read', 'tehillim', 'tikkun', 'torah',
+                'week', 'weekly', 'shabbos', 'yahrzeit',
+                'zmanim',
+                'more', 'search', 'settings', 'about', 'sources', 'privacy', 'terms'];
+
+  /** Which hub a page belongs to, for the tab bar and the back row. */
+  var HOME_OF = {
+    tehillim: 'read', tikkun: 'read', torah: 'read',
+    weekly: 'week', shabbos: 'week', yahrzeit: 'week',
+    search: 'more', settings: 'more', about: 'more',
+    sources: 'more', privacy: 'more', terms: 'more',
+  };
   var loaded = { tikkun: false, library: false, site: false };
 
   /**
@@ -2235,12 +2213,20 @@
    */
   var PANEL_TITLES = {
     today: null,                         // the home page keeps the plain title
+    read: 'Read',
     tehillim: "Today's Tehillim",
     tikkun: 'Tikkun HaKlali',
-    weekly: 'Torah of the week',
+    torah: 'Quick Torah',
+    week: 'This week',
+    weekly: 'Dvar Torah',
+    shabbos: 'Shabbos',
+    yahrzeit: 'Yahrzeits',
     zmanim: 'Zmanim',
+    more: 'More',
     search: 'Search',
-    about: 'Reminders & about',
+    settings: 'Settings',
+    about: 'About',
+    sources: 'Sources',
     privacy: 'Privacy policy',
     terms: 'Terms of use',
   };
@@ -2332,10 +2318,6 @@
     state.panel = name;
     rememberPanel(name, !!fromHistory);
 
-    // Moving to another page closes the sidebar. Without this, tapping
-    // "Open" inside it left it hanging over the page you asked for.
-    closeSidebar(false);
-
     // The search bar belongs to the search page. Going somewhere else puts it
     // away; coming back to search brings it out, since an empty search page
     // with no box on it is a dead end.
@@ -2372,8 +2354,12 @@
       if (crossing && p === was) return;
       node.hidden = p !== name;
     });
+    // Open Tehillim and the Read tab stays lit: you are still inside Read.
+    // Without this the bar goes blank the moment you leave a hub, which is
+    // the moment you most need to know where you are.
+    var lit = HOME_OF[name] || name;
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-      t.classList.toggle('is-active', t.getAttribute('data-panel') === name);
+      t.classList.toggle('is-active', t.getAttribute('data-panel') === lit);
     });
     positionTabLens();
 
@@ -2389,7 +2375,7 @@
 
     // The list of seforim comes from the app itself, so the page cannot drift
     // out of step with what is actually being read.
-    if (name === 'about' && !loaded.library) {
+    if ((name === 'about' || name === 'sources') && !loaded.library) {
       loaded.library = true;
       fetch('/api/library', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.json(); })
@@ -2409,12 +2395,16 @@
 
     // Which version is actually running, so it can be read without hunting
     // for a web address.
-    if (name === 'about') {
+    if (name === 'about' || name === 'settings' || name === 'more') {
       fetch('/api/health', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.json(); })
-        .then(function (h) { setText('aboutBuild', 'Version ' + h.build); })
+        .then(function (h) {
+          setText('aboutBuild', 'Version ' + h.build);
+          setText('moreBuild', 'Breslov Daily · version ' + h.build);
+        })
         .catch(function () { setText('aboutBuild', ''); });
     }
+    if (name === 'settings') setText('settingsPlace', state.place.name);
 
     // A policy page that says when it last changed, taken from the build the
     // page is actually running rather than from a date typed in by hand --
@@ -2610,13 +2600,30 @@
       b.addEventListener('click', function () { showPanel(b.getAttribute('data-goto')); });
     });
 
+    // The source line opens the whole piece. It is the only control on the
+    // teaching, and it does the one thing somebody tapping a source wants.
+    on('nekudaSource', 'click', function () {
+      var full = $('nekudaFull');
+      if (!full) return;
+      var opening = full.hidden;
+      full.hidden = !opening;
+      var btn = $('nekudaSource');
+      if (btn) btn.setAttribute('aria-expanded', String(opening));
+    });
+    on('torahFullBtn', 'click', function () {
+      var full = $('torahFull');
+      if (!full) return;
+      full.hidden = !full.hidden;
+      var btn = $('torahFullBtn');
+      if (btn) btn.textContent = full.hidden ? 'Read the whole lesson' : 'Close';
+    });
+
     on('placeBtn', 'click', askForLocation);
     on('aboutLocation', 'click', askForLocation);
     on('themeBtn', 'click', toggleTheme);
     setUpReminder();
 
     wireSearchBar();
-    wireSidebar();
     wireForgetMe();
 
     var form = $('searchForm');
