@@ -5336,8 +5336,13 @@ button.row.is-pressed { background: var(--surface-2); }
    `:root .choice, :root[data-theme="dark"] .choice { max-width: 58% }`, and at
    one class versus two the later rule still loses. Measured, not assumed --
    the select stayed at 181px of a 312px row and went on truncating. */
-:root .choice,
-:root[data-theme="dark"] .choice {
+/* Scoped to `.choice-row`, which is the stacked layout in the minhag picker.
+   Unscoped, `width: 100%` reached the selects in the Settings rows too --
+   different markup, a label beside its control -- and took all the room, so
+   "Hebrew font" wrapped onto two lines to make space for a select that did
+   not need it. */
+:root .choice-row > .choice,
+:root[data-theme="dark"] .choice-row > .choice {
   flex: 1 1 auto;
   width: 100%;
   max-width: none;
@@ -5362,8 +5367,8 @@ button.row.is-pressed { background: var(--surface-2); }
     justify-content: space-between;
     gap: 16px;
   }
-  :root .choice,
-  :root[data-theme="dark"] .choice { flex: 0 1 auto; width: auto; min-width: 230px; max-width: 58%; }
+  :root .choice-row > .choice,
+  :root[data-theme="dark"] .choice-row > .choice { flex: 0 1 auto; width: auto; min-width: 230px; max-width: 58%; }
 }
 
 /* The switch rows in this picker keep their old shape: a label and a toggle
@@ -5399,4 +5404,294 @@ button.row.is-pressed { background: var(--surface-2); }
   color: var(--accent);
   box-shadow: none;
   transform: none;
+}
+
+/* ===========================================================================
+   BUILD 72 — hierarchy, not decoration.
+   =========================================================================== */
+
+/* ---- Progressive disclosure -------------------------------------------- */
+/* The policy and about pages hold real information and none of it is being
+   deleted -- but 3,000 pixels of it on a phone is a wall, and a wall is read
+   by nobody, which is the same as not having written it. A <details> keeps
+   every word and asks the reader to want it first.
+
+   Native <details>, not a scripted accordion: it opens without JavaScript, it
+   is in the tab order, a screen reader announces it as expandable, and
+   ctrl-F inside a closed one still finds the text on most browsers. */
+.fold {
+  border-top: 1px solid var(--hair-soft);
+}
+.fold:first-of-type { border-top: 0; }
+.fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 13px 0;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  list-style: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Safari draws its own triangle through ::-webkit-details-marker, and Chrome
+   through `display: list-item`. Both have to go or there are two markers. */
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::marker { content: ""; }
+.fold > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.fold-title { flex: 1 1 auto; min-width: 0; }
+/* The chevron, drawn the same way the rows draw theirs, turned when open. */
+.fold > summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 8px; height: 8px;
+  border-right: 1.8px solid var(--text-3);
+  border-bottom: 1.8px solid var(--text-3);
+  transform: rotate(45deg);
+  transition: transform var(--base, 200ms) var(--ease, ease);
+  margin-right: 3px;
+}
+.fold[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
+.fold-body { padding: 0 0 18px; }
+.fold-body > :first-child { margin-top: 0; }
+.fold-body > :last-child { margin-bottom: 0; }
+.fold-body p,
+.fold-body li {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.fold-body h3 {
+  margin: 20px 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.fold-body h3:first-child { margin-top: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fold > summary::after { transition: none; }
+}
+
+/* The short answer, above the folds. The point of the page in four lines,
+   for the reader who wants to know and not to study. */
+.gist {
+  margin: 0 0 22px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text);
+  max-width: 46ch;
+}
+.gist strong { font-weight: 600; }
+.gist-points {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.gist-points li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 6px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.gist-points li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---- The contextual sections on Today ----------------------------------- */
+/* Ushpizin and a yahrzeit are no longer cards. They are strips like the rest
+   of the page, with the one line that matters set as a lead and the rest
+   folded. A card around them said "this is the subject of this screen", which
+   on Sukkos it visibly was -- and it is not. */
+.context-lead {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text);
+}
+.context-sub {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+#ushpizinCard .nights { margin: 10px 0 14px; }
+#ushpizinCard .ushpiz + .ushpiz { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--hair-soft); }
+/* --text-3 measured 3.77:1 on the Ushpizin heading, under the 4.5:1 normal
+   text needs. It inherits the tag colour, which is right for "Bereshit" beside
+   a heading and wrong for the Hebrew name of the section. */
+.rows-tag.he {
+  font-family: var(--hebrew);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--text-2);
+  unicode-bidi: isolate;
+}
+
+/* The policy summary: four short facts, then the policy. */
+.gist-points.gist-strong li { color: var(--text); font-weight: 500; }
+.gist-after {
+  margin: 14px 0 20px;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+.gist-note { display: block; margin-top: 10px; color: var(--text-2); font-size: 0.9375rem; }
+.gist .he { font-family: var(--hebrew); unicode-bidi: isolate; }
+.folds { margin: 0 0 8px; }
+/* A fold inside the long prose keeps that prose's own type size. */
+.sources .fold-body p,
+.sources .fold-body li { font-size: 0.9375rem; line-height: 1.7; color: var(--text-2); }
+.sources .fold-body .small { font-size: 0.875rem; }
+.legal-links { margin-top: 16px; }
+
+/* A fold whose summary carries the value it is hiding, so the page can be
+   read without opening it. */
+.fold-lead > summary { gap: 10px; }
+.fold-value {
+  flex: 0 0 auto;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 450;
+  color: var(--accent);
+}
+.card > .fold:first-of-type { border-top: 0; }
+
+/* The one action that sits inside a settings row. A text button, not a
+   capsule: it was the last `.pill` the app rendered. */
+.row-action {
+  flex: 0 0 auto;
+  padding: 8px 2px 8px 12px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+.row-action.is-pressed { opacity: 0.55; }
+
+/* ---- The last of the old surface ---------------------------------------
+   Asking the browser which elements actually paint a gradient -- rather than
+   reading the stylesheet, where most of them are overridden and paint
+   nothing -- turned up 48 across the app. Three kinds, all of them from the
+   design that was replaced:
+
+   1. A rose-to-gold fill on the thing that is "current": the night marker on
+      the Ushpizin, the sefirah lozenge beside the guest, and the next zman in
+      the Coming up list on Today. The same two-hue gradient already removed
+      from the tabs, the minhag picker and the search chips. One accent.
+
+   2. A rose-to-gold hairline across the top of every card.
+
+   3. A glass sheen on every button, icon button and wheel number: a white
+      ::before and a radial ::after, left over from the version that was
+      explicitly undone. They are invisible against a light card and show as
+      a pale smear in dark mode, and they are two extra painted layers on
+      every control in the app.
+------------------------------------------------------------------------- */
+
+/* 1. One accent for "this is the one". */
+.night.is-now,
+:root[data-theme="dark"] .night.is-now {
+  background: var(--accent);
+  background-image: none;
+}
+.night.is-past,
+:root[data-theme="dark"] .night.is-past { background: var(--accent-sub); }
+
+.ushpiz-sefirah,
+:root[data-theme="dark"] .ushpiz-sefirah {
+  background: var(--surface-2);
+  background-image: none;
+  border: 1px solid var(--hair);
+  color: var(--text-2);
+}
+.ushpiz-minhag,
+:root[data-theme="dark"] .ushpiz-minhag {
+  background: none;
+  background-image: none;
+  border: 1px solid var(--hair);
+  /* Which minhag's order this guest belongs to, on the three days the two
+     differ. It decides which of two names a reader takes as theirs, so it is
+     not decoration -- and --text-3 measured 3.77:1. */
+  color: var(--text-2);
+}
+
+/* The next zman on Today: marked the way the Zmanim page marks it. */
+.up-row.is-next,
+:root[data-theme="dark"] .up-row.is-next {
+  background: none;
+  background-image: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.up-row.is-next .up-name,
+.up-row.is-next .up-time,
+.up-row.is-next .up-he,
+.up-row.is-next .up-away { color: var(--accent); }
+.up-row.is-next .up-time { font-weight: 700; }
+
+/* 2. No rose-to-gold rule along the top of a card. */
+.card::before,
+.card::after { display: none !important; }
+
+/* 3. No sheen on anything. */
+.btn::before, .btn::after,
+.icon-btn::before, .icon-btn::after,
+.wheel-item::before, .wheel-item::after,
+.aa::before, .aa::after,
+.stepper button::before, .stepper button::after,
+.pill::before, .pill::after,
+.switch::before, .switch::after { background-image: none !important; }
+
+/* The chosen wheel number in dark mode was still the rose-to-gold fill: the
+   wheel items carry `is-active` from the row of numbers they replaced, and
+   `:root[data-theme="dark"] .chapters button.is-active` is more specific than
+   the reset that took the fill off everywhere else. A number in a wheel is a
+   number; it is told apart by being bigger and in the accent. */
+:root[data-theme="dark"] .chapters .wheel-item,
+:root[data-theme="dark"] .chapters .wheel-item.is-active,
+:root[data-theme="dark"] .wheel .wheel-item.is-active {
+  background: none;
+  background-image: none;
+  color: var(--text-2);
+}
+:root[data-theme="dark"] .wheel .wheel-item.is-chosen,
+:root[data-theme="dark"] .chapters .wheel-item.is-chosen {
+  color: var(--accent);
+  background: none;
+  background-image: none;
+}
+.search-ideas + .search-shelf { margin-top: 4px; }
+.search-start .shelf-title { margin-bottom: 4px; }
+
+/* And the settings selects keep the calm field treatment without the sizing. */
+:root .rows-form .choice,
+:root[data-theme="dark"] .rows-form .choice {
+  border-radius: 12px;
+  border: 1px solid var(--hair);
+  background-color: var(--surface-2);
+  box-shadow: none;
+  color: var(--text);
+  min-height: 44px;
 }

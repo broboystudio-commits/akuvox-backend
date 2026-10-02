@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '71';
+  var BUILD = '72';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -593,7 +593,6 @@
     renderMoreToday(cal);
 
     // ---- Shabbos
-    setText('parshaTag', cal.parsha ? cal.parsha.en : '');
     var rows = [];
     if (cal.parsha) rows.push(['Parsha', cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '')]);
     if (cal.candles) rows.push(['Candle lighting', clock(cal.candles.time) + ' · ' + prettyDate(cal.candles.date)]);
@@ -620,9 +619,9 @@
       });
       return kv;
     }
-    fillWith('shabbosTimes', shabbosRows());
     fillWith('weeklyShabbos', shabbosRows());
     fillWith('shabbosFull', shabbosRows());
+    fillWith('weekShabbos', shabbosRows());
     renderComingUp(coming);
     setText('shabbosParsha', cal.parsha
       ? 'Parashas ' + cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '') : '');
@@ -758,21 +757,41 @@
       rows.push(['torah', 'Quick Torah', data.spark.heading || data.spark.ref]);
     }
     if (data.weekly && data.weekly.available) {
-      rows.push(['weekly', 'Dvar Torah', data.weekly.mode === 'yomtov'
+      rows.push(['weekly', "This week's Torah", data.weekly.mode === 'yomtov'
         ? 'for ' + data.weekly.yomTov
-        : 'for Parashas ' + (data.weekly.parsha || '')]);
+        : 'Parashas ' + (data.weekly.parsha || '')]);
       setText('rowWeekly', data.weekly.mode === 'yomtov'
         ? 'for ' + data.weekly.yomTov : 'for Parashas ' + (data.weekly.parsha || ''));
     }
+    // Shabbos, as the last thing there is to know about today. The times used
+    // to be a table of their own further down the page; a row saying when
+    // candles are, which opens the page that has the rest, says the useful
+    // half in one line and does not repeat what is already on that page.
+    var cal72 = data.calendar;
+    if (cal72.candles || cal72.havdalah) {
+      var when = [];
+      if (cal72.candles) when.push('Candles ' + clock(cal72.candles.time));
+      if (cal72.havdalah) when.push('havdalah ' + clock(cal72.havdalah.time));
+      rows.push(['shabbos', 'Shabbos', when.join(' · ')]);
+    }
 
     var frag = document.createDocumentFragment();
-    rows.forEach(function (r) {
+    rows.forEach(function (r, i) {
       var b = el('button', 'row');
       b.type = 'button';
       b.setAttribute('data-goto', r[0]);
+      // The row's name is its title. Without saying so, the accessible name
+      // is everything inside run together -- "Today's Tehillim Tehillim
+      // 104-105" -- which is what a screen reader reads out.
+      b.setAttribute('aria-label', r[1]);
       var main = el('span', 'row-main');
       main.appendChild(el('span', 'row-title', r[1]));
-      if (r[2]) main.appendChild(el('span', 'row-sub', r[2]));
+      if (r[2]) {
+        var sub = el('span', 'row-sub', r[2]);
+        sub.id = 'todayRowSub' + i;
+        main.appendChild(sub);
+        b.setAttribute('aria-describedby', sub.id);
+      }
       b.appendChild(main);
       b.appendChild(el('span', 'row-go'));
       b.addEventListener('click', function () { showPanel(r[0]); });
@@ -855,30 +874,37 @@
    * early and on the rest it said the same thing twice.
    */
   function renderComingUp(coming) {
-    var strip = $('yomTovStrip');
-    var into = $('yomTovList');
-    if (!strip || !into) return;
-
-    if (!coming || !coming.length) {
-      strip.hidden = true;
-      fill(into, document.createDocumentFragment());
-      return;
+    // Two places want it: the Shabbos page and the week page. Built fresh for
+    // each, because a fragment can only be put into the document once -- the
+    // second insertion would silently move it out of the first.
+    function draw() {
+      var frag = document.createDocumentFragment();
+      coming.slice(0, 6).forEach(function (h) {
+        var row = el('div', 'row is-plain');
+        var main = el('span', 'row-main');
+        main.appendChild(el('span', 'row-title', h.en));
+        var sub = prettyDate(h.date);
+        if (h.he) sub += ' · ';
+        main.appendChild(el('span', 'row-sub', sub));
+        if (h.he) main.lastChild.appendChild(el('span', 'he', h.he));
+        row.appendChild(main);
+        frag.appendChild(row);
+      });
+      return frag;
     }
 
-    var frag = document.createDocumentFragment();
-    coming.slice(0, 6).forEach(function (h) {
-      var row = el('div', 'row is-plain');
-      var main = el('span', 'row-main');
-      main.appendChild(el('span', 'row-title', h.en));
-      var sub = prettyDate(h.date);
-      if (h.he) sub += ' · ';
-      main.appendChild(el('span', 'row-sub', sub));
-      if (h.he) main.lastChild.appendChild(el('span', 'he', h.he));
-      row.appendChild(main);
-      frag.appendChild(row);
+    [['yomTovStrip', 'yomTovList'], ['weekComingStrip', 'weekComing']].forEach(function (pair) {
+      var strip = $(pair[0]);
+      var into = $(pair[1]);
+      if (!strip || !into) return;
+      if (!coming || !coming.length) {
+        strip.hidden = true;
+        fill(into, document.createDocumentFragment());
+        return;
+      }
+      fill(into, draw());
+      strip.hidden = false;
     });
-    fill(into, frag);
-    strip.hidden = false;
   }
 
   /** Where the Tikkun was left, said in words. */
@@ -1071,14 +1097,39 @@
     fill(into, frag);
   }
 
+  /**
+   * A <details> that keeps everything and shows it when asked.
+   *
+   * Used where a section holds a page's worth of real content that belongs on
+   * the screen it is on, but must not be the loudest thing there: the
+   * Ushpizin passages, the yahrzeit's passage, and the long halves of the
+   * policy pages. Nothing is removed by folding it -- it is one tap away and
+   * it is in the page for a screen reader and for find-on-page.
+   */
+  function fold(summaryText, contentNode, openByDefault) {
+    var box = el('details', 'fold');
+    if (openByDefault) box.open = true;
+    var head = el('summary');
+    head.appendChild(el('span', 'fold-title', summaryText));
+    box.appendChild(head);
+    var body = el('div', 'fold-body');
+    body.appendChild(contentNode);
+    box.appendChild(body);
+    return box;
+  }
+
   function renderUshpizin(data) {
     var card = $('ushpizinCard');
     if (!card) return;
     if (!data || !data.guests || !data.guests.length) { card.hidden = true; return; }
 
     card.hidden = false;
-    setText('ushpizinTitle', 'Ushpizin');
     setText('ushpizinHe', 'אוּשְׁפִּיזִין');
+    // Whose night it is, said in the heading rather than buried in the card.
+    // That is the whole of what most people open this for.
+    var names = data.guests.map(function (g) { return g.name; });
+    setText('ushpizinTitle', 'Tonight: ' + names.join(' · ') +
+      '  ·  night ' + data.day + ' of ' + data.of);
 
     // Seven nights, and which one this is. A row of marks says it at a
     // glance where "day 4 of 7" has to be read.
@@ -1117,22 +1168,30 @@
 
       row.appendChild(el('p', 'ushpiz-about', g.about));
 
-      // The Torah of the day, under the guest it belongs to.
+      // The Torah of the day, and Rebbe Nachman on it, folded. Both are whole
+      // passages with their own credits, and on Sukkos the two of them made
+      // this the biggest thing on the home screen -- several times the size of
+      // the day's teaching, which is what the page is for. Nothing is lost:
+      // the summary says what is inside and one tap opens it.
+      var torah = document.createDocumentFragment();
       if (g.passage && g.passage.available) {
-        row.appendChild(passageBox(g.passage));
+        torah.appendChild(passageBox(g.passage));
       } else {
-        row.appendChild(el('p', 'hint',
+        torah.appendChild(el('p', 'hint',
           'The passage could not be loaded from Sefaria just now.'));
       }
-
       // And a word on it from Rebbe Nachman or Reb Noson, where Sefaria
       // records one. Named by whoever actually said it.
       if (g.dvar && g.dvar.available) {
         var said = el('div', 'dvar');
         said.appendChild(el('div', 'dvar-label', (g.dvar.says || 'Breslov') + ' on this'));
         said.appendChild(passageBox(g.dvar, 'is-dvar'));
-        row.appendChild(said);
+        torah.appendChild(said);
       }
+      var what = g.passage && g.passage.available && g.passage.ref
+        ? 'His Torah for tonight · ' + g.passage.ref
+        : 'His Torah for tonight';
+      row.appendChild(fold(what, torah));
       wrap.appendChild(row);
     });
 
@@ -1152,7 +1211,7 @@
     if (!today) { card.hidden = true; return; }
 
     card.hidden = false;
-    setText('yahrzeitTitle', 'Yahrzeit · ' + today.name);
+    setText('yahrzeitTitle', today.name);
     setText('yahrzeitHe', today.he || '');
 
     var about = today.about || '';
@@ -1169,7 +1228,10 @@
       return;
     }
 
-    fill(body, passageBox(p));
+    // Folded, for the same reason the Ushpizin passages are: it is a whole
+    // passage with its own credits, it belongs on this page, and it is not
+    // what the page is about.
+    fill(body, fold('From his sefer · ' + (p.ref || ''), passageBox(p)));
   }
 
   /**
@@ -1269,6 +1331,10 @@
     // what it is, and it was in a `title` attribute -- a tooltip, which on a
     // phone is nothing at all. Five names with no explanation is a guess for
     // anybody who does not already know which one they hold.
+    // The summary line says which one is in force, so the fold can stay shut.
+    var now = (opts.presets.find(function (x) { return x.id === zmanim.prefs.minhag; }) || {}).label;
+    setText('minhagNow', now || 'Set line by line');
+
     var presets = el('div', 'rows choices');
     presets.setAttribute('role', 'radiogroup');
     presets.setAttribute('aria-label', 'Which zmanim you hold by');
@@ -1900,10 +1966,12 @@
     // wrapped onto four ragged lines. A suggested search is the same kind of
     // thing as a sefer on the shelf below it, and the two were being drawn as
     // two different kinds of object.
+    box.appendChild(el('h3', 'shelf-title', 'Suggested searches'));
     var ideas = el('div', 'search-ideas');
     SEARCH_IDEAS.forEach(function (word) {
       var b = el('button', 'row idea');
       b.type = 'button';
+      b.setAttribute('aria-label', 'Search for ' + word);
       b.appendChild(el('span', 'idea-glyph'));
       b.appendChild(el('span', 'row-main', word));
       b.addEventListener('click', function () { searchFor(word); });
@@ -2786,11 +2854,12 @@
 
     // Which version is actually running, so it can be read without hunting
     // for a web address.
-    if (name === 'about' || name === 'settings' || name === 'more') {
+    if (name === 'about' || name === 'settings' || name === 'more' || name === 'sources') {
       fetch('/api/health', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.json(); })
         .then(function (h) {
           setText('aboutBuild', 'Version ' + h.build);
+          setText('sourcesBuild', 'Running version ' + h.build + '.');
           setText('moreBuild', 'Breslov Daily · version ' + h.build);
         })
         .catch(function () { setText('aboutBuild', ''); });
@@ -3122,7 +3191,7 @@
   // promises somewhere to go that does not exist.
   var PRESSABLE = '.btn, .pill, .stepper button, .icon-btn, .aa, .resume button,' +
                   '.tab, .row:not(.is-plain), .wheel-item, .backrow, .nekuda-source,' +
-                  '.shelf-book, .result, .suggest-item, .scope';
+                  '.shelf-book, .result, .suggest-item, .scope, .row-action';
 
   /**
    * Mark what is being pressed, rather than leaving it to :active.

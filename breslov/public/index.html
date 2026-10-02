@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="71">
+<html lang="en" data-build="72">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=71" />
+<link rel="stylesheet" href="/styles.css?v=72" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -156,8 +156,13 @@
       <div class="nekuda-full" id="nekudaFull" hidden></div>
     </article>
 
-    <!-- ---- what there is to do today. Rows, not a wall of cards. -->
-    <nav class="rows" id="todayRows" aria-label="Today at a glance"></nav>
+    <!-- ---- what there is to do today. Rows, not a wall of cards, and a
+             heading over them so the page says what they are rather than
+             leaving a block of links to explain itself. -->
+    <section class="strip">
+      <h2 class="rows-head">Today at a glance</h2>
+      <nav class="rows" id="todayRows" aria-label="Today at a glance"></nav>
+    </section>
 
     <!-- ---- at most two more, and only when they are worth it. -->
     <section class="more-today strip" id="moreToday" hidden>
@@ -167,23 +172,28 @@
 
     <!-- ---- Ushpizin and yahrzeit keep their own places. A yahrzeit never
              replaces the נקודה; it sits below it as its own thing. -->
-    <article class="card" id="ushpizinCard" hidden>
-      <header class="card-head">
-        <h2 id="ushpizinTitle">Ushpizin</h2>
-        <span class="ref he" id="ushpizinHe"></span>
-      </header>
+    <!-- Ushpizin and the yahrzeit keep their places and keep every word they
+         had. What changed is that the words are folded away until asked for.
+         On Sukkos this card was the largest thing on the home screen by some
+         distance -- a guest, a sefirah, a sentence, the whole of Psalms 23 in
+         two languages with its credits, and then a second passage of Rebbe
+         Nachman on it with credits of its own. All of it below the נקודה,
+         and all of it dwarfing the נקודה. The day's teaching is the page;
+         whose night it is belongs on the page too, but not at four times the
+         size. -->
+    <section class="strip" id="ushpizinCard" hidden>
+      <h2 class="rows-head">Ushpizin <span class="rows-tag he" id="ushpizinHe"></span></h2>
+      <p class="context-lead" id="ushpizinTitle"></p>
       <div class="nights" id="ushpizinNights" role="img"></div>
       <div id="ushpizinBody"></div>
-    </article>
+    </section>
 
-    <article class="card" id="yahrzeitCard" hidden>
-      <header class="card-head">
-        <h2 id="yahrzeitTitle">Yahrzeit</h2>
-        <span class="ref he" id="yahrzeitHe"></span>
-      </header>
-      <p class="hint" id="yahrzeitAbout"></p>
+    <section class="strip" id="yahrzeitCard" hidden>
+      <h2 class="rows-head">Yahrzeit <span class="rows-tag he" id="yahrzeitHe"></span></h2>
+      <p class="context-lead" id="yahrzeitTitle"></p>
+      <p class="context-sub" id="yahrzeitAbout"></p>
       <div id="yahrzeitBody"></div>
-    </article>
+    </section>
 
     <!-- Kept from the old home screen, and kept because it earns its place:
          the next few zmanim and when Shabbos comes in. Quieter now. -->
@@ -195,10 +205,11 @@
       <div class="upcoming" id="upcoming"></div>
     </section>
 
-    <section class="strip" id="shabbosStrip">
-      <h2 class="rows-head">Shabbos <span class="rows-tag" id="parshaTag"></span></h2>
-      <div class="kv" id="shabbosTimes"></div>
-    </section>
+    <!-- The Shabbos times used to be a table down here. They are a row in
+         "Today at a glance" now, saying when candles are and opening the
+         Shabbos page for the rest -- which is where the parsha, havdalah and
+         the week's calendar already live. A second copy of them on the home
+         screen was the same facts twice on one scroll. -->
 
     <!-- Six hidden leftovers from the old Today screen used to sit here:
          #sparkFull, #openFull, #verseRef, #verseBody, #quickTehillim and
@@ -215,20 +226,30 @@
   <!-- ----------------------------------------------------------- READ -->
   <section class="panel" id="panel-read" role="region" aria-label="Read" hidden>
     <header class="hubhead"><h1>Read</h1></header>
+    <!-- Each row carries its own aria-label.
+         Without one, a row's accessible name is everything inside it run
+         together: "Today's Tehillim the day's portion", with no pause and no
+         punctuation, which is what a screen reader reads out and what any
+         text extraction of this page produces. The label names the
+         destination; the second line is description, and the row-sub carries
+         an id so it is announced as one. -->
     <nav class="rows" aria-label="Reading">
-      <button class="row" data-goto="tehillim" type="button">
-        <span class="row-main"><span class="row-title">Today&rsquo;s Tehillim</span>
-          <span class="row-sub" id="rowTehillim">the day&rsquo;s portion</span></span>
+      <button class="row" data-goto="tehillim" type="button"
+              aria-label="Tehillim" aria-describedby="rowTehillim">
+        <span class="row-main"><span class="row-title">Tehillim</span>
+          <span class="row-sub" id="rowTehillim">Today&rsquo;s portion</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
-      <button class="row" data-goto="tikkun" type="button">
+      <button class="row" data-goto="tikkun" type="button"
+              aria-label="Tikkun HaKlali" aria-describedby="rowTikkunSub">
         <span class="row-main"><span class="row-title">Tikkun HaKlali</span>
-          <span class="row-sub">ten psalms, in order</span></span>
+          <span class="row-sub" id="rowTikkunSub">Ten psalms, in order</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
-      <button class="row" data-goto="torah" type="button">
+      <button class="row" data-goto="torah" type="button"
+              aria-label="Torah" aria-describedby="rowTorah">
         <span class="row-main"><span class="row-title">Torah</span>
-          <span class="row-sub" id="rowTorah">a short piece, and the shelf it comes from</span></span>
+          <span class="row-sub" id="rowTorah">A short piece of Torah</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
     </nav>
@@ -255,22 +276,40 @@
       <p class="hubsub" id="weekSub"></p>
     </header>
     <nav class="rows" aria-label="This week">
-      <button class="row" data-goto="weekly" type="button">
+      <button class="row" data-goto="weekly" type="button"
+              aria-label="Dvar Torah" aria-describedby="rowWeekly">
         <span class="row-main"><span class="row-title">Dvar Torah</span>
           <span class="row-sub" id="rowWeekly">short and sharp, for this week</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
-      <button class="row" data-goto="shabbos" type="button">
+      <button class="row" data-goto="shabbos" type="button"
+              aria-label="Shabbos and the parsha" aria-describedby="rowShabbos">
         <span class="row-main"><span class="row-title">Shabbos &amp; the parsha</span>
           <span class="row-sub" id="rowShabbos">candle lighting and havdalah</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
-      <button class="row" data-goto="yahrzeit" type="button">
+      <button class="row" data-goto="yahrzeit" type="button"
+              aria-label="Yahrzeits" aria-describedby="rowYahrzeit">
         <span class="row-main"><span class="row-title">Yahrzeits</span>
           <span class="row-sub" id="rowYahrzeit">this month</span></span>
         <span class="row-go" aria-hidden="true"></span>
       </button>
     </nav>
+
+    <!-- The week itself, not only the way to it.
+         This page was three links and nothing else -- a menu standing in for
+         a page. The two facts anybody opens it for are when Shabbos comes in
+         and what is coming in the calendar, and both were a tap further in
+         for no reason. The rows above still go to the fuller pages. -->
+    <section class="strip">
+      <h2 class="rows-head">Shabbos</h2>
+      <div class="kv" id="weekShabbos"></div>
+    </section>
+
+    <section class="strip" id="weekComingStrip" hidden>
+      <h2 class="rows-head">Coming up</h2>
+      <div class="rows" id="weekComing"></div>
+    </section>
   </section>
 
   <!-- ------------------------------------------------------- SHABBOS -->
@@ -403,19 +442,34 @@
       <div class="zmanim" id="zmanimList"><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
     </article>
 
+    <!-- The picker folded behind the choice in force. The list inside is
+         exactly the one from build 71 -- a row per minhag with a tick and its
+         explanation -- and opening it is one tap. What changed is that the
+         page no longer ends with a settings screen: it ends with a line
+         saying which minhag these times follow, which is the only part most
+         people need to see. -->
     <article class="card">
-      <header class="card-head">
-        <h2>Which zmanim you hold by</h2>
-      </header>
-      <p class="hint">
-        Pick a minhag, or set any line yourself. Everything follows your choice —
-        including the countdown at the top and the widget on your phone.
-      </p>
-      <div id="minhagPicker"></div>
+      <h2 class="rows-head">Minhag</h2>
+      <details class="fold fold-lead" id="minhagFold">
+        <summary>
+          <span class="fold-title">Which zmanim you hold by</span>
+          <span class="fold-value" id="minhagNow"></span>
+        </summary>
+        <div class="fold-body">
+          <p class="hint">
+            Pick a minhag, or set any line yourself. Everything follows your
+            choice — including the countdown at the top and the widget on your
+            phone.
+          </p>
+          <div id="minhagPicker"></div>
+        </div>
+      </details>
     </article>
+    <!-- The caveat stays -- it is the most important sentence on the page --
+         but as a footnote and not as a paragraph competing with the times. -->
     <p class="footnote">
       Calculated for your location using the KosherJava algorithms.
-      Times are a guide — follow your rav and your shul's luach.
+      <strong>Times are a guide — follow your rav and your shul&rsquo;s luach.</strong>
     </p>
   </section>
 
@@ -440,24 +494,29 @@
       <p class="hubsub">One teaching a day, and the day it belongs to.</p>
     </header>
 
-    <article class="card">
-      <header class="card-head"><h2>What this is</h2></header>
-      <p class="hint">
-        One teaching a day — the נקודה ליום — chosen because it belongs to
-        today rather than because today's number came up. Around it: the day's
-        Tehillim, the Tikkun HaKlali, the zmanim where you are, and a Torah for
-        the week. It is meant to be opened once a day and read, not browsed.
-      </p>
-      <p class="hint">
-        Everything here is free, there is nothing to sign up for, no account
-        and no tracking of any kind. The place your zmanim are set to is sent
-        to this server to work the times out, and is not stored anywhere. The
-        privacy page says exactly what happens to it.
-      </p>
-    </article>
+    <!-- The short answer first, and the long one folded under it.
+         Everything that was here is still here, word for word. What changed
+         is that the page no longer opens with four screens of explanation:
+         somebody who wants to know what this app is can find out in the time
+         it takes to read a paragraph, and somebody who wants the reasoning
+         can have all of it one tap down. -->
+    <p class="gist">
+      One teaching a day — the <span class="he">נְקֻדָּה לַיּוֹם</span> — chosen
+      because it belongs to today rather than because today&rsquo;s number came
+      up. Around it: the day&rsquo;s Tehillim, the Tikkun HaKlali, the zmanim
+      where you are, and a Torah for the week.
+      <span class="gist-note">Meant to be opened once a day and read, not browsed.</span>
+    </p>
+    <ul class="gist-points">
+      <li>Free, with nothing to sign up for and no account.</li>
+      <li>No tracking of any kind.</li>
+      <li>Every word of Torah comes from Sefaria, with the edition named.</li>
+    </ul>
 
-    <article class="card">
-      <header class="card-head"><h2>Where the daily teaching comes from</h2></header>
+    <div class="folds">
+    <details class="fold">
+      <summary><span class="fold-title">Where the daily teaching comes from</span></summary>
+      <div class="fold-body">
       <p class="hint">
         From a short, closed list of rebbes: Rebbe Nachman and Reb Noson, the
         Arizal and Rabbi Chaim Vital, the Baal Shem Tov and the Maggid of
@@ -490,51 +549,85 @@
         the week first, then for a piece on that week's parsha; if it finds
         neither it says so rather than showing something unrelated.
       </p>
-    </article>
-
-    <article class="card">
-      <header class="card-head">
-        <h2>Daily reminder</h2>
-      </header>
-      <p class="hint">
-        Subscribe in your phone's Calendar app and it will remind you every day,
-        with the day's Tehillim on the reminder. It keeps working whether or not
-        you open this site, and you can turn it off in Calendar whenever you like.
-      </p>
-      <div class="choice-row">
-        <span class="choice-name">Remind me at</span>
-        <select class="choice" id="reminderTime"></select>
       </div>
-      <button class="btn" id="reminderAdd" type="button">Add to my calendar</button>
-      <p class="hint" id="reminderNote" style="margin-top:12px"></p>
-    </article>
+    </details>
 
-    <article class="card">
-      <header class="card-head"><h2>Your location</h2></header>
+    <!-- These two folds explain; they do not control.
+         Both the reminder controls and the location button existed here AND
+         on the Settings page, with the same ids on both copies. Two elements
+         cannot share an id: getElementById answers with the first, so every
+         handler bound by id went to this copy and the Settings page's
+         "Remind me at", "Add to my calendar" and "Use mine" did nothing at
+         all when pressed. Nothing looked wrong -- they are real controls,
+         they just were not the ones anything was listening to. The controls
+         live on Settings, which is where the app says settings live. -->
+    <details class="fold">
+      <summary><span class="fold-title">Daily reminder</span></summary>
+      <div class="fold-body">
+      <p class="hint">
+        Subscribe in your phone&rsquo;s Calendar app and it will remind you every
+        day, with the day&rsquo;s Tehillim on the reminder. It keeps working
+        whether or not you open this site, and you can turn it off in Calendar
+        whenever you like. It is a calendar subscription and not email: no
+        address is asked for and none is ever sent to.
+      </p>
+      <nav class="rows" aria-label="Set the reminder">
+        <button class="row" data-goto="settings" type="button" aria-label="Set it up in Settings">
+          <span class="row-main"><span class="row-title">Set it up in Settings</span></span>
+          <span class="row-go" aria-hidden="true"></span>
+        </button>
+      </nav>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary><span class="fold-title">Your location</span></summary>
+      <div class="fold-body">
       <div class="kv">
         <div class="kv-row"><span class="k">Zmanim for</span><span class="v" id="aboutPlace">—</span></div>
-        <div class="kv-row"><span class="k">Today's teaching</span><span class="v" id="aboutSpark">—</span></div>
       </div>
-      <button class="btn ghost" id="aboutLocation" type="button" style="margin-top:14px">Use my current location</button>
-    </article>
+      <p class="hint">
+        The place is used to work out the times and is not stored. You can
+        change it, or let the phone supply it, in Settings.
+      </p>
+      <nav class="rows" aria-label="Change the location">
+        <button class="row" data-goto="settings" type="button" aria-label="Change it in Settings">
+          <span class="row-main"><span class="row-title">Change it in Settings</span></span>
+          <span class="row-go" aria-hidden="true"></span>
+        </button>
+      </nav>
+      </div>
+    </details>
 
-    <article class="card">
-      <header class="card-head"><h2>Privacy, and the rules</h2></header>
+    <details class="fold">
+      <summary><span class="fold-title">Privacy, and the rules</span></summary>
+      <div class="fold-body">
       <p class="hint">
         No accounts, no analytics, no advertising, no trackers, and nothing
         sold. Your settings stay on this device. Nothing you read here is
         recorded against you, because there is no account for it to be
         recorded against.
       </p>
-      <div class="legal-links">
-        <button class="pill" data-goto="privacy" type="button">Privacy policy</button>
-        <button class="pill" data-goto="terms" type="button">Terms of use</button>
-      </div>
-      <p class="hint" style="margin-top:14px">
+      <p class="hint">
         You can also <strong>delete everything saved about you</strong>, here
         or on the privacy page — it takes one tap and nothing is kept back.
       </p>
-    </article>
+      <!-- These were the last two `.pill` elements the app actually rendered.
+           Two capsules side by side for two destinations is the old language;
+           a destination is a row. -->
+      <nav class="rows legal-links" aria-label="Policies">
+        <button class="row" data-goto="privacy" type="button" aria-label="Privacy policy">
+          <span class="row-main"><span class="row-title">Privacy policy</span></span>
+          <span class="row-go" aria-hidden="true"></span>
+        </button>
+        <button class="row" data-goto="terms" type="button" aria-label="Terms of use">
+          <span class="row-main"><span class="row-title">Terms of use</span></span>
+          <span class="row-go" aria-hidden="true"></span>
+        </button>
+      </nav>
+      </div>
+    </details>
+    </div>
 
   </section>
 
@@ -577,7 +670,7 @@
       <div class="row row-static">
         <span class="row-main"><span class="row-title">Location</span>
           <span class="row-sub" id="settingsPlace">—</span></span>
-        <button class="pill small" id="aboutLocation" type="button">Use mine</button>
+        <button class="row-action" id="aboutLocation" type="button">Use mine</button>
       </div>
     </div>
     <p class="rows-note">Which opinion each zman follows is set on the Zmanim
@@ -628,8 +721,21 @@
         the app says so rather than showing something that might be wrong.
       </p>
 
+      <!-- What it reads from, named before the licensing detail. Each line is
+           a section below; nothing here is claimed that those do not say. -->
+      <ul class="gist-points">
+        <li><strong>Sefaria</strong> — every passage of Torah</li>
+        <li><strong>kosher-zmanim</strong> (KosherJava) — the halachic times</li>
+        <li><strong>@hebcal/core</strong> — the Hebrew calendar, parsha and candle lighting</li>
+        <li><strong>Frank Ruhl Libre, David Libre, Heebo</strong> — the Hebrew faces, under the OFL</li>
+        <li><strong>Node.js, Express, Render</strong> — the server it runs on</li>
+      </ul>
+
       <div class="sources">
-        <h3>The texts</h3>
+        <div class="folds">
+        <details class="fold">
+          <summary><span class="fold-title">The texts</span></summary>
+          <div class="fold-body">
         <p>
           <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>
           — a free library of Jewish texts. Everything read in this app comes from there:
@@ -646,7 +752,11 @@
           passage shows its own, underneath the text.
         </p>
 
-        <h3>Zmanim</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Zmanim</span></summary>
+          <div class="fold-body">
         <p>
           <a href="https://github.com/BehindTheMath/KosherZmanim" target="_blank" rel="noopener">kosher-zmanim</a>
           by BehindTheMath (LGPL-3.0), the JavaScript port of
@@ -657,14 +767,22 @@
           Times are a guide. Follow your rav and your shul's luach.
         </p>
 
-        <h3>The Jewish calendar</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The Jewish calendar</span></summary>
+          <div class="fold-body">
         <p>
           <a href="https://www.hebcal.com" target="_blank" rel="noopener">@hebcal/core</a>
           by Michael J. Radwin (GPL-2.0) — the Hebrew date, the parsha, candle
           lighting, havdalah and the yomim tovim.
         </p>
 
-        <h3>The Hebrew faces</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The Hebrew faces</span></summary>
+          <div class="fold-body">
         <p>
           <strong>Frank Ruhl Libre</strong>, <strong>David Libre</strong> and
           <strong>Heebo</strong>, each under the
@@ -680,7 +798,11 @@
           Authors. Choosing "Your device's font" downloads nothing at all.
         </p>
 
-        <h3>The pictures</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The pictures</span></summary>
+          <div class="fold-body">
         <p class="small">
           There are none. Every symbol on this page is drawn by the page itself
           in a line or two of SVG, and the app icon was generated by a script in
@@ -688,7 +810,11 @@
           icon set from anybody else to be licensed.
         </p>
 
-        <h3>Everything else</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Everything else</span></summary>
+          <div class="fold-body">
         <p>
           Built with <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>
           and <a href="https://expressjs.com" target="_blank" rel="noopener">Express</a>,
@@ -696,15 +822,22 @@
           No analytics, no trackers, no accounts.
         </p>
 
-        <h3>Thanks</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Thanks</span></summary>
+          <div class="fold-body">
         <p class="small">
           To Sefaria, to Hebcal and to the KosherJava project, who have each made
           decades of work freely available. This app is only a way of reading
           what they already give away.
-        </p>
+        </p></div>
+        </details>
+</div>
+
       </div>
 
-      <p class="hint" style="margin-top:20px" id="aboutBuild"></p>
+      <p class="hint" style="margin-top:20px" id="sourcesBuild"></p>
     </div>
   </section>
 
@@ -716,16 +849,27 @@
       <p class="hint" id="privacyUpdated"></p>
 
       <div class="sources">
-        <p>
-          The short version: this site has no accounts, no analytics, no
-          advertising, no trackers and no database. It does not know who you
-          are and has no way of finding out.
+        <!-- The whole policy in four lines, then the whole policy. Nothing
+             below is removed or shortened; it is folded, which is the only
+             way a page of this length gets read on a phone at all. -->
+        <ul class="gist-points gist-strong">
+          <li>No accounts.</li>
+          <li>No analytics.</li>
+          <li>No advertising.</li>
+          <li>No trackers, and no database.</li>
+        </ul>
+        <p class="gist-after">
+          This site does not know who you are and has no way of finding out.
+          Everything below says exactly what that means, section by section.
         </p>
 
-        <h3>Who runs this site</h3>
+        <div class="folds">
+<h3>Who runs this site</h3>
         <p id="siteOwner" class="small">—</p>
 
-        <h3>What stays on your device, and never leaves it</h3>
+                <details class="fold">
+          <summary><span class="fold-title">What stays on your device, and never leaves it</span></summary>
+          <div class="fold-body">
         <p>
           Your chosen place, minhag, theme, font, text size, reminder time,
           whether you want the English, the psalm you last reached in the
@@ -737,7 +881,11 @@
           clears every bit of it.
         </p>
 
-        <h3>The one cookie</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The one cookie</span></summary>
+          <div class="fold-body">
         <p>
           If the site has a password on it, getting past the password sets one
           cookie, <code>bd_access</code>, so you are not asked again on every
@@ -752,7 +900,11 @@
           measured, remembered or shared.
         </p>
 
-        <h3>What the server sees</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">What the server sees</span></summary>
+          <div class="fold-body">
         <p>
           To work out zmanim, the app sends a place — coordinates and a time
           zone — with each request. They are used to calculate the times and
@@ -776,7 +928,11 @@
           their doing, not this app's, and nothing here adds to it.
         </p>
 
-        <h3>Who else is contacted</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Who else is contacted</span></summary>
+          <div class="fold-body">
         <p>
           <strong>From your device: nobody but this server.</strong> No fonts,
           no scripts, no images, no analytics from anywhere else. You can check
@@ -790,7 +946,11 @@
           outside request at all.
         </p>
 
-        <h3>The daily reminder</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The daily reminder</span></summary>
+          <div class="fold-body">
         <p>
           The reminder is a calendar subscription, not email. This site never
           sends email and has no mailing list, so there is nothing to
@@ -799,14 +959,22 @@
           the subscription in Calendar stops it immediately.
         </p>
 
-        <h3>Children</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Children</span></summary>
+          <div class="fold-body">
         <p>
           Nothing is collected from anyone of any age, so there is nothing to
           ask a parent's permission for. There is no sign-up, no age gate and
           no profile, for a child or for anybody else.
         </p>
 
-        <h3>Delete everything</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Delete everything</span></summary>
+          <div class="fold-body">
         <p>
           There is no account to close, because there is no account. What there
           is, you can remove right here: the settings saved in this browser,
@@ -815,12 +983,19 @@
         <button class="btn ghost" id="forgetMe" type="button">Delete everything saved about me</button>
         <p class="hint" id="forgetNote" style="margin-top:12px" role="status" aria-live="polite"></p>
 
-        <h3>Changes</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Changes</span></summary>
+          <div class="fold-body">
         <p class="small">
           If any of this changes, it changes here. This page is part of the app
           rather than a separate document that can quietly go out of date, and
           the version it belongs to is shown at the foot of the About page.
-        </p>
+        </p></div>
+        </details>
+</div>
+
       </div>
     </article>
 
@@ -833,7 +1008,10 @@
       <header class="card-head"><h2>Terms of use</h2></header>
 
       <div class="sources">
-        <h3>What this is</h3>
+        <div class="folds">
+        <details class="fold">
+          <summary><span class="fold-title">What this is</span></summary>
+          <div class="fold-body">
         <p>
           A way of reading things that are already freely available: Rebbe
           Nachman's seforim and the Tehillim from Sefaria, zmanim calculated
@@ -842,7 +1020,11 @@
           any kind — now or later.
         </p>
 
-        <h3>The Torah is not ours</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">The Torah is not ours</span></summary>
+          <div class="fold-body">
         <p>
           Every passage belongs to whoever published that edition or made that
           translation, and each one is named under the text it belongs to, with
@@ -852,7 +1034,11 @@
           the gap.
         </p>
 
-        <h3>Times are a guide</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Times are a guide</span></summary>
+          <div class="fold-body">
         <p>
           Zmanim are calculated, and calculations rest on the opinion chosen,
           the place given and a model of the horizon that no model gets exactly
@@ -861,7 +1047,11 @@
           rely on it where being wrong would be serious.
         </p>
 
-        <h3>No warranty</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">No warranty</span></summary>
+          <div class="fold-body">
         <p>
           It is offered as it is. It may be unavailable, it may be out of date,
           and the free hosting it runs on sleeps when nobody has opened it for a
@@ -869,15 +1059,26 @@
           it is not answerable for any loss that comes of using it.
         </p>
 
-        <h3>Using it</h3>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Using it</span></summary>
+          <div class="fold-body">
         <p>
           Read it, learn from it, and share the address with whoever you like.
           Do not use it to attack the server, and do not pass the password on
           to people the person who gave it to you did not mean to include.
         </p>
 
-        <h3>Who to ask</h3>
-        <p id="termsOwner" class="small">—</p>
+        </div>
+        </details>
+        <details class="fold">
+          <summary><span class="fold-title">Who to ask</span></summary>
+          <div class="fold-body">
+        <p id="termsOwner" class="small">—</p></div>
+        </details>
+</div>
+
       </div>
     </article>
 
@@ -885,6 +1086,6 @@
 
 </main>
 
-<script src="/app.js?v=71"></script>
+<script src="/app.js?v=72"></script>
 </body>
 </html>
