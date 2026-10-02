@@ -275,6 +275,36 @@ async function main() {
     library.refsFromShape([{ title: 'Likutei Moharan', length: 286 }],
       { title: 'Likutei Moharan' }).length === 286);
 
+  console.log('\nA search hit is ours, or it is not');
+
+  // Sefaria's search does not reliably name the book a hit came from. The
+  // search page learned that and read it off the reference; the weekly card's
+  // chag search was then written against the book field anyway, and every
+  // word came back "40 hits, none from the ten" -- so the card showed a
+  // parsha lesson through the whole of Sukkos. One copy of the test now, and
+  // this is it.
+  const HITS = [
+    [{ ref: 'Likutei Halakhot, Yoreh Deah, Laws of Shaving 3:13:1' }, 'Likutei Halakhot'],
+    [{ ref: 'Likutei Moharan, Part II 27' }, 'Likutei Moharan, Part II'],
+    [{ ref: 'Likutei Moharan 24:3' }, 'Likutei Moharan'],
+    [{ ref: 'Sefer HaMiddot, Truth 5' }, 'Sefer HaMiddot'],
+    [{ ref: 'Likkutei Etzot, Joy 1' }, 'Likkutei Etzot'],
+    [{ book: 'Likutei Tefilot', ref: 'Likutei Tefilot, Volume II 6' }, 'Likutei Tefilot'],
+    // Not ours, however much they look like Torah.
+    [{ ref: 'Shulchan Arukh, Orach Chayim 625' }, null],
+    [{ ref: 'Ohr Chadash 9:18:2' }, null],
+    [{ ref: 'Berakhot 2a' }, null],
+    [{ ref: 'Likutei Moharan Commentary 3' }, null],
+    [{}, null],
+  ];
+  const misread = HITS.filter(([hit, want]) => library.bookOfHit(hit) !== want);
+  check('A hit is placed by its reference, not by a book field',
+    misread.length === 0,
+    misread.length ? misread.map(([h, w]) => `${h.ref || '(none)'} wanted ${w}`).join('; ')
+                   : `${HITS.length} hits`);
+  check('And one that is not ours is not claimed',
+    HITS.filter(([, want]) => want === null).every(([hit]) => !library.belongsToUs(hit)));
+
   console.log('\nThe weekly Torah is about this week');
 
   // Exactly the strings hebcal produces, which is the only thing the picker

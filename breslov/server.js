@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '59';
+const BUILD = '60';
 
 app.use(cors());
 
@@ -726,17 +726,7 @@ app.get('/api/search', route(async (req) => {
       // off the front of the reference instead: "Likutei Moharan 24:3" belongs
       // to "Likutei Moharan". Relying on a book field is what made the Reb
       // Nachman count come out as zero.
-      const ourTitles = library.BOOKS.map((b) => b.title);
-      const belongsToUs = (hit) => {
-        if (hit.book && ourTitles.indexOf(hit.book) !== -1) return true;
-        if (!hit.ref) return false;
-        return ourTitles.some((title) =>
-          hit.ref === title ||
-          hit.ref.indexOf(title + ' ') === 0 ||
-          hit.ref.indexOf(title + ',') === 0);
-      };
-
-      const ours = found.hits.filter(belongsToUs);
+      const ours = found.hits.filter(library.belongsToUs);
       const hits = scope === 'all' ? found.hits : ours;
 
       return {

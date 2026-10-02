@@ -371,6 +371,51 @@ async function bookStatus() {
  * "Rebbe Nachman darshans a verse" whichever of the ten it came from, which
  * put Reb Noson's words in Rebbe Nachman's mouth about a third of the time.
  */
+/**
+ * Is this search hit from one of our seforim?
+ *
+ * Sefaria's search does not reliably name the book a hit came from, so the
+ * book is read off the front of the reference instead: "Likutei Moharan 24:3"
+ * belongs to "Likutei Moharan". There was a copy of this in the search
+ * endpoint with a comment saying that relying on the book field is what made
+ * the Reb Nachman count come out as zero -- and the weekly card's chag search
+ * was then written relying on the book field, and every word came back "40
+ * hits, none from the ten". One copy now, so the lesson only has to hold in
+ * one place.
+ */
+function belongsToUs(hit) {
+  return bookOfHit(hit) !== null;
+}
+
+/**
+ * Where a reference stops being a title and starts being a place in it.
+ *
+ * "Likutei Moharan 24:3" is the sefer. "Likutei Moharan, Part II 27" is the
+ * sefer. "Likutei Moharan Commentary 3" is somebody writing about the sefer,
+ * and attributing that to Rebbe Nachman is the one mistake this whole app is
+ * arranged to avoid -- so after the title there has to be a comma, or a
+ * number, and a word does not count.
+ */
+function refStartsWith(ref, title) {
+  if (ref === title) return true;
+  if (ref.indexOf(title + ',') === 0) return true;
+  if (ref.indexOf(title + ' ') !== 0) return false;
+  return /^\d/.test(ref.slice(title.length + 1));
+}
+
+/** Which of our seforim a hit is from, or null. */
+function bookOfHit(hit) {
+  if (!hit) return null;
+  const titles = BOOKS.map((b) => b.title);
+  if (hit.book && titles.indexOf(hit.book) !== -1) return hit.book;
+  if (!hit.ref) return null;
+  // The longest title that fits, so "Likutei Moharan, Part II" is not read
+  // as "Likutei Moharan".
+  return titles
+    .filter((t) => refStartsWith(hit.ref, t))
+    .sort((a, b) => b.length - a.length)[0] || null;
+}
+
 function saidBy(title) {
   const book = BOOKS.find((b) => b.title === title || b.label === title);
   return (book && book.says) || null;
@@ -378,6 +423,8 @@ function saidBy(title) {
 
 module.exports = {
   saidBy,
+  belongsToUs,
+  bookOfHit,
   BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY, bookStatus,
   refsFor, refsFromShape, weeklyBooks, dailyBookPool,
   tehillimForDay, tehillimRef, tehillimLabel, tehillimChapters,

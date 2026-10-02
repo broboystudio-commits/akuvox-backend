@@ -281,12 +281,16 @@ async function breslovAbout(terms, date, salt, tried) {
   for (const word of words) {
     let found;
     try {
-      found = await sefaria.search(word, { size: 40 });
+      // Wide, because the ten seforim are a thin slice of Sefaria and a
+      // search for a chag is mostly Shas and Shulchan Aruch.
+      found = await sefaria.search(word, { size: 120 });
     } catch (err) {
       note(word, `search failed: ${err.message}`);
       continue;
     }
-    const ours = (found.hits || []).filter((h) => h.book && BRESLOV_TITLES.has(h.book));
+    // By the front of the reference, not by a book field Sefaria's search
+    // does not reliably set. See library.belongsToUs.
+    const ours = (found.hits || []).filter((h) => library.belongsToUs(h));
     const refs = [...new Set(ours.map((h) => h.ref).filter(Boolean))];
     if (!refs.length) { note(word, `${(found.hits || []).length} hits, none from the ten`); continue; }
 
@@ -295,8 +299,8 @@ async function breslovAbout(terms, date, salt, tried) {
     try {
       const text = await sefaria.getText(choice);
       if (!text || !(text.hebrew || []).length) { note(word, `${choice} had no Hebrew`); continue; }
-      note(word, `ok: ${choice}`);
-      return { text, book: (meta && meta.book) || null, word };
+      note(word, `ok: ${choice} (${ours.length} of ${(found.hits || []).length} hits were ours)`);
+      return { text, book: library.bookOfHit(meta) || null, word };
     } catch (err) {
       note(word, `${choice} would not load: ${err.message}`);
     }
