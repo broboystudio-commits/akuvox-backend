@@ -2736,3 +2736,14 @@ body.hide-english .verse-card .verse-en { display: none; }
    pane was crossing it, which measured 1.01:1. */
 :root .chapters .chapter-track button.is-passing,
 :root .tabs .tab.is-passing { color: var(--bar-on); }
+
+
+/* "Rebbe Nachman on this" -- who is speaking, above the piece they said. */
+.dvar-label {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rose-700);
+}

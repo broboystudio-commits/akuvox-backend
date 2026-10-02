@@ -240,7 +240,11 @@ async function weeklyTorah(date, calendar) {
           parshaHe: calendar?.parsha?.he || null,
           parshaRef,
           anchor: meta?.anchor || null,
-          why: `Rebbe Nachman darshans a verse from Parashas ${parshaName} in this lesson.`,
+          // Whose words these are, not whose sefer they are filed under. Ten
+          // books can be linked to a parsha and three of them are Reb
+          // Noson's; this line used to credit Rebbe Nachman with all of them.
+          says: library.saidBy(meta?.title) || null,
+          why: `${library.saidBy(meta?.title) || 'Rebbe Nachman'} on a verse from Parashas ${parshaName}.`,
           alternatives: linked.length,
         });
       }
@@ -430,6 +434,60 @@ async function yahrzeitPassage(titles, date, tried) {
 }
 
 /**
+ * A short piece of Breslov Torah on a passage.
+ *
+ * The same link data the weekly lesson uses, pointed at a verse instead of a
+ * parsha: Sefaria is asked what in Rebbe Nachman's and Reb Noson's seforim it
+ * connects to this passage, and one of them is shown. It is a real
+ * connection recorded by Sefaria, not a guess made here, and whoever actually
+ * said it is named.
+ *
+ * Nothing is shown when nothing is linked. A guest with no dvar Torah under
+ * him is better than one with a lesson that has nothing to do with him.
+ */
+async function dvarOnPassage(refs, date, salt) {
+  const list = (Array.isArray(refs) ? refs : [refs]).filter(Boolean);
+  for (const ref of list) {
+    let linked = [];
+    try {
+      linked = await lessonsLinkedToParsha(ref);
+    } catch (err) {
+      continue;
+    }
+    if (!linked.length) continue;
+
+    const choice = pickForDay(linked.map((l) => l.ref), date, salt || 53);
+    const meta = linked.find((l) => l.ref === choice);
+    let text = null;
+    try {
+      text = await sefaria.getText(choice);
+    } catch (err) {
+      continue;
+    }
+    if (!text || !(text.hebrew || []).length) continue;
+
+    const full = present(text, {});
+    return {
+      available: true,
+      ref: full.ref,
+      heRef: full.heRef,
+      url: full.url,
+      // Shorter than the passage it is about. On a day the two orders differ
+      // the card carries two guests, each with a passage and a word on it,
+      // and four full excerpts is a page rather than something you say over.
+      // The link is there for whoever wants the rest.
+      he: snippet((text.hebrew || []).join(' '), 150),
+      en: snippet((text.english || []).join(' '), 200),
+      credit: full.credit,
+      says: library.saidBy(meta && meta.title) || null,
+      book: (meta && meta.title) || null,
+      on: ref,
+    };
+  }
+  return null;
+}
+
+/**
  * The Torah on an Ushpizin card.
  *
  * Unlike the yahrzeit passages, nothing is searched for and no shape is
@@ -486,7 +544,7 @@ async function ushpizinPassage(refs, date, tried) {
 }
 
 module.exports = {
-  yahrzeitPassage, ushpizinPassage, answersTo, shapeNames,
+  yahrzeitPassage, ushpizinPassage, dvarOnPassage, answersTo, shapeNames,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

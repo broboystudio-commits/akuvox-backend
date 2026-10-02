@@ -14,6 +14,7 @@ const sefaria = require('./sefaria');
 const BOOKS = [
   {
     key: 'likutei-moharan',
+    says: 'Rebbe Nachman',
     title: 'Likutei Moharan',
     he: 'לִקּוּטֵי מוֹהֲרַ״ן',
     label: 'Likutei Moharan',
@@ -24,6 +25,7 @@ const BOOKS = [
   },
   {
     key: 'likutei-moharan-ii',
+    says: 'Rebbe Nachman',
     title: 'Likutei Moharan, Part II',
     he: 'לִקּוּטֵי מוֹהֲרַ״ן תִּנְיָנָא',
     label: 'Likutei Moharan II',
@@ -34,6 +36,7 @@ const BOOKS = [
   },
   {
     key: 'sichot-haran',
+    says: 'Rebbe Nachman',
     title: 'Sichot HaRan',
     he: 'שִׂיחוֹת הָרַ״ן',
     label: 'Sichot HaRan',
@@ -44,6 +47,7 @@ const BOOKS = [
   },
   {
     key: 'sefer-hamiddot',
+    says: 'Rebbe Nachman',
     title: 'Sefer HaMiddot',
     he: 'סֵפֶר הַמִּדּוֹת',
     label: 'Sefer HaMiddot',
@@ -54,6 +58,7 @@ const BOOKS = [
   },
   {
     key: 'likutei-etzot',
+    says: 'Rebbe Nachman',
     // Sefaria's catalogue spells this with two k's. Both are tried.
     title: 'Likkutei Etzot',
     aliases: ['Likutei Etzot'],
@@ -70,6 +75,7 @@ const BOOKS = [
   // for a text that does not exist. /api/diagnostics reports which resolved.
   {
     key: 'likutei-tefilot',
+    says: 'Reb Noson',
     title: 'Likutei Tefilot',
     he: 'לִקּוּטֵי תְּפִלּוֹת',
     label: 'Likutei Tefilot',
@@ -80,6 +86,7 @@ const BOOKS = [
   },
   {
     key: 'sippurei-maasiyot',
+    says: 'Rebbe Nachman',
     title: 'Sippurei Maasiyot',
     he: 'סִפּוּרֵי מַעֲשִׂיּוֹת',
     label: 'Sippurei Maasiyot',
@@ -90,6 +97,7 @@ const BOOKS = [
   },
   {
     key: 'chayei-moharan',
+    says: 'Reb Noson, telling of Rebbe Nachman',
     title: 'Chayei Moharan',
     he: 'חַיֵּי מוֹהֲרַ״ן',
     label: 'Chayei Moharan',
@@ -111,6 +119,7 @@ const BOOKS = [
   // below is one the live server confirmed it can actually read.
   {
     key: 'shivchei-haran',
+    says: 'Reb Noson, telling of Rebbe Nachman',
     title: 'Shivchei HaRan',
     he: 'שִׁבְחֵי הָרַ״ן',
     label: 'Shivchei HaRan',
@@ -122,6 +131,7 @@ const BOOKS = [
   },
   {
     key: 'likutei-halachot',
+    says: 'Reb Noson',
     // Sefaria's catalogue spells this "Halakhot". Asking for "Halachot"
     // resolved once and failed later, so both are tried.
     title: 'Likutei Halakhot',
@@ -352,7 +362,22 @@ async function bookStatus() {
   return out;
 }
 
+/**
+ * Whose words a sefer carries.
+ *
+ * Not the same as who wrote it down. Sichot HaRan is Rebbe Nachman speaking
+ * and Reb Noson writing; Likutei Tefilot and Likutei Halachot are Reb Noson's
+ * own, built on what he heard. The weekly lesson used to be announced as
+ * "Rebbe Nachman darshans a verse" whichever of the ten it came from, which
+ * put Reb Noson's words in Rebbe Nachman's mouth about a third of the time.
+ */
+function saidBy(title) {
+  const book = BOOKS.find((b) => b.title === title || b.label === title);
+  return (book && book.says) || null;
+}
+
 module.exports = {
+  saidBy,
   BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY, bookStatus,
   refsFor, refsFromShape, weeklyBooks, dailyBookPool,
   tehillimForDay, tehillimRef, tehillimLabel, tehillimChapters,

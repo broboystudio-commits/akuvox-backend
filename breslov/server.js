@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '54';
+const BUILD = '55';
 
 app.use(cors());
 
@@ -237,6 +237,32 @@ app.get('/api/diagnostics', route(async (req) => {
     const got = await daily.ushpizinPassage(g.refs, today, tried);
     return { name: g.name, refs: g.refs, passage: got ? got.ref : null, tried: got ? undefined : tried };
   }));
+  // Asked for, and I do not know the answer from here: Sefaria answers 403 to
+  // anything not already cached in this sandbox. The Satmar Rebbe's seforim
+  // are twentieth century and most likely still in copyright, which is the
+  // usual reason Sefaria does not carry something. Rather than assert that,
+  // this asks -- and if the answer is yes, his Torah can go in beside the
+  // others. Nothing is quoted from a sefer this app has not been handed.
+  const satmar = await Promise.all(
+    ['Divrei Yoel', 'Divrei Yoel al HaTorah', 'VaYoel Moshe'].map(async (title) => {
+      try {
+        const shape = await sefaria.getShape(title);
+        const nodes = Array.isArray(shape) ? shape : [shape];
+        return { title, found: true, sefariaCalls: (nodes[0] && nodes[0].title) || null,
+                 pieces: library.refsFromShape(shape, { title }).length };
+      } catch (err) {
+        let suggests = [];
+        try { suggests = (await sefaria.suggest(title)).slice(0, 4).map((x) => x.text); }
+        catch (e) { /* the suggestion service is a nicety */ }
+        return { title, found: false, why: err.message, sefariaSuggests: suggests };
+      }
+    }));
+  record('Does Sefaria carry the Satmar Rebbe',
+    satmar.some((b) => b.found),
+    satmar.some((b) => b.found)
+      ? satmar.filter((b) => b.found).map((b) => b.title).join(', ')
+      : 'none of ' + satmar.map((b) => b.title).join(', ') + ' -- so nothing is quoted from him');
+
   record('Ushpizin passages arrive',
     guestRefs.every((g) => g.passage),
     `${guestRefs.filter((g) => g.passage).length} of ${guestRefs.length} guests have their Torah`);
@@ -394,6 +420,7 @@ app.get('/api/diagnostics', route(async (req) => {
         'Nothing is shown in place of a text it cannot load.',
     checks,
     ushpizinRefs: guestRefs,
+    satmar,
     yahrzeits: {
       total: yahrzeits.all().length,
       today: yahrzeits.yahrzeitsOn(dates.calendarFor(today, place, new Date()).hebrew).map((y) => y.name),
@@ -458,9 +485,15 @@ async function ushpizinFor(calendar, date) {
   if (!today) return null;
 
   const guests = await Promise.all(today.guests.map(async (g) => {
-    const passage = await cached(`ushpizin:${g.id}:${daily.dayKey(date)}`, DAY,
-      () => daily.ushpizinPassage(g.refs, date));
-    return Object.assign({}, g, { passage: passage || null });
+    const [passage, dvar] = await Promise.all([
+      cached(`ushpizin:${g.id}:${daily.dayKey(date)}`, DAY,
+        () => daily.ushpizinPassage(g.refs, date)),
+      // A word on the passage from Rebbe Nachman or Reb Noson, where Sefaria
+      // records one. Null where it does not, rather than something adjacent.
+      cached(`ushpizin-dvar:${g.id}:${daily.dayKey(date)}`, DAY,
+        () => daily.dvarOnPassage(g.refs, date, 53)),
+    ]);
+    return Object.assign({}, g, { passage: passage || null, dvar: dvar || null });
   }));
   return Object.assign({}, today, { guests });
 }

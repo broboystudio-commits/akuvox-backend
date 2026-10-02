@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '54';
+  var BUILD = '55';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -611,6 +611,14 @@
         row.appendChild(el('p', 'hint',
           'The passage could not be loaded from Sefaria just now.'));
       }
+
+      // And a word on it from Rebbe Nachman or Reb Noson, where Sefaria
+      // records one. Named by whoever actually said it.
+      if (g.dvar && g.dvar.available) {
+        row.appendChild(el('div', 'dvar-label',
+          (g.dvar.says || 'Breslov') + ' on this'));
+        row.appendChild(passageBox(g.dvar, 'is-dvar'));
+      }
       wrap.appendChild(row);
     });
 
@@ -656,8 +664,8 @@
    * The yahrzeit card and the Ushpizin card show a passage the same way, so
    * they draw it with the same function rather than each with its own copy.
    */
-  function passageBox(p) {
-    var box = el('div', 'passage');
+  function passageBox(p, extra) {
+    var box = el('div', 'passage' + (extra ? ' ' + extra : ''));
     if (p.ref) box.appendChild(el('div', 'passage-label', p.heRef || p.ref));
     if (p.he) box.appendChild(el('div', 'he', p.he));
     if (p.en && state.english) box.appendChild(el('div', 'en', p.en));

@@ -247,6 +247,21 @@ async function main() {
       both[o].slice(0, 3).map((g) => g.id).join(',') === 'avraham,yitzchak,yaakov' &&
       both[o][6].id === 'dovid'));
 
+  // Whose words a sefer carries is not the same as whose sefer it is. The
+  // weekly lesson announced every one of the ten as Rebbe Nachman's, and
+  // three of them are Reb Noson's.
+  check('Likutei Moharan is Rebbe Nachman', library.saidBy('Likutei Moharan') === 'Rebbe Nachman');
+  check('Likutei Halachot is Reb Noson', library.saidBy('Likutei Halakhot') === 'Reb Noson');
+  check('So is Likutei Tefilot', library.saidBy('Likutei Tefilot') === 'Reb Noson');
+  check('Chayei Moharan says it is Reb Noson telling of him',
+    /Reb Noson/.test(library.saidBy('Chayei Moharan') || '') &&
+    /Rebbe Nachman/.test(library.saidBy('Chayei Moharan') || ''),
+    library.saidBy('Chayei Moharan'));
+  const unattributed = library.BOOKS.filter((b) => !b.says);
+  check('Every sefer on the shelf says whose words it carries',
+    unattributed.length === 0,
+    unattributed.length ? unattributed.map((b) => b.title).join(', ') : `all ${library.BOOKS.length}`);
+
   console.log('\nThe Jewish day turns at nightfall');
 
   // Until this was here the app used the civil date all evening: at eight
