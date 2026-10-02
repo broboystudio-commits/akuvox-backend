@@ -262,6 +262,18 @@ async function main() {
     unattributed.length === 0,
     unattributed.length ? unattributed.map((b) => b.title).join(', ') : `all ${library.BOOKS.length}`);
 
+  // An answer from Sefaria that carries nothing is not a sefer. All three of
+  // the Satmar Rebbe's titles came back without throwing, and the check
+  // written then called that "found" -- so the diagnostics announced that
+  // Sefaria had all three when every one of them was empty.
+  const nothing = [[], {}, [{}], [{ title: 'Divrei Yoel', length: 0, chapters: [] }]];
+  check('An empty answer describes no pieces',
+    nothing.every((shape) => library.refsFromShape(shape, { title: 'Divrei Yoel' }).length === 0),
+    `${nothing.length} shapes, none of them a sefer`);
+  check('A real one does',
+    library.refsFromShape([{ title: 'Likutei Moharan', length: 286 }],
+      { title: 'Likutei Moharan' }).length === 286);
+
   console.log('\nThe Jewish day turns at nightfall');
 
   // Until this was here the app used the civil date all evening: at eight

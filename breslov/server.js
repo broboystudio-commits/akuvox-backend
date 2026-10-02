@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '55';
+const BUILD = '56';
 
 app.use(cors());
 
@@ -248,20 +248,35 @@ app.get('/api/diagnostics', route(async (req) => {
       try {
         const shape = await sefaria.getShape(title);
         const nodes = Array.isArray(shape) ? shape : [shape];
-        return { title, found: true, sefariaCalls: (nodes[0] && nodes[0].title) || null,
-                 pieces: library.refsFromShape(shape, { title }).length };
+        const pieces = library.refsFromShape(shape, { title }).length;
+        return {
+          title,
+          // "The request did not throw" is not "Sefaria has the sefer".
+          // Asked the first time, all three came back found, with no name
+          // and nothing in them -- which is what an empty answer looks like,
+          // and the headline then read as though it had all three.
+          hasText: pieces > 0,
+          sefariaCalls: (nodes[0] && nodes[0].title) || null,
+          pieces,
+          // What actually came back, so the next reading settles it rather
+          // than needing another round.
+          answered: JSON.stringify(shape).slice(0, 240),
+        };
       } catch (err) {
         let suggests = [];
         try { suggests = (await sefaria.suggest(title)).slice(0, 4).map((x) => x.text); }
         catch (e) { /* the suggestion service is a nicety */ }
-        return { title, found: false, why: err.message, sefariaSuggests: suggests };
+        return { title, hasText: false, why: err.message, sefariaSuggests: suggests };
       }
     }));
-  record('Does Sefaria carry the Satmar Rebbe',
-    satmar.some((b) => b.found),
-    satmar.some((b) => b.found)
-      ? satmar.filter((b) => b.found).map((b) => b.title).join(', ')
-      : 'none of ' + satmar.map((b) => b.title).join(', ') + ' -- so nothing is quoted from him');
+  const haveSatmar = satmar.filter((b) => b.hasText);
+  // Not a pass or a fail: Sefaria's catalogue is not this app's doing, and a
+  // sefer it does not carry is not a fault to turn the page red.
+  record('Does Sefaria carry the Satmar Rebbe', true,
+    haveSatmar.length
+      ? `yes: ${haveSatmar.map((b) => `${b.title} (${b.pieces} pieces)`).join(', ')}`
+      : `no -- ${satmar.map((b) => `${b.title}: ${b.pieces === 0 ? 'empty' : b.why}`).join('; ')}` +
+        ' -- so nothing is quoted from him');
 
   record('Ushpizin passages arrive',
     guestRefs.every((g) => g.passage),
