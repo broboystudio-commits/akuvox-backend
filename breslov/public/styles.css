@@ -4636,3 +4636,182 @@ body { padding-bottom: calc(76px + var(--safe-bottom)); }
 .tabs::after { display: none !important; }
 .topbar::before,
 .topbar::after { display: none !important; }
+
+
+/* ╔═══ desktop, designed rather than stretched ══════════════════════════╗
+
+   The old wide layout made the phone screen wider: the tab bar became a row
+   of pills under the header and the home screen split into two columns, so
+   the day's teaching sat in a column beside a stack of smaller things. On a
+   laptop that reads as a dashboard, which is the one thing this is not.
+
+   What a reading app does on a desktop is put the navigation down the left
+   edge, where it is out of the way and always visible, and give the words a
+   measure they can actually be read at. One column of text, the width of a
+   page, with the five destinations beside it.                            ╝*/
+
+@media (min-width: 900px) {
+  :root { --shell: 1180px; --rail: 232px; }
+
+  /* The rail: the five destinations as a list, and nothing else in it. */
+  .tabs {
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 2px;
+    width: var(--rail);
+    max-width: none;
+    margin: 0;
+    /* Below the header, measured rather than guessed. 92px was a guess and
+       the header is about 140px, so the first destination -- Today -- sat
+       behind it and could not be seen or clicked. --topbar-h is kept in step
+       with the real header by a ResizeObserver. */
+    padding: calc(var(--topbar-h, 140px) + 14px) 14px 20px;
+    overflow-y: auto;
+    background: none;
+    border-top: 0;
+    border-right: 1px solid var(--hair-soft);
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    z-index: 20;
+  }
+  .tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 13px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+  .tab svg { width: 20px; height: 20px; flex: 0 0 auto; }
+  .tab span { display: block; }
+  :root .tab.is-active,
+  :root .tabs .tab.is-active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .tab:hover { background: var(--surface-2); color: var(--text); }
+    :root .tab.is-active:hover { background: var(--accent-bg); color: var(--accent); }
+  }
+  .tab.wide-only { display: flex; }
+
+  /* The header spans the rail as well, so the date sits above both. */
+  .topbar { padding-left: 0; }
+  .bar, .nextzman {
+    max-width: none;
+    padding-left: 26px;
+    padding-right: 32px;
+  }
+
+  /* One column of reading, beside the rail and not stretched across the
+     screen. 720px is about 70 characters of the English, which is where a
+     line stops being comfortable to track back from. */
+  body { padding-bottom: 56px; }
+  main {
+    max-width: 720px;
+    margin: 0;
+    margin-left: calc(var(--rail) + 48px);
+    padding: 32px 28px 0;
+  }
+
+  /* The home screen is one column here too. It was two, with the teaching
+     beside a stack of smaller things, which is the layout of a dashboard. */
+  #panel-today:not([hidden]) {
+    display: block;
+  }
+  #panel-today > .card,
+  #panel-today > .nekuda,
+  #panel-today > .rows,
+  #panel-today > .strip { grid-column: auto; grid-row: auto; margin-bottom: 26px; }
+
+  /* The date can run as one line up here; there is room for it. */
+  .daystamp { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; padding-bottom: 24px; }
+  .daystamp-greg { order: 2; margin-left: auto; }
+  .daystamp-heb { order: 1; margin: 0; font-size: 1.625rem; }
+  .daystamp-of { order: 3; flex: 1 0 100%; margin-top: 2px; }
+
+  .hubhead h1 { font-size: 2rem; }
+  .nekuda p.nekuda-he { font-size: 1.4375rem; }
+}
+
+/* Past about 1500px the rail stays where it is and the column centres in
+   what is left, so the text does not end up hard against the navigation on a
+   very wide screen. */
+@media (min-width: 1500px) {
+  main { margin-left: auto; margin-right: auto; padding-left: calc(var(--rail) / 2); }
+}
+
+/* Tablet: the bottom bar is still right for a device held in two hands, but
+   the column can breathe. */
+@media (min-width: 640px) and (max-width: 899px) {
+  main { max-width: 680px; }
+  .nekuda p.nekuda-he { font-size: 1.4375rem; }
+}
+
+
+/* ── two things the measurements found ───────────────────────────────── */
+
+/* The accent on its own tint came out at 4.01:1 for the tab you are on.
+   One step deeper is 4.73:1 there and 6.62:1 on the page, and it is still
+   plainly the same rose -- the app's one colour, just dark enough to read
+   off the two surfaces it actually sits on. */
+:root { --accent: #7d4a52; --accent-sub: #94616a; }
+
+/* The lozenge the old active tab wore is still drawn on a wide screen,
+   where the block that hid it does not reach. Nothing draws behind a tab
+   label now, at any width. */
+.tab::before,
+.tab::after,
+:root .tab.is-active::before,
+:root .tab.is-active::after { display: none !important; }
+
+/* A list row has to answer a finger like everything else: no 300ms wait for
+   a second tap, no grey flash from the browser, and a held row stays lit. */
+.row, button.row {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button.row.is-pressed { background: var(--surface-2); }
+
+/* ---------------------------------------------------------------------------
+   Two things the wheel's own measurements found.
+
+   1. The wheel could not be touched at all.
+
+   The band the numbers sit in is `pointer-events: none` on purpose: it is
+   sticky across the full width of the card, and without that it would swallow
+   every tap and every text selection in the strip of card beside the numbers.
+   The taps were handed back by `.card > .chapters .chapter-track { pointer-
+   events: auto }` -- and `.chapter-track` was the horizontal bar the wheel
+   replaced. The rule survived the element. Nothing looked wrong, nothing threw,
+   and `elementFromPoint` in the middle of the wheel returned the card behind
+   it: the numbers were a picture. The checks missed it because every one of
+   them turned the wheel by setting `scrollTop` or calling `.click()`, and
+   neither of those asks the browser whether a finger could have got there.
+
+   2. The numbers filled the whole card.
+
+   `.wheel-item` is `width: 100%`, so on a wide screen a two-digit number sat
+   in the middle of a 606px row with hairlines running the full width of the
+   card. That is not a wheel, it is a list with its edges cut off. A picker is
+   a dial: narrow, centred, with the reading beside and below it.
+--------------------------------------------------------------------------- */
+.card > .chapters .wheel { pointer-events: auto; }
+
+.wheel {
+  width: 100%;
+  max-width: 180px;
+  margin-inline: auto;
+}

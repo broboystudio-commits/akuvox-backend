@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '67';
+  var BUILD = '68';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1560,10 +1560,31 @@
   }
 
   /** Restart the entrance animation on a node whose contents just changed. */
+  /**
+   * Play the page's entrance, and then get out of the way.
+   *
+   * The class used to stay on until the next page change, and that is a
+   * quiet trap: the entry animation ends on `transform: none` with a `both`
+   * fill, and a filled animation beats a transition. So once a page had
+   * finished arriving, nothing that was a direct child of it could be
+   * transformed by CSS any more -- every button on it stopped pressing in
+   * under a finger. Measured as scale 1.000 while held, on a button whose
+   * rule says 0.955 and whose transition was running.
+   *
+   * It comes off as soon as the animation is done, which is also the moment
+   * it has nothing left to do.
+   */
   function replay(node) {
     node.classList.remove('is-entering');
     void node.offsetWidth; // forces the browser to notice the class really left
     node.classList.add('is-entering');
+
+    window.clearTimeout(node._entering);
+    var done = function () { node.classList.remove('is-entering'); };
+    // The longest of the staggered children, plus a little. A timer rather
+    // than animationend because the children animate, not the panel, and
+    // their events arrive in an order nobody should have to reason about.
+    node._entering = window.setTimeout(done, 520);
   }
 
   function applyReadingPrefs() {
@@ -2903,8 +2924,8 @@
   }
 
   /** Everything that is meant to squash when you press it. */
-  var PRESSABLE = '.btn, .pill, .chapters button, .quick-card, .stepper button,' +
-                  '.icon-btn, .aa, .resume button, .tab, .chip-tag';
+  var PRESSABLE = '.btn, .pill, .stepper button, .icon-btn, .aa, .resume button,' +
+                  '.tab, .row, .wheel-item, .backrow, .nekuda-source';
 
   /**
    * Mark what is being pressed, rather than leaving it to :active.

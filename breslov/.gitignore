@@ -1,3 +1,8 @@
 node_modules/
 data/cache/*.json
 .env
+
+# Runtime content record: written by the server as it chooses each day.
+# It is state, not source, and the disk it lives on is thrown away on every
+# restart anyway.
+data/history/
