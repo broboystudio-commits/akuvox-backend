@@ -14,6 +14,8 @@ const zmanim = require('../lib/zmanim');
 const library = require('../lib/library');
 const ushpizin = require('../lib/ushpizin');
 const daily = require('../lib/daily');
+const inspiration = require('../lib/inspiration');
+const teachers = require('../lib/teachers');
 const { dateFromIso, pickForDay, pickRunForDay } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
@@ -376,6 +378,67 @@ async function main() {
   const nextWeek = dates.calendarFor(dateFromIso('2026-10-05'), nightPlace,
     new Date(shkia.getTime() + 60 * 60 * 1000));
   check('A date you asked for does not move', nextWeek.hebrew.afterSunset === false, nextWeek.hebrew.en);
+
+  console.log("\nThe day's נקודה knows what day it is");
+
+  // Every day hebcal can name, swept past the occasion table. A day that
+  // carries real Torah and is not recognised is a day the נקודה will be
+  // about the wrong thing -- and the way that happens is silent: hebcal
+  // renders a curly apostrophe, U+2019, where these patterns were written
+  // with a typed one, so "Tish'a B'Av" and every fast in the year matched
+  // nothing at all and fell through to the parsha. Nothing failed. The app
+  // was simply never told it was Tisha B'Av.
+  {
+    const { HebrewCalendar, Location: Where } = require('@hebcal/core');
+    const spot = new Where(40.6782, -73.9442, false, 'America/New_York');
+    const year = HebrewCalendar.calendar({
+      start: new Date(2026, 0, 1), end: new Date(2027, 0, 1), location: spot, il: false,
+    });
+    const names = new Map();
+    for (const ev of year) {
+      const cats = ev.getCategories();
+      if (!(cats.includes('holiday') || cats.includes('roshchodesh'))) continue;
+      if (cats.includes('zmanim')) continue;
+      const name = ev.render('en');
+      if (!names.has(name)) names.set(name, cats);
+    }
+    const unmatched = [...names].filter(([name]) =>
+      !inspiration.OCCASIONS.find((o) => o.is.test(inspiration.plain(name))));
+    const fasts = unmatched.filter(([, c]) => c.includes('fast'));
+    const majors = unmatched.filter(([, c]) => c.includes('major'));
+    check('Every fast in the year is recognised', fasts.length === 0,
+      fasts.length ? fasts.map(([n]) => n).join(', ') : `${names.size} day names swept`);
+    check('And every major yom tov', majors.length === 0,
+      majors.length ? majors.map(([n]) => n).join(', ') : 'none missed');
+    check('The ones left are left on purpose', unmatched.length <= 9,
+      unmatched.map(([n]) => n).join(', ') + ' — no approved teacher has Torah for these');
+  }
+
+  // Today means today. The first version read the nine-day forward window
+  // the weekly card uses, so an ordinary Tuesday in Adar called itself Purim
+  // and did so every day for a week and a half.
+  {
+    const ordinary = dates.calendarFor(new Date(2026, 1, 24, 12), place, null);
+    const onPurim = dates.calendarFor(new Date(2026, 2, 3, 12), place, null);
+    const a = inspiration.contextFor(ordinary);
+    const b = inspiration.contextFor(onPurim);
+    check('An ordinary day is about its parsha, not a yom tov next week',
+      a.kind === 'parsha' && /Tetzaveh/.test(a.label || ''), a.label);
+    check('And Purim is about Purim', b.kind === 'yomtov' && b.label === 'Purim', b.label);
+  }
+
+  // The pool is closed and the Rambam sits outside it.
+  check('Seven approved teachers, and no eighth',
+    teachers.APPROVED.length === 7,
+    teachers.APPROVED.map((t) => t.short).join(', '));
+  check('The Rambam is the fallback, not one of them',
+    teachers.FALLBACK.id === 'rambam'
+      && !teachers.APPROVED.some((t) => t.id === 'rambam'),
+    'reached when no approved teacher fits, never instead of one that does');
+  check('A rebbe whose talmidim wrote it down is quoted as "based on"',
+    teachers.quoting(teachers.BY_ID.get('besht')) === 'based-on'
+      && teachers.quoting(teachers.BY_ID.get('nachman')) === 'quotation',
+    'the Baal Shem Tov wrote nothing; Rebbe Nachman did');
 
   console.log('\nAn untranslated sefer does not become the whole card');
 

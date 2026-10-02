@@ -423,6 +423,10 @@ function saidBy(title) {
 
 module.exports = {
   saidBy,
+  // Used by lib/teachers.js and lib/inspiration.js to place a reference by
+  // the front of it, which is the only reliable way: Sefaria's search does
+  // not set a book field you can trust.
+  refStartsWith,
   belongsToUs,
   bookOfHit,
   BOOKS, BY_KEY, TIKKUN_HAKLALI, TEHILLIM_BY_DAY, bookStatus,

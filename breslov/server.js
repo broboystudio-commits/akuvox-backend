@@ -18,6 +18,9 @@ const dates = require('./lib/dates');
 const ics = require('./lib/ics');
 const zmanimLib = require('./lib/zmanim');
 const daily = require('./lib/daily');
+const inspiration = require('./lib/inspiration');
+const teachers = require('./lib/teachers');
+const history = require('./lib/history');
 const library = require('./lib/library');
 const yahrzeits = require('./lib/yahrzeits');
 const ushpizin = require('./lib/ushpizin');
@@ -353,6 +356,44 @@ app.get('/api/diagnostics', route(async (req) => {
       : 'none set yet -- the privacy and terms pages say so plainly, which is ' +
         'true but not what you want on a site other people use');
 
+  // The נקודה: which rung of the ladder it came off, and what each teacher
+  // was asked. From this sandbox Sefaria cannot be reached at all, so this
+  // trail is the only way to see whether the chooser is behaving on the real
+  // server -- the same reason the chag words are reported below.
+  let nekudaTried = null;
+  let nekudaNow = null;
+  try {
+    nekudaTried = [];
+    nekudaNow = await inspiration.chooseFor(today, calendarNow, nekudaTried);
+    record("Today's נקודה", !!(nekudaNow && nekudaNow.available),
+      nekudaNow && nekudaNow.available
+        ? `${nekudaNow.route}: ${nekudaNow.ref}` +
+          (nekudaNow.teacher ? ` — ${nekudaNow.teacher.short}` : '') +
+          ` (${nekudaNow.context.label || 'ordinary day'})`
+        : (nekudaNow && nekudaNow.reason) || 'nothing came back');
+  } catch (err) {
+    record("Today's נקודה", false, err.message);
+  }
+
+  // Which of the approved teachers Sefaria actually carries. Asked, never
+  // assumed: a shape lookup that does not throw is not an answer, which is
+  // how the Satmar Rav was once reported as present while Sefaria was saying
+  // "No index or category found to match Divrei Yoel".
+  let teacherShelf = null;
+  try {
+    teacherShelf = await teachers.availability({ refresh: true });
+    const carried = teacherShelf.filter((t) => t.available.length);
+    const absent = teacherShelf.filter((t) => !t.available.length);
+    record('The approved teachers on Sefaria',
+      // Never a failure: a teacher nobody has digitised is not a fault in
+      // this app. It is reported so it is known.
+      true,
+      `${carried.length} of ${teacherShelf.length} carried` +
+      (absent.length ? ` — nothing for ${absent.map((t) => t.name).join(', ')}` : ''));
+  } catch (err) {
+    record('The approved teachers on Sefaria', false, err.message);
+  }
+
   record('Ushpizin passages arrive',
     guestRefs.every((g) => g.passage),
     `${guestRefs.filter((g) => g.passage).length} of ${guestRefs.length} guests have their Torah`);
@@ -542,6 +583,15 @@ app.get('/api/diagnostics', route(async (req) => {
           parsha: weeklyNow.parsha || null, says: weeklyNow.says || null }
       : { mode: null, reason: weeklyNow && weeklyNow.reason },
     chagWords,
+    nekuda: nekudaNow && nekudaNow.available
+      ? { route: nekudaNow.route, ref: nekudaNow.ref,
+          teacher: nekudaNow.teacher && nekudaNow.teacher.id,
+          quoting: nekudaNow.quoting,
+          context: nekudaNow.context && nekudaNow.context.label }
+      : { route: null, reason: nekudaNow && nekudaNow.reason },
+    nekudaTried,
+    teacherShelf,
+    contentHistory: history.stats(),
     translations: todayPieces.map(([what, piece]) => ({
       what, ref: piece.ref, english: !!piece.translated,
     })),
@@ -640,6 +690,14 @@ app.get('/api/daily', route(async (req) => {
   return cached(`spark:${daily.dayKey(date)}`, DAY, () => daily.dailySpark(date));
 }));
 
+/** Today's נקודה on its own, for a widget or a watch face. */
+app.get('/api/inspiration', route(async (req) => {
+  const place = placeFromQuery(req);
+  const date = dateFromQuery(req, place);
+  const calendar = dates.calendarFor(date, place, new Date());
+  return cached(`nekuda:${daily.dayKey(date)}`, DAY, () => inspiration.forDay(date, calendar));
+}));
+
 app.get('/api/tehillim', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
@@ -670,7 +728,11 @@ app.get('/api/today', route(async (req) => {
   const zmanim = zmanimLib.zmanimFor(date, place, new Date(), zmanimPrefsFromQuery(req));
   const week = Math.floor(daily.dayKey(date) / 7);
 
-  const [spark, tehillim, weekly, yahrzeitsToday] = await Promise.all([
+  const [nekuda, spark, tehillim, weekly, yahrzeitsToday] = await Promise.all([
+    // The day's נקודה. Cached in memory for the process AND written to the
+    // history file, which is what makes it the same teaching all day even
+    // across a restart -- the memory cache alone would choose again.
+    cached(`nekuda:${daily.dayKey(date)}`, DAY, () => inspiration.forDay(date, calendar)),
     cached(`spark:${daily.dayKey(date)}`, DAY, () => daily.dailySpark(date)),
     cached(`tehillim:${calendar.hebrew.year}-${calendar.hebrew.monthName}-${calendar.hebrew.day}`,
       DAY, () => daily.dailyTehillim(calendar.hebrew)),
@@ -680,7 +742,12 @@ app.get('/api/today', route(async (req) => {
   ]);
 
   return {
-    calendar, zmanim, spark, tehillim, weekly,
+    calendar, zmanim,
+    // The heart of the day. `spark` stays beside it under its own name --
+    // it is the Quick Torah now, a short piece from the shelf, and it is a
+    // different thing from the נקודה rather than a replaced version of it.
+    inspiration: nekuda,
+    spark, tehillim, weekly,
     yahrzeits: yahrzeitsToday,
     // Null on every day but the seven of Sukkos.
     ushpizin: await ushpizinFor(calendar, date),

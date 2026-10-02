@@ -185,9 +185,11 @@ function shabbosTimes(date, place) {
   });
 
   const now = date.getTime();
+  const todayIso = date.toISOString().slice(0, 10);
   let candles = null;
   let havdalah = null;
   const holidays = [];
+  const today = [];
 
   for (const ev of events) {
     const cats = ev.getCategories();
@@ -198,13 +200,32 @@ function shabbosTimes(date, place) {
       time: ev.eventTimeStr || null,
       date: ev.getDate().greg().toISOString().slice(0, 10),
       iso: ev.eventTime ? ev.eventTime.toISOString() : null,
+      // What hebcal files it under, so whoever reads this can tell a yom tov
+      // from a Rosh Chodesh without matching on its name.
+      kind: cats.includes('roshchodesh') ? 'roshchodesh'
+        : cats.includes('fast') ? 'fast'
+        : cats.includes('shabbat') ? 'special-shabbos'
+        : cats.includes('major') ? 'yomtov'
+        : 'minor',
     };
     if (cats.includes('candles') && !candles && when >= now) candles = entry;
     if (cats.includes('havdalah') && candles && !havdalah && when >= now) havdalah = entry;
-    if (cats.includes('holiday') && when >= now - 86400000) holidays.push(entry);
+
+    // Rosh Chodesh is its own category and was being dropped: nothing here
+    // asked for it, so the app could not tell that today was Rosh Chodesh.
+    // The `zmanim+fast` events are the times a fast starts and ends, which is
+    // zmanim and not an occasion.
+    const occasion = (cats.includes('holiday') || cats.includes('roshchodesh'))
+      && !cats.includes('zmanim');
+    if (occasion && when >= now - 86400000) holidays.push(entry);
+    if (occasion && entry.date === todayIso) today.push(entry);
   }
 
-  return { candles, havdalah, holidays: holidays.slice(0, 4) };
+  // `holidays` is a window reaching forward, which is what the weekly card
+  // wants: a yom tov coming on Wednesday is already this week's subject on
+  // Sunday. `today` is only today, which is what the day's own teaching
+  // wants. Keeping both apart stops one from answering the other's question.
+  return { candles, havdalah, holidays: holidays.slice(0, 8), today };
 }
 
 /** Everything calendar-related for one day, in one object. */
