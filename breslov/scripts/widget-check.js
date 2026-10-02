@@ -26,6 +26,13 @@ for (const fn of ['buildSmall', 'buildMedium', 'buildLarge',
   const body = bodyOf(fn);
   check(`${fn} asks for the yahrzeit`,
     /yahrzeits|yahrzeitLine/.test(body), body ? 'no mention of it' : 'function not found');
+  // The same thing happened again with the Ushpizin: it went into two of the
+  // five and the large widget, which is the one with the most room for it,
+  // was not one of them. Anything every size is meant to show gets a line
+  // here, because "I added it" and "every builder asks for it" keep turning
+  // out to be different statements.
+  check(`${fn} asks for the Ushpizin`,
+    /ushpizin|ushpizinLine/i.test(body), body ? 'no mention of it' : 'function not found');
 }
 
 // And the teaching is Hebrew-only unless someone changes one line.

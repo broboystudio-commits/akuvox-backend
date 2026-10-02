@@ -325,6 +325,12 @@ function buildLarge(data) {
     w.addSpacer(6);
   }
 
+  const guestBig = ushpizinLine(data);
+  if (guestBig) {
+    addLine(w, guestBig, Font.semiboldSystemFont(11), COLORS.gold, 1);
+    w.addSpacer(6);
+  }
+
   addTeaching(w, data, Font.semiboldSystemFont(11), Font.systemFont(14), Font.systemFont(11), 4);
   return w;
 }
@@ -355,18 +361,25 @@ function buildAccessoryRectangular(data) {
     }
   }
   addHebrew(w, data.hebrewDate, Font.semiboldSystemFont(14), Color.white(), 1);
+  // One line is free. A yahrzeit takes it; on Sukkos, when there is no
+  // yahrzeit, the day's guest does.
+  const lockGuest = data.ushpizin && (data.ushpizin.guests || [])[0];
   if (who) addLine(w, `Yahrzeit · ${who.name}`, Font.systemFont(11), Color.white(), 1);
+  else if (lockGuest) addLine(w, lockGuest.name, Font.systemFont(11), Color.white(), 1);
   return w;
 }
 
 function buildAccessoryInline(data) {
   const w = new ListWidget();
   const who = (data.yahrzeits || [])[0];
+  const guest = data.ushpizin && (data.ushpizin.guests || [])[0];
   const text = who
     ? `Yahrzeit · ${who.name}`
-    : data.next
-      ? `${data.next.label} ${data.next.time}${data.next.tomorrow ? ' tomorrow' : ''}`
-      : data.hebrewDateEn;
+    : guest
+      ? `Ushpizin · ${guest.name}`
+      : data.next
+        ? `${data.next.label} ${data.next.time}${data.next.tomorrow ? ' tomorrow' : ''}`
+        : data.hebrewDateEn;
   addLine(w, text, Font.systemFont(12), Color.white(), 1);
   return w;
 }
