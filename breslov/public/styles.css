@@ -5198,3 +5198,205 @@ button.row.is-pressed { background: var(--surface-2); }
   visibility: hidden;
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------------------
+   No more pills.
+
+   Three places were still drawing capsules: the minhag picker on Zmanim, the
+   suggested searches, and the search scope. All three were the previous
+   design showing through -- a rounded fill with a border and a shadow for the
+   ones not chosen, and for the one chosen a rose-to-gold gradient, a heavier
+   shadow and `scale(1.04)`. That is two hues where the palette allows one, and
+   in dark mode the gradient did not change at all: a light peach capsule on a
+   near-black page.
+
+   Choosing one of several is a list you tick. That is what a phone does, it
+   needs no new colour, and it leaves room for the sentence explaining each
+   choice -- which existed all along, in a `title` attribute, which on a phone
+   is nothing at all.
+--------------------------------------------------------------------------- */
+
+/* A row you choose, with a tick. */
+.choices { margin: 0 0 4px; }
+.choice-opt { cursor: pointer; }
+.choice-opt .row-title { font-weight: 450; }
+.choice-opt.is-chosen .row-title { color: var(--accent); font-weight: 600; }
+
+/* The tick: drawn, at the stroke weight the chevrons use, and only there when
+   the row is the chosen one. No box, no fill, no second colour. */
+.row-tick {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+.choice-opt.is-chosen .row-tick::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 7px;
+  height: 13px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+}
+
+/* A suggested search: a row with a small magnifier, the same shape as a sefer
+   on the shelf underneath it. */
+.search-ideas {
+  display: block;
+  margin-bottom: 26px;
+}
+.row.idea {
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--hair-soft);
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+.row.idea:first-child { border-top: 0; }
+.row.idea.is-pressed { background: var(--surface-2); }
+.idea-glyph {
+  flex: 0 0 auto;
+  width: 13px; height: 13px;
+  border: 1.6px solid var(--text-3);
+  border-radius: 50%;
+  position: relative;
+}
+.idea-glyph::after {
+  content: "";
+  position: absolute;
+  right: -5px; bottom: -3px;
+  width: 6px;
+  border-top: 1.6px solid var(--text-3);
+  transform: rotate(45deg);
+}
+
+/* Where to look: two words, the one in force underlined. A filter over a list
+   should read as a caption above it, not as two buttons competing with the
+   results. */
+#searchScope {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 20px;
+  flex-wrap: wrap;
+}
+.scope {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 0 4px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.9375rem;
+  font-weight: 450;
+  color: var(--text-3);
+}
+.scope.is-chosen {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.scope-count { font-size: 0.8125rem; font-variant-numeric: tabular-nums; opacity: 0.75; }
+.scope-sep { color: var(--hair); }
+.scope.is-pressed { opacity: 0.6; }
+
+/* The per-line choices under the minhag list.
+
+   Two things were wrong and they made each other worse. The row is allowed to
+   wrap, and the select is capped at 62% of it -- so a short pair sat side by
+   side while "Latest Shacharis (MGA)" pushed its select onto a second line,
+   where it then truncated anyway ("From alos 72 mi…"). Half the rows one
+   shape, half the other, and the longest values unreadable.
+
+   And the select itself was a 999px capsule with a shadow: the same thing
+   being removed everywhere else on this page.
+
+   So: one shape for every row. On a phone the label sits above its control
+   and the control takes the full width, which is what a phone does with a
+   long setting and leaves nothing to truncate. Side by side only where there
+   is genuinely room for both. */
+.choice-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hair-soft);
+}
+.choice-name { color: var(--text-2); }
+
+/* `:root .choice` and not `.choice`: there is an earlier
+   `:root .choice, :root[data-theme="dark"] .choice { max-width: 58% }`, and at
+   one class versus two the later rule still loses. Measured, not assumed --
+   the select stayed at 181px of a 312px row and went on truncating. */
+:root .choice,
+:root[data-theme="dark"] .choice {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--hair);
+  background-color: var(--surface-2);
+  box-shadow: none;
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+.choice:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+@media (min-width: 560px) {
+  .choice-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  :root .choice,
+  :root[data-theme="dark"] .choice { flex: 0 1 auto; width: auto; min-width: 230px; max-width: 58%; }
+}
+
+/* The switch rows in this picker keep their old shape: a label and a toggle
+   always fit on one line. */
+.choice-row:has(> .switch) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.choice-row:has(> .switch) .choice-name { flex: 1 1 auto; }
+
+/* Every row's second line was --text-3, measured at 4.03:1 on the page --
+   under the 4.5:1 that normal text needs. It had never been measured: the
+   contrast check looked at row TITLES and at labels inside controls, and the
+   sub-line is where most of the actual information in this app now lives --
+   which psalms today's Tehillim are, where you stopped in the Tikkun, what
+   each minhag means. --text-2 puts it at 6.8:1 and still reads as secondary. */
+.row-sub { color: var(--text-2); }
+
+/* Nothing renders `.pill` any more -- the three places that did are a ticked
+   list, a list of rows and a text toggle. The rules are left because the
+   stylesheet has a lot of history in it and removing them blind is how you
+   break something you cannot see, but the one thing that must not come back
+   is the look itself: a rose-to-gold gradient, a shadow and a scale on the
+   chosen one, identical in dark mode. If a `.pill` ever reappears it gets the
+   current palette, not the previous design. */
+.pill.is-active,
+:root[data-theme="dark"] .pill.is-active {
+  background: var(--accent-bg);
+  background-image: none;
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: none;
+  transform: none;
+}

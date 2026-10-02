@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '70';
+  var BUILD = '71';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1256,11 +1256,33 @@
 
     var wrap = document.createDocumentFragment();
 
-    var presets = el('div', 'pills');
+    // A list you tick, not a row of capsules.
+    //
+    // Five minhagim as floating pills wrapped onto three ragged lines, and
+    // the one you hold was told apart by being bigger and filled with a
+    // rose-to-gold gradient -- two hues, a shadow and a scale, which is the
+    // only thing left on the page still dressed that way. Choosing one of
+    // several is a list with a tick beside the one that is chosen; that is
+    // what a phone does and it is what this is now.
+    //
+    // It also gets the explanation back. Each minhag has a sentence saying
+    // what it is, and it was in a `title` attribute -- a tooltip, which on a
+    // phone is nothing at all. Five names with no explanation is a guess for
+    // anybody who does not already know which one they hold.
+    var presets = el('div', 'rows choices');
+    presets.setAttribute('role', 'radiogroup');
+    presets.setAttribute('aria-label', 'Which zmanim you hold by');
     opts.presets.forEach(function (p) {
-      var b = el('button', 'pill' + (zmanim.prefs.minhag === p.id ? ' is-active' : ''), p.label);
+      var chosen = zmanim.prefs.minhag === p.id;
+      var b = el('button', 'row choice-opt' + (chosen ? ' is-chosen' : ''));
       b.type = 'button';
-      b.title = p.about;
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(chosen));
+      var main = el('span', 'row-main');
+      main.appendChild(el('span', 'row-title', p.label));
+      if (p.about) main.appendChild(el('span', 'row-sub', p.about));
+      b.appendChild(main);
+      b.appendChild(el('span', 'row-tick'));
       b.addEventListener('click', function () {
         state.zmanim = { minhag: p.id, showAll: state.zmanim.showAll };
         save(STORE.zmanim, state.zmanim);
@@ -1874,10 +1896,16 @@
       'Every sefer of Rebbe Nachman at once. A word, an idea, or the name of ' +
       'a sefer — in English or in Hebrew.'));
 
+    // Rows, like everything else you tap in this app -- not ten capsules
+    // wrapped onto four ragged lines. A suggested search is the same kind of
+    // thing as a sefer on the shelf below it, and the two were being drawn as
+    // two different kinds of object.
     var ideas = el('div', 'search-ideas');
     SEARCH_IDEAS.forEach(function (word) {
-      var b = el('button', 'pill small', word);
+      var b = el('button', 'row idea');
       b.type = 'button';
+      b.appendChild(el('span', 'idea-glyph'));
+      b.appendChild(el('span', 'row-main', word));
       b.addEventListener('click', function () { searchFor(word); });
       ideas.appendChild(b);
     });
@@ -1970,7 +1998,7 @@
       ? data.hits.length + (data.hits.length === 1 ? ' result' : ' results')
       : 'nothing found');
 
-    renderScopePills(data);
+    renderScopeChoice(data);
 
     if (!data.hits.length) {
       var message = data.scope === 'breslov' && data.everywhere
@@ -2021,15 +2049,28 @@
   }
 
   /** Let the reader widen the search past Reb Nachman if nothing turns up. */
-  function renderScopePills(data) {
+  /**
+   * Where to look: two words of plain text, the one in force underlined.
+   *
+   * Two capsules the width of the screen for what is really a two-way switch,
+   * with the chosen one filled in a rose-to-gold gradient. It is a filter
+   * over a list of results; it should sit above the list like a caption and
+   * not like two buttons competing with the results for attention.
+   */
+  function renderScopeChoice(data) {
     var wrap = document.createDocumentFragment();
-    [
+    var opts = [
       { id: 'breslov', label: 'Reb Nachman', count: data.inBreslov },
       { id: 'all', label: 'Everywhere', count: data.everywhere },
-    ].forEach(function (opt) {
-      var b = el('button', 'pill' + (searchState.scope === opt.id ? ' is-active' : ''),
-        opt.label + (opt.count == null ? '' : ' (' + opt.count + ')'));
+    ];
+    opts.forEach(function (opt, i) {
+      if (i) wrap.appendChild(el('span', 'scope-sep', '·'));
+      var chosen = searchState.scope === opt.id;
+      var b = el('button', 'scope' + (chosen ? ' is-chosen' : ''));
       b.type = 'button';
+      b.setAttribute('aria-pressed', String(chosen));
+      b.appendChild(el('span', 'scope-label', opt.label));
+      if (opt.count != null) b.appendChild(el('span', 'scope-count', String(opt.count)));
       b.addEventListener('click', function () {
         if (searchState.scope === opt.id) return;
         searchState.scope = opt.id;
@@ -3081,7 +3122,7 @@
   // promises somewhere to go that does not exist.
   var PRESSABLE = '.btn, .pill, .stepper button, .icon-btn, .aa, .resume button,' +
                   '.tab, .row:not(.is-plain), .wheel-item, .backrow, .nekuda-source,' +
-                  '.shelf-book, .result, .suggest-item';
+                  '.shelf-book, .result, .suggest-item, .scope';
 
   /**
    * Mark what is being pressed, rather than leaving it to :active.
