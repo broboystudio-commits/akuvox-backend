@@ -205,6 +205,20 @@ function yahrzeitLine(data) {
   return who.years ? `Yahrzeit · ${who.name} · ${who.years} years` : `Yahrzeit · ${who.name}`;
 }
 
+/**
+ * The day's guest, on the seven days of Sukkos.
+ *
+ * On the three days the two orders differ, both names are given with a slash
+ * between them. A widget has no room to explain which is whose -- the app
+ * does that -- but it has room not to pick one for you.
+ */
+function ushpizinLine(data) {
+  const u = data.ushpizin;
+  if (!u || !u.guests || !u.guests.length) return '';
+  const names = u.guests.map((g) => g.name).join(' / ');
+  return `Ushpizin · ${names}`;
+}
+
 function buildSmall(data) {
   const w = new ListWidget();
   background(w);
@@ -214,7 +228,9 @@ function buildSmall(data) {
   // On the seventeen days a year it falls, the yahrzeit takes the parsha's
   // line. There is only room for one of them and it is the rarer.
   const small = (data.yahrzeits || [])[0];
+  const smallGuest = data.ushpizin && (data.ushpizin.guests || [])[0];
   if (small) addLine(w, small.name, Font.semiboldSystemFont(10), COLORS.goldSoft, 1);
+  else if (smallGuest) addLine(w, smallGuest.name, Font.semiboldSystemFont(10), COLORS.goldSoft, 1);
   else if (data.parsha) addLine(w, data.parsha, Font.systemFont(10), COLORS.inkFaint, 1);
 
   w.addSpacer(6);
@@ -256,6 +272,12 @@ function buildMedium(data) {
   const yahrzeit = yahrzeitLine(data);
   if (yahrzeit) {
     addLine(w, yahrzeit, Font.semiboldSystemFont(11), COLORS.gold, 1);
+    w.addSpacer(6);
+  }
+
+  const guest = ushpizinLine(data);
+  if (guest) {
+    addLine(w, guest, Font.semiboldSystemFont(11), COLORS.gold, 1);
     w.addSpacer(6);
   }
 

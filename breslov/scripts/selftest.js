@@ -12,6 +12,7 @@
 const dates = require('../lib/dates');
 const zmanim = require('../lib/zmanim');
 const library = require('../lib/library');
+const ushpizin = require('../lib/ushpizin');
 const { dateFromIso, pickForDay, pickRunForDay } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
@@ -200,6 +201,51 @@ async function main() {
   const three = pickRunForDay(['a', 'b', 'c'], someIso, 29, 8);
   check('A three-piece sefer gives three', three.length === 3 && new Set(three).size === 3,
     three.join(', '));
+
+  console.log('\nThe Ushpizin');
+
+  // Seven guests, 15 to 21 Tishrei, and nothing on either side of them.
+  // Shemini Atzeres is not Sukkos and has no guest.
+  const onDay = (d) => ushpizin.ushpizinOn({ monthName: 'Tishrei', day: d });
+  check('Nothing the day before Sukkos', onDay(14) === null);
+  check('Nothing on Shemini Atzeres', onDay(22) === null);
+  check('Nothing in another month',
+    ushpizin.ushpizinOn({ monthName: 'Cheshvan', day: 16 }) === null);
+  const week = [15, 16, 17, 18, 19, 20, 21].map(onDay);
+  check('A guest on each of the seven days', week.every((d) => d && d.guests.length), 
+    week.filter(Boolean).length + ' of 7');
+  check('And they are numbered one to seven',
+    week.map((d) => d.day).join(',') === '1,2,3,4,5,6,7',
+    week.map((d) => d.day).join(','));
+
+  // The two orders agree on four days and differ on three. Both are given on
+  // the days they differ, and never silently one of them.
+  const differ = week.filter((d) => !d.agreed).map((d) => d.day);
+  check('The two orders differ on days four, five and six',
+    differ.join(',') === '4,5,6', differ.join(',') || 'none');
+  check('Both are shown on those days, each named',
+    week.filter((d) => !d.agreed).every((d) =>
+      d.guests.length === 2 && d.guests.every((g) => g.minhag)),
+    'the Zohar and the Arizal');
+  check('And one on the days they agree',
+    week.filter((d) => d.agreed).every((d) => d.guests.length === 1));
+
+  // Each order holds all seven, once each, and the two famous ones are where
+  // they belong: Yosef is fourth for the Arizal and sixth for the Zohar.
+  const both = ushpizin.all();
+  check('Each order holds all seven guests, once each',
+    new Set(both.zohar.map((g) => g.id)).size === 7 &&
+    new Set(both.arizal.map((g) => g.id)).size === 7);
+  check('The Zohar has Moshe fourth and Yosef sixth',
+    both.zohar[3].id === 'moshe' && both.zohar[5].id === 'yosef',
+    both.zohar[3].name + ' then ' + both.zohar[5].name);
+  check('The Arizal has Yosef fourth and Aharon sixth',
+    both.arizal[3].id === 'yosef' && both.arizal[5].id === 'aharon',
+    both.arizal[3].name + ' then ' + both.arizal[5].name);
+  check('Both begin with the avos and end with Dovid HaMelech',
+    ['zohar', 'arizal'].every((o) =>
+      both[o].slice(0, 3).map((g) => g.id).join(',') === 'avraham,yitzchak,yaakov' &&
+      both[o][6].id === 'dovid'));
 
   console.log('\nThe Jewish day turns at nightfall');
 

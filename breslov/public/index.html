@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="50">
+<html lang="en" data-build="52">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -15,7 +15,7 @@
 <link rel="icon" href="/icons/icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="/styles.css?v=50" />
+<link rel="stylesheet" href="/styles.css?v=52" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -172,6 +172,14 @@
          sent the grid past column one before the lesson asked for it, so the
          lesson dropped to the next row and left the whole left-hand side of
          the page empty. Order in the markup is the order down that column. -->
+    <article class="card" id="ushpizinCard" hidden>
+      <header class="card-head">
+        <h2 id="ushpizinTitle">Ushpizin</h2>
+        <span class="ref he" id="ushpizinHe"></span>
+      </header>
+      <div id="ushpizinBody"></div>
+    </article>
+
     <article class="card" id="yahrzeitCard" hidden>
       <header class="card-head">
         <h2 id="yahrzeitTitle">Yahrzeit</h2>
@@ -496,6 +504,6 @@
 
 </main>
 
-<script src="/app.js?v=50"></script>
+<script src="/app.js?v=52"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '50';
+  var BUILD = '52';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -556,6 +556,7 @@
     setText('weeklyParshaTag', cal.parsha ? (cal.parsha.he || cal.parsha.en) : '');
 
     renderYahrzeits(data.yahrzeits);
+    renderUshpizin(data.ushpizin);
     renderZmanim(data.zmanim, cal);
     renderWeekly(data.weekly);
     renderTehillim(data.tehillim);
@@ -570,6 +571,50 @@
    * else here -- and where his sefer is not on Sefaria there is no passage,
    * rather than words he never said.
    */
+  /**
+   * The day's guest, on the seven days of Sukkos.
+   *
+   * On three of those days the two minhagim name a different guest, and the
+   * card says so rather than choosing for you. Showing one order silently is
+   * the one thing it must not do: somebody holding the other has no way to
+   * know a choice was made on their behalf.
+   */
+  function renderUshpizin(data) {
+    var card = $('ushpizinCard');
+    if (!card) return;
+    if (!data || !data.guests || !data.guests.length) { card.hidden = true; return; }
+
+    card.hidden = false;
+    setText('ushpizinTitle', 'Ushpizin · day ' + data.day + ' of ' + data.of);
+    setText('ushpizinHe', 'אוּשְׁפִּיזִין');
+
+    var body = $('ushpizinBody');
+    if (!body) return;
+    var wrap = document.createDocumentFragment();
+
+    data.guests.forEach(function (g) {
+      var row = el('div', 'ushpiz');
+      var head = el('div', 'ushpiz-head');
+      head.appendChild(el('span', 'ushpiz-name', g.name));
+      head.appendChild(el('span', 'ushpiz-he he', g.he));
+      row.appendChild(head);
+
+      var note = g.sefirah + (g.sefirahHe ? ' · ' + g.sefirahHe : '');
+      if (g.minhag) note += '  —  the order of ' + g.minhag;
+      row.appendChild(el('div', 'ushpiz-note', note));
+      row.appendChild(el('p', 'hint', g.about));
+      wrap.appendChild(row);
+    });
+
+    if (!data.agreed) {
+      wrap.appendChild(el('p', 'hint ushpiz-both',
+        'Two orders are kept for the Ushpizin, and today is one of the three ' +
+        'days they differ. Both are given; keep the one your family keeps.'));
+    }
+
+    fill(body, wrap);
+  }
+
   function renderYahrzeits(list) {
     var card = $('yahrzeitCard');
     if (!card) return;
@@ -1537,6 +1582,7 @@
 
     var boxes = [];        // where each item is, read once per gesture
     var drift = 0;         // how far translateX(0) is from the bar's left edge
+    var flight = 0;        // the frame loop that runs while the pane travels
 
     /**
      * Where the pane sits when it is told to move nowhere.
@@ -1634,10 +1680,57 @@
       lens.style.width = r.width + 'px';
       lens.style.transform = 'translateX(' + (r.left - p.left - drift) + 'px)';
       lens.style.opacity = '1';
+      watchFlight();
+    }
+
+    /**
+     * Follow the pane while it springs across, and colour whatever it is
+     * passing over.
+     *
+     * The pane is bright and the labels that are not selected are white, so
+     * for the few frames it is over one of them that label is white on white.
+     * Caught at 1.01:1 -- as close to invisible as a measurement goes. Under
+     * a finger this never happened, because the thing being dragged over is
+     * marked as it goes; on a tap there was nothing doing that job.
+     *
+     * It stops as soon as the pane stops, so nothing runs between taps.
+     */
+    function watchFlight() {
+      if (flight) window.cancelAnimationFrame(flight);
+      var still = 0, wasAt = null, frames = 0;
+      var step = function () {
+        flight = 0;
+        var box = lens.getBoundingClientRect();
+        var at = Math.round(box.left + box.width / 2);
+        still = (at === wasAt) ? still + 1 : 0;
+        wasAt = at;
+
+        var near = null, gap = Infinity;
+        Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) {
+          var b = node.getBoundingClientRect();
+          var d = Math.abs((b.left + b.width / 2) - at);
+          if (d < gap) { gap = d; near = node; }
+        });
+        Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) {
+          node.classList.toggle('is-passing', node === near && !node.classList.contains('is-active'));
+        });
+
+        // Two still frames means it has arrived; the cap is for a spring that
+        // never quite settles on a fractional pixel.
+        if (still >= 2 || ++frames > 90) {
+          Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) {
+            node.classList.remove('is-passing');
+          });
+          return;
+        }
+        flight = window.requestAnimationFrame(step);
+      };
+      flight = window.requestAnimationFrame(step);
     }
 
     function release() {
       bar.classList.remove('is-dragging');
+      if (flight) { window.cancelAnimationFrame(flight); flight = 0; }
       boxes.forEach(function (b) { b.node.classList.remove('is-under'); });
       if (frame) { window.cancelAnimationFrame(frame); frame = 0; }
       pending = null;

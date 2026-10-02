@@ -20,6 +20,7 @@ const zmanimLib = require('./lib/zmanim');
 const daily = require('./lib/daily');
 const library = require('./lib/library');
 const yahrzeits = require('./lib/yahrzeits');
+const ushpizin = require('./lib/ushpizin');
 const sefaria = require('./lib/sefaria');
 const lock = require('./lib/lock');
 const { isoDateInZone, dateFromIso } = require('./lib/util');
@@ -32,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '50';
+const BUILD = '52';
 
 app.use(cors());
 
@@ -221,6 +222,12 @@ app.get('/api/diagnostics', route(async (req) => {
       return { name: y.name, book: y.book, ok: false, detail: err.message };
     }
   }));
+  const guests = ushpizin.ushpizinOn(dates.calendarFor(today, place, new Date()).hebrew);
+  record('Ushpizin', true, guests
+    ? `day ${guests.day} of ${guests.of}: ` +
+      guests.guests.map((g) => g.name + (g.minhag ? ` (${g.minhag})` : '')).join(' / ')
+    : 'not Sukkos today');
+
   record('Yahrzeit seforim on Sefaria',
     yahrzeitBooks.some((b) => b.ok),
     `${yahrzeitBooks.filter((b) => b.ok).length} of ${yahrzeitBooks.length} found`);
@@ -430,7 +437,10 @@ app.get('/api/calendar', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);
   const calendar = dates.calendarFor(date, place, new Date());
-  return Object.assign({}, calendar, { yahrzeits: await yahrzeitsFor(calendar, date) });
+  return Object.assign({}, calendar, {
+    yahrzeits: await yahrzeitsFor(calendar, date),
+    ushpizin: ushpizin.ushpizinOn(calendar.hebrew),
+  });
 }));
 
 // ---------------------------------------------------------------- the learning
@@ -480,7 +490,12 @@ app.get('/api/today', route(async (req) => {
     yahrzeitsFor(calendar, date),
   ]);
 
-  return { calendar, zmanim, spark, tehillim, weekly, yahrzeits: yahrzeitsToday };
+  return {
+    calendar, zmanim, spark, tehillim, weekly,
+    yahrzeits: yahrzeitsToday,
+    // Null on every day but the seven of Sukkos.
+    ushpizin: ushpizin.ushpizinOn(calendar.hebrew),
+  };
 }));
 
 /**
@@ -554,6 +569,10 @@ app.get('/api/widget', route(async (req) => {
     // and the app is one tap away.
     yahrzeits: yahrzeits.yahrzeitsOn(calendar.hebrew)
       .map((y) => ({ name: y.name, he: y.he, years: y.years })),
+    // The day's guest, on the seven days of Sukkos and no others. A widget
+    // has no room to explain two orders, so on the three days they differ it
+    // carries both names and says whose each is.
+    ushpizin: ushpizin.ushpizinOn(calendar.hebrew),
     tehillim: library.tehillimForDay(calendar.hebrew.day, calendar.hebrew.daysInMonth)
       .map(library.tehillimLabel).join(' • '),
     place: place.name,

@@ -44,14 +44,28 @@
      They were three different panes until the day they sat on a screen
      together and only one of them looked like glass. `veil` is the top bar's
      own, because it is the only one with words printed straight on it. */
-  --bar-glass:  rgba(255, 255, 255, 0.22);
+  /* 0.22 was as clear as this can be and still hold 4.5:1 on a good day --
+     and the margin turned out to depend on the day. The header's height
+     changes with the length of the zman countdown, which moves the sticky
+     bar, which changes what is behind it; the same check read 5.81 one
+     morning and 4.32 another on text that had not changed. A bar that only
+     passes when the clock is kind is not passing. */
+  --bar-glass:  rgba(255, 255, 255, 0.34);
   --bar-rim:    rgba(255, 255, 255, 0.75);
   --bar-lit:    rgba(255, 255, 255, 0.95);
   --bar-under:  rgba(255, 255, 255, 0.35);
   --bar-bright: 1.18;
   --bar-ink:    #3a3a44;
-  --bar-lens:   rgba(255, 255, 255, 0.88);
-  --bar-on:     var(--rose-700);
+  /* The night lens has been at 0.95 since the numeral on it was measured;
+     daylight was left at 0.88 and never was. The rose numeral on a lens the
+     page still tints through reads 4.3:1 where the page behind is pale. */
+  --bar-lens:   rgba(255, 255, 255, 0.96);
+  /* Rose-700 is the right colour for the accent and too light to be text on
+     a pane the page still shows through: the numeral on the lens and the
+     words on the settings sheet both sat near 4.1-4.4 in daylight. A deeper
+     rose, used only where the accent has to be read rather than seen. */
+  --on-glass:   #6f4049;
+  --bar-on:     var(--on-glass);
   --bar-veil:   rgba(253, 251, 249, 0.62);
   --bar-bright-tabs: 1.18;
   --panel-glass: rgba(255, 255, 255, 0.62);
@@ -1095,7 +1109,7 @@ body.hide-english .en { display: none; }
      like glass until a bright Hebrew stroke passes under it: the veil adds
      to it instead of covering it, and a white numeral on top measured 4.17:1.
      A dark tint takes the stroke down the way a dark material does. */
-  --bar-glass:  rgba(18, 18, 20, 0.40);
+  --bar-glass:  rgba(18, 18, 20, 0.56);
   --bar-rim:    rgba(255, 255, 255, 0.38);
   --bar-lit:    rgba(255, 255, 255, 0.28);
   --bar-under:  rgba(255, 255, 255, 0.06);
@@ -1119,6 +1133,9 @@ body.hide-english .en { display: none; }
      which is also what the photograph shows: on a dark screen the chosen
      tab's capsule is the brightest thing on the bar. */
   --bar-lens:   rgba(255, 255, 255, 0.95);
+  /* At night the accent is already a light pink against a dark sheet, so it
+     reads as it is. */
+  --on-glass:   var(--rose-700);
   --bar-on:     #1c1c1e;
   --bar-veil:   rgba(0, 0, 0, 0.34);
   /* The number bar is dimmed hard because it lies over the psalm you are
@@ -2549,7 +2566,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  color: var(--rose-700);
+  color: var(--on-glass);
   font-weight: 500;
 }
 /* And the glass system draws a ring and a sheen on every control in the app
@@ -2659,3 +2676,63 @@ body.hide-english .verse-card .verse-en { display: none; }
 }
 :root .chapters .chapter-track button.is-active::before,
 :root .chapters .chapter-track button.is-active::after { display: none; }
+
+
+/* ---- the Ushpizin ------------------------------------------------------ */
+/* One guest, or on three days of Sukkos two, each under the name of the
+   order it comes from. */
+.ushpiz + .ushpiz {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.ushpiz-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.ushpiz-name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ushpiz-he {
+  font-family: var(--hebrew);
+  font-size: 1.125rem;
+  color: var(--rose-700);
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+.ushpiz-note {
+  margin-top: 3px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.ushpiz .hint { margin-top: 6px; }
+/* The line about the two orders belongs to the card, not to the guest it
+   happens to follow -- without this it read as part of what Yosef did. */
+.ushpiz-both {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+
+/* A floor under the numerals on the clear bar.
+   The bar carries whatever the psalm happens to put behind it, and a white
+   numeral crossing a bright Hebrew stroke was landing at 4.4:1 -- fine on
+   most of the page, not on all of it. The shadow travels with the glyph, so
+   it darkens exactly the few pixels that need it and nothing else, which is
+   what a tint cannot do. The selected one sits on its own lens and needs
+   none of this. */
+:root[data-theme="dark"] .chapters .chapter-track button:not(.is-active) {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 7px rgba(0, 0, 0, 0.75);
+}
+
+
+/* Whatever the travelling pane is over takes the colour that reads on it.
+   Without this a white label sat on a bright pane for the few frames the
+   pane was crossing it, which measured 1.01:1. */
+:root .chapters .chapter-track button.is-passing,
+:root .tabs .tab.is-passing { color: var(--bar-on); }
