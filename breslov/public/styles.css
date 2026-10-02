@@ -3533,3 +3533,123 @@ html.theme-switching *::before,
 html.theme-switching *::after {
   transition: none !important;
 }
+
+
+/* ═══════════════════════════════════════════════════ one surface, not pages
+
+   Changing page used to be a cut: one panel's `hidden` went on, another's
+   came off. The pill at the bottom was the only thing that moved, which is
+   exactly what made the app feel like a stack of pages with a nice animation
+   bolted to the bottom of it rather than one surface you move across.
+
+   Now the two panels pass each other, in the direction you moved through the
+   tabs. The one leaving is lifted out of the flow for those few frames: two
+   panels in the flow at once makes the page briefly twice as tall, and a
+   scrollbar that appears and goes again is a jolt you feel without seeing
+   what caused it.                                                          */
+
+/* The leaving panel is positioned against <main>'s PADDING box, not its
+   content box -- that is simply how absolute positioning works -- so left: 0
+   would put it sixteen pixels to the left of where it was sitting a frame
+   ago, and the page would appear to shunt sideways before it faded. The pad
+   is published as a custom property at each breakpoint and used here, so the
+   two can never drift apart. */
+main {
+  position: relative;
+  /* The panels slide sideways as they change. Without this the 26px they
+     travel hangs off the right of the page for those few frames, the document
+     gets wider than the window, and a phone browser answers by zooming out --
+     measured as a viewport 22px taller on the one page where it happened, and
+     it would be seen as the whole page flinching on every tap.
+
+     `clip` rather than `hidden`: hidden makes this a scroll container, which
+     would take the sticky number bars inside it off the window and stick them
+     to <main> instead. clip hides the overflow and changes nothing else. */
+  overflow-x: clip;
+  --main-pad: 16px;
+  --main-pad-top: 20px;
+}
+/* Safari before 16 has no `clip`. There the panels stop short of the edge
+   instead, which costs nothing anyone can see and cannot widen the page. */
+@supports not (overflow-x: clip) {
+  .panel.is-entering { --come: 0px; }
+  .panel.is-leaving  { --go: 0px; }
+}
+/* The same breakpoints the padding itself uses, 640 and 900 -- not round
+   numbers chosen here, which is how the two would come apart. */
+@media (min-width: 640px) { main { --main-pad: 20px; --main-pad-top: 28px; } }
+@media (min-width: 900px) { main { --main-pad: 28px; --main-pad-top: 24px; } }
+
+.panel.is-leaving {
+  position: absolute;
+  top: var(--main-pad-top, 20px);
+  left: var(--main-pad);
+  right: var(--main-pad);
+  pointer-events: none;
+  z-index: 1;
+  animation: panel-out 180ms var(--glide) both;
+}
+.panel.is-leaving[data-to="left"]  { --go: -24px; }
+.panel.is-leaving[data-to="right"] { --go: 24px; }
+
+@keyframes panel-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translate3d(var(--go, -24px), 0, 0); }
+}
+
+/* The arriving page comes from the other side, and its cards still rise in
+   turn behind it -- the stagger reads as the page settling rather than as
+   four separate animations once it is travelling as well. */
+.panel.is-entering {
+  animation: panel-in 300ms var(--glide) both;
+}
+.panel.is-entering[data-from="right"] { --come: 26px; }
+.panel.is-entering[data-from="left"]  { --come: -26px; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translate3d(var(--come, 26px), 0, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The cards' own entrance shortens and tightens, because it is now riding on
+   top of the page's. Four of them at 45ms apart under a 420ms rise was a
+   quarter of a second of ripple after the page had already arrived. */
+.panel.is-entering > * { animation: rise 280ms var(--glide) both; }
+.panel.is-entering > *:nth-child(2) { animation-delay: 30ms; }
+.panel.is-entering > *:nth-child(3) { animation-delay: 60ms; }
+.panel.is-entering > *:nth-child(4) { animation-delay: 90ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel.is-leaving { display: none; }
+  .panel.is-entering,
+  .panel.is-entering > * { animation: none; }
+}
+
+
+/* ── the sheet is a surface you can push ─────────────────────────────── */
+
+/* It follows a finger now, so two things have to be true: a scroll inside it
+   must not become a scroll of the page behind it, and the finger must be
+   read as a drag rather than as the browser's own pull-to-refresh. */
+.sidebar {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+/* The grabber is the obvious place to take hold of, so it says so. */
+.sheet-grabber { cursor: grab; }
+.sidebar:active .sheet-grabber { cursor: grabbing; }
+
+/* While a finger is on it nothing eases -- the sheet IS the finger. The drag
+   turns the transitions off with an inline style and clears it on release, so
+   the spring back and the slide away both run on the rule above. */
+
+/* The page behind a sheet does not scroll, and nor does it rubber-band at its
+   ends, which through a translucent sheet reads as the whole screen wobbling. */
+body.no-scroll {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition-duration: 0.001ms !important; }
+}

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '64';
+  var BUILD = '65';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1687,6 +1687,10 @@
     var scrim = $('menuScrim');
     var btn = $('menuBtn');
     if (!menu) return;
+    // Anything a half-finished drag left behind goes before it comes back up.
+    menu.style.transform = '';
+    menu.style.transition = '';
+    if (scrim) { scrim.style.opacity = ''; scrim.style.transition = ''; }
     menu.hidden = false;
     if (scrim) scrim.hidden = false;
     // Two frames: hidden is dropped first, then the class that slides it in,
@@ -1728,6 +1732,91 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && sidebarOpen()) closeSidebar(true);
     });
+    dragToDismiss();
+  }
+
+  /**
+   * Push the sheet down with a finger.
+   *
+   * A sheet that can only be dismissed by finding a small cross in its corner
+   * is a dialog wearing a sheet's clothes. This one follows the finger: it
+   * goes down as far as it is pushed, never up, the page behind it dims less
+   * the further it travels, and letting go either sends it the rest of the
+   * way or springs it back.
+   *
+   * It goes either on a long push -- past a third of its own height -- or on
+   * a short fast flick, because those are two different ways of saying the
+   * same thing and an iPhone honours both. Velocity is measured over the last
+   * 120ms rather than the whole gesture, so a slow drag that ends with a
+   * flick counts as a flick.
+   *
+   * Only below 900px, where it is a sheet. Above that it is a centred modal
+   * and there is nowhere for it to go.
+   */
+  function dragToDismiss() {
+    var menu = $('sideMenu');
+    var scrim = $('menuScrim');
+    if (!menu || !window.PointerEvent) return;
+
+    var startY = 0, lastY = 0, lastAt = 0, travelled = 0, dragging = false;
+
+    var isSheet = function () {
+      try { return window.matchMedia('(max-width: 899px)').matches; } catch (e) { return true; }
+    };
+
+    menu.addEventListener('pointerdown', function (e) {
+      if (!isSheet() || e.button) return;
+      // Not from inside something that scrolls, or that the finger is meant
+      // to be operating: dragging a sheet away by its font menu is not what
+      // anybody reaching for the font menu wanted.
+      if (e.target.closest('button, select, input, a, [role="switch"]')) return;
+      if (menu.scrollTop > 0) return;
+      dragging = true;
+      travelled = 0;
+      startY = lastY = e.clientY;
+      lastAt = e.timeStamp;
+      menu.style.transition = 'none';
+      if (scrim) scrim.style.transition = 'none';
+      menu.setPointerCapture(e.pointerId);
+    });
+
+    menu.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      travelled = Math.max(0, e.clientY - startY);   // down only
+      // Rubber band: the first hundred pixels are one to one, and past that
+      // it gets heavier, the way every list on an iPhone does at its end.
+      var shown = travelled <= 100 ? travelled : 100 + (travelled - 100) * 0.45;
+      menu.style.transform = 'translate3d(0,' + shown.toFixed(1) + 'px,0)';
+      if (scrim) {
+        var height = menu.offsetHeight || 1;
+        scrim.style.opacity = String(Math.max(0, 1 - (travelled / height) * 0.9));
+      }
+      if (e.timeStamp - lastAt > 16) { lastY = e.clientY; lastAt = e.timeStamp; }
+    });
+
+    var letGo = function (e) {
+      if (!dragging) return;
+      dragging = false;
+      try { menu.releasePointerCapture(e.pointerId); } catch (err) { /* already gone */ }
+
+      var over = e.timeStamp - lastAt;
+      var speed = over > 0 ? (e.clientY - lastY) / over : 0;   // px per ms, down is +
+      var far = travelled > (menu.offsetHeight || 1) * 0.33;
+      var flicked = speed > 0.5;
+
+      menu.style.transition = '';
+      if (scrim) { scrim.style.transition = ''; scrim.style.opacity = ''; }
+
+      if (far || flicked) {
+        // Let the class take it the rest of the way, from where it is.
+        menu.style.transform = '';
+        closeSidebar(false);
+      } else {
+        menu.style.transform = '';     // springs back on its own transition
+      }
+    };
+    menu.addEventListener('pointerup', letGo);
+    menu.addEventListener('pointercancel', letGo);
   }
 
   // ------------------------------------------------------------- the lens
@@ -1804,6 +1893,10 @@
     var holding = null;
     var startX = 0, startY = 0;
     var engaged = false, decided = false;
+    // Set on the first move of a gesture, not when the finger lands: it is
+    // what turns the easing off, and turning it off on touchdown is what made
+    // the pill teleport instead of travel.
+    var following = false;
     var pending = null, frame = 0;
 
     function live() {
@@ -1934,10 +2027,20 @@
       startY = e.touches[0].clientY;
       decided = false;
       engaged = !!opts.grabAtOnce;
+      following = false;
       measure();
       calibrate();
       if (engaged) {
-        bar.classList.add('is-dragging');
+        // It comes to meet the finger -- but it TRAVELS there. `is-dragging`
+        // turns every transition off, and adding it here meant the pane was
+        // already under the finger on the frame the finger landed: on a real
+        // tap the pill did not glide across the bar at all, it was simply
+        // somewhere else. Measured at 1 distinct position in 400ms against 7
+        // for a synthetic click, which is why this was invisible until the
+        // check used a real pointer.
+        //
+        // Nothing is turned off until the finger actually moves, which is the
+        // only moment a transition would be in the way.
         queue(startX);
       }
     }, { passive: true });
@@ -1953,6 +2056,10 @@
         else return;
       }
       if (!engaged) return;
+      // The finger is moving, so now the pane must stop easing and simply be
+      // where the finger is. A spring under a moving finger is the pane always
+      // arriving where the finger has just been.
+      if (!following) { following = true; bar.classList.add('is-dragging'); }
       // Once this is our gesture the page must not scroll under it.
       if (e.cancelable) e.preventDefault();
       queue(t.clientX);
@@ -2112,7 +2219,45 @@
     });
   }
 
+  /** Which way along the tab bar this move went: +1 forwards, -1 back. */
+  function travel(from, to) {
+    var a = PANELS.indexOf(from);
+    var b = PANELS.indexOf(to);
+    if (a < 0 || b < 0 || a === b) return 1;
+    return b > a ? 1 : -1;
+  }
+
+  /** Has the phone asked for no movement? */
+  function stillness() {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) { return false; }
+  }
+
+  /**
+   * Let a panel leave before it is taken away.
+   *
+   * It is lifted out of the flow first -- absolutely, at the top of <main> --
+   * because two panels in the flow at once makes the page twice as tall for
+   * three frames, and a scrollbar that appears and goes again is a jolt you
+   * can feel even when you cannot see what caused it.
+   */
+  function handOver(panel, direction) {
+    panel.setAttribute('data-to', direction > 0 ? 'left' : 'right');
+    panel.classList.add('is-leaving');
+    // Whatever was already running on it stops; it is on its way out.
+    panel.classList.remove('is-entering');
+    window.clearTimeout(panel._leaveTimer);
+    panel._leaveTimer = window.setTimeout(function () {
+      panel.classList.remove('is-leaving');
+      panel.removeAttribute('data-to');
+      // Only hide it if the page has not come back to it in the meantime.
+      if (state.panel !== panel.id.replace('panel-', '')) panel.hidden = true;
+    }, 190);
+  }
+
   function showPanel(name, fromHistory) {
+    var was = state.panel;
     state.panel = name;
     rememberPanel(name, !!fromHistory);
 
@@ -2129,9 +2274,32 @@
       closeSearchBar();
     }
 
+    // The page you are leaving goes somewhere rather than vanishing.
+    //
+    // Changing page used to be a straight swap: one panel's `hidden` went on,
+    // another's came off, and the pill at the bottom glided across while the
+    // content under it cut. The pill was the only thing moving, which is what
+    // made the app feel like a set of pages rather than one surface.
+    //
+    // Both are on screen for a sixth of a second now, passing each other in
+    // the direction you moved through the tabs -- forwards and the old page
+    // leaves to the left, backwards and it leaves to the right. The leaving
+    // one is taken out of the flow for those few frames so the page does not
+    // briefly become twice as tall and bounce the scroll.
+    var leaving = $('panel-' + was);
+    var direction = travel(was, name);
+    var crossing = !!leaving && leaving !== $('panel-' + name) && !leaving.hidden && !stillness();
+    if (crossing) handOver(leaving, direction);
+
     PANELS.forEach(function (p) {
       var node = $('panel-' + p);
-      if (node) node.hidden = p !== name;
+      if (!node) return;
+      // The one on its way out is hidden by handOver, once it has gone. Every
+      // other panel -- including that one when there is no crossing, which is
+      // what happens with motion turned off -- is hidden now. Leaving that
+      // case out left the previous page on screen for good.
+      if (crossing && p === was) return;
+      node.hidden = p !== name;
     });
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.classList.toggle('is-active', t.getAttribute('data-panel') === name);
@@ -2139,7 +2307,10 @@
     positionTabLens();
 
     var panel = $('panel-' + name);
-    if (panel) replay(panel);
+    if (panel) {
+      panel.setAttribute('data-from', direction > 0 ? 'right' : 'left');
+      replay(panel);
+    }
     window.scrollTo({ top: 0, behavior: 'auto' });
 
     if (name === 'search' && !searchState.query) runSearch('');
