@@ -16,6 +16,7 @@ const ushpizin = require('../lib/ushpizin');
 const daily = require('../lib/daily');
 const inspiration = require('../lib/inspiration');
 const teachers = require('../lib/teachers');
+const yahrzeits = require('../lib/yahrzeits');
 const { dateFromIso, pickForDay, pickRunForDay } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
@@ -67,6 +68,63 @@ async function main() {
       plainDay.fast ? 'times on a day with no fast' : 'none');
   }
 
+  // Where two parts of this app name the same sefer, they have to name it the
+  // same way.
+  //
+  // This is not tidiness. yahrzeits.js carries a comment saying Sefaria spells
+  // the Maggid's sefer "Maggid Devarav leYaakov" with a small l, that it had
+  // been guessed wrong twice, and that the spelling was finally read off
+  // Sefaria's own catalogue. teachers.js was then written with a capital L,
+  // and the Maggid -- one of the seven approved rebbes -- contributed nothing
+  // to the נקודה from the day he was added. Nothing threw. availability()
+  // reported "no pieces", which is exactly what it is for and reads the same
+  // whether a sefer is not digitised or merely misspelt. Only the live
+  // server's diagnostics showed the same sefer answering with 134 pieces
+  // further down the same page.
+  //
+  // So: for anyone both files know about, every sefer one of them names must
+  // be a spelling the other would accept. This needs no internet and would
+  // have caught it the day it was written.
+  {
+    const both = [];
+    for (const t of teachers.APPROVED.concat([teachers.FALLBACK])) {
+      const y = yahrzeits.YAHRZEITS.find((row) => row.name === t.name);
+      if (y && y.book) both.push([t, y]);
+    }
+    check('Both lists name seforim for the same teachers', both.length >= 4,
+      both.map(([t]) => t.short).join(', ') || 'no overlap to check');
+
+    // The question is NOT "do the two files overlap somewhere" -- the first
+    // version of this check asked that, and passed on the broken build,
+    // because yahrzeits.js happens to carry the wrong spelling in its own
+    // alias list. yahrzeits.js can afford aliases: it tries each in turn and
+    // a wrong one simply does not resolve. teachers.js cannot, because a
+    // wrong spelling there does not fail to resolve -- it resolves to an
+    // index with no pieces, which availability() records as "not carried" and
+    // moves on from.
+    //
+    // So the question is: does teachers.js contain the CANONICAL spelling --
+    // the one yahrzeits.js names as the book itself, read off Sefaria's
+    // catalogue -- and not merely some spelling of it.
+    const clashes = [];
+    for (const [t, y] of both) {
+      if (t.titles.includes(y.book)) continue;
+      const loose = t.titles.find((title) => title.toLowerCase() === y.book.toLowerCase());
+      clashes.push(loose
+        ? `${t.short}: teachers.js has "${loose}", Sefaria spells it "${y.book}"`
+        : `${t.short}: teachers.js never names "${y.book}"`);
+    }
+    check('And teachers.js uses the spelling Sefaria actually uses',
+      clashes.length === 0,
+      clashes.length ? clashes.join(' | ') : `${both.length} seforim, spelt as Sefaria spells them`);
+
+    // And the specific one that bit, named, so it cannot drift back.
+    const maggid = teachers.APPROVED.find((t) => t.id === 'maggid');
+    check('The Maggid\'s sefer is spelt the way Sefaria spells it',
+      maggid.titles.includes('Maggid Devarav leYaakov'),
+      maggid.titles[0]);
+  }
+
   console.log('\nZmanim (no internet needed)');
   const z = zmanim.zmanimFor(today, place);
   check('All times calculated', z.times.length >= 12, `${z.times.length} times`);
@@ -93,7 +151,6 @@ async function main() {
   // "Teves" -- fails no test on its own: it simply never matches, and the
   // yahrzeit silently never appears. So the year is walked day by day and
   // every name must be found.
-  const yahrzeits = require('../lib/yahrzeits');
   const { HDate } = require('@hebcal/core');
 
   for (const year of [5787, 5788]) {

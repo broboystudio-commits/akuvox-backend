@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '69';
+const BUILD = '70';
 
 app.use(cors());
 
@@ -382,14 +382,32 @@ app.get('/api/diagnostics', route(async (req) => {
   let teacherShelf = null;
   try {
     teacherShelf = await teachers.availability({ refresh: true });
-    const carried = teacherShelf.filter((t) => t.available.length);
-    const absent = teacherShelf.filter((t) => !t.available.length);
+    // The seven and the Rambam are counted apart. Counting them together
+    // printed "6 of 8 carried", which reads as though the approved pool were
+    // eight -- and the whole design rests on it being seven with the Rambam
+    // outside, reached only when none of them fits.
+    const pool = teacherShelf.filter((t) => !t.fallback);
+    const fallback = teacherShelf.find((t) => t.fallback);
+    const carried = pool.filter((t) => t.available.length);
+    // A teacher nobody has digitised is not a fault in this app, and the
+    // list says in advance who that is expected to be. One who is absent
+    // WITHOUT being expected to be is worth a red line: that is what a
+    // misspelt title looks like from here, and it is how the Maggid went
+    // missing for weeks while this line said "nothing for" and nobody read
+    // it as a bug.
+    const expected = pool.filter((t) => !t.available.length && t.expectMissing);
+    const unexpected = pool.filter((t) => !t.available.length && !t.expectMissing);
     record('The approved teachers on Sefaria',
-      // Never a failure: a teacher nobody has digitised is not a fault in
-      // this app. It is reported so it is known.
-      true,
-      `${carried.length} of ${teacherShelf.length} carried` +
-      (absent.length ? ` — nothing for ${absent.map((t) => t.name).join(', ')}` : ''));
+      unexpected.length === 0,
+      `${carried.length} of ${pool.length} carried` +
+      (expected.length ? ` — not digitised, as expected: ${expected.map((t) => t.name).join(', ')}` : '') +
+      (unexpected.length ? ` — MISSING and not expected to be: ${unexpected.map((t) => t.name).join(', ')}` +
+        ' (usually a title spelt differently from Sefaria\'s own catalogue)' : ''));
+    record('The Rambam is there to fall back on',
+      !!fallback && fallback.available.length > 0,
+      fallback && fallback.available.length
+        ? fallback.available.join(', ') + ' — outside the seven, reached only when none of them fits'
+        : 'the fallback has nothing, so a day no approved teacher fits has nothing to show');
   } catch (err) {
     record('The approved teachers on Sefaria', false, err.message);
   }

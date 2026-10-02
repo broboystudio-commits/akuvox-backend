@@ -93,7 +93,18 @@ const APPROVED = [
     short: 'The Maggid of Mezritch',
     he: 'הַמַּגִּיד מִמֶּזְרִיטְשׁ',
     years: '1704–1772',
-    titles: ['Maggid Devarav LeYaakov', 'Or Torah'],
+    // Sefaria spells it with a SMALL l -- "leYaakov". This was written down
+    // in yahrzeits.js, with a comment saying it had been guessed wrong twice
+    // and was finally read off Sefaria's own catalogue -- and then it was
+    // guessed a fourth time here, with a capital L, and the Maggid quietly
+    // contributed nothing to the נקודה from the day he was added. Nothing
+    // threw and nothing looked wrong: availability() faithfully reported "no
+    // pieces", which is exactly what it is for, and "no pieces" reads the
+    // same whether a sefer is not digitised or merely misspelt. The live
+    // server's own diagnostics showed the same sefer answering with 134
+    // pieces two sections further down the page, under the yahrzeit code
+    // that spells it correctly.
+    titles: ['Maggid Devarav leYaakov', 'Maggid Devarav LeYaakov', 'Or Torah'],
     recorded: true,
   },
   {
@@ -224,6 +235,11 @@ async function availability({ refresh = false } = {}) {
       id: teacher.id,
       name: teacher.name,
       expectMissing: !!teacher.expectMissing,
+      // Whether this row is one of the seven or the Rambam. The diagnostics
+      // counted the whole shelf and reported "6 of 8 carried", which reads as
+      // though the approved pool were eight -- the one thing this module's
+      // first paragraph says it is not. He is reported, and reported apart.
+      fallback: teacher.id === FALLBACK.id,
       seforim,
       available: seforim.filter((s) => s.has).map((s) => s.title),
     });
