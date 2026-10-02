@@ -541,7 +541,13 @@ main { max-width: 720px; margin: 0 auto; padding: 20px 16px 0; }
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--rose-500);
+  /* Rose-500 at twelve points measured 2.93:1 in daylight -- it is a mid
+     tone meant for a tint, not for small uppercase type, and this label
+     carries the reference, which is the one thing on a passage somebody
+     might want to write down. It had been this way on every card in the app
+     since the beginning; nothing had measured a reference until the Ushpizin
+     card made it necessary to measure the whole card. */
+  color: var(--rose-700);
 }
 
 .he {
@@ -2679,39 +2685,107 @@ body.hide-english .verse-card .verse-en { display: none; }
 
 
 /* ---- the Ushpizin ------------------------------------------------------ */
-/* One guest, or on three days of Sukkos two, each under the name of the
-   order it comes from. */
+/* A night, a guest, a passage, and a word on it. Four things in that order,
+   and the card's job is to let the eye tell them apart without reading --
+   the guest's own Torah and the Breslov word on it were two identical blocks
+   before this, so the page looked like twice as much to get through as it
+   was. */
+
+/* Seven nights, and which one this is. */
+.nights {
+  display: flex;
+  gap: 7px;
+  margin: 2px 0 18px;
+}
+.night {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-2);
+  transition: transform var(--bounce) var(--spring), background var(--base) var(--ease);
+}
+.night.is-past { background: var(--rose-300); }
+.night.is-now {
+  width: 22px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, var(--rose-300), var(--gold-400));
+}
+
 .ushpiz + .ushpiz {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 26px;
+  padding-top: 24px;
   border-top: 1px solid var(--line);
 }
+/* The Hebrew first and large: it is his night, and his name is the thing on
+   the card worth seeing from across a table. */
 .ushpiz-head {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px 12px;
-}
-.ushpiz-name {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--ink);
+  gap: 4px 14px;
 }
 .ushpiz-he {
   font-family: var(--hebrew);
-  font-size: 1.125rem;
-  color: var(--rose-700);
+  font-size: 1.625rem;
+  line-height: 1.2;
+  color: var(--ink);
   direction: rtl;
   unicode-bidi: isolate;
 }
-.ushpiz-note {
-  margin-top: 3px;
-  font-size: 0.8125rem;
+.ushpiz-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--ink-2);
 }
-.ushpiz .hint { margin-top: 6px; }
-/* The line about the two orders belongs to the card, not to the guest it
-   happens to follow -- without this it read as part of what Yosef did. */
+.ushpiz-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ushpiz-sefirah,
+.ushpiz-minhag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.ushpiz-sefirah {
+  background: linear-gradient(120deg, var(--rose-100), var(--gold-100));
+  color: var(--rose-700);
+}
+.ushpiz-sefirah .he { font-family: var(--hebrew); font-size: 0.875rem; }
+.ushpiz-minhag {
+  background: var(--veil);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.ushpiz-about {
+  margin: 12px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* The passage needs air above it, or its reference reads as the last line of
+   the sentence describing the guest. */
+.ushpiz > .passage { margin-top: 20px; }
+
+/* The word on the passage is quieter than the passage, and set in from it,
+   so the eye reads it as a comment rather than as more of the same. */
+.dvar {
+  margin-top: 18px;
+  padding-left: 14px;
+  border-left: 2px solid var(--rose-200, var(--line-2));
+}
+.dvar .passage { margin-top: 8px; }
+.dvar .he { font-size: 1.0625rem; }
+.dvar .en { font-size: 0.875rem; }
+
 .ushpiz-both {
   margin-top: 16px;
   padding-top: 14px;

@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '56';
+  var BUILD = '57';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -395,6 +395,12 @@
   }
 
   function unavailableNotice(what, detail, retry) {
+    // `what` is the name of the thing, in words, and nothing else. Four
+    // callers were left passing the failed payload here when the arguments
+    // changed, which put "could not load the [object Object]" on the page --
+    // the exact thing this function was written to stop. Caught by a check
+    // that drives a failed answer through each panel and reads the screen.
+    if (typeof what !== 'string') what = 'page';
     if (detail) console.warn('[breslov] ' + what + ' failed:', detail);
 
     var box = el('div', 'notice');
@@ -489,7 +495,7 @@
       setText('aboutSpark', spark.heading || spark.ref);
     } else {
       setText('verseRef', '');
-      fill($('verseBody'), unavailableNotice(spark, 'daily teaching'));
+      fill($('verseBody'), unavailableNotice('daily teaching', spark && spark.reason, refresh));
       setHidden('openFull', true);
       setHidden('sparkFull', true);
     }
@@ -585,8 +591,22 @@
     if (!data || !data.guests || !data.guests.length) { card.hidden = true; return; }
 
     card.hidden = false;
-    setText('ushpizinTitle', 'Ushpizin · day ' + data.day + ' of ' + data.of);
+    setText('ushpizinTitle', 'Ushpizin');
     setText('ushpizinHe', 'אוּשְׁפִּיזִין');
+
+    // Seven nights, and which one this is. A row of marks says it at a
+    // glance where "day 4 of 7" has to be read.
+    var nights = $('ushpizinNights');
+    if (nights) {
+      var marks = document.createDocumentFragment();
+      for (var n = 1; n <= data.of; n++) {
+        var dot = el('span', 'night' + (n === data.day ? ' is-now' : (n < data.day ? ' is-past' : '')));
+        dot.setAttribute('aria-hidden', 'true');
+        marks.appendChild(dot);
+      }
+      fill(nights, marks);
+      nights.setAttribute('aria-label', 'Night ' + data.day + ' of ' + data.of);
+    }
 
     var body = $('ushpizinBody');
     if (!body) return;
@@ -594,15 +614,22 @@
 
     data.guests.forEach(function (g) {
       var row = el('div', 'ushpiz');
+
+      // The guest, in Hebrew first and large: it is his night.
       var head = el('div', 'ushpiz-head');
-      head.appendChild(el('span', 'ushpiz-name', g.name));
       head.appendChild(el('span', 'ushpiz-he he', g.he));
+      head.appendChild(el('span', 'ushpiz-name', g.name));
       row.appendChild(head);
 
-      var note = g.sefirah + (g.sefirahHe ? ' · ' + g.sefirahHe : '');
-      if (g.minhag) note += '  —  the order of ' + g.minhag;
-      row.appendChild(el('div', 'ushpiz-note', note));
-      row.appendChild(el('p', 'hint', g.about));
+      var tags = el('div', 'ushpiz-tags');
+      var sef = el('span', 'ushpiz-sefirah');
+      sef.appendChild(el('span', 'he', g.sefirahHe || ''));
+      sef.appendChild(document.createTextNode(g.sefirah));
+      tags.appendChild(sef);
+      if (g.minhag) tags.appendChild(el('span', 'ushpiz-minhag', 'the order of ' + g.minhag));
+      row.appendChild(tags);
+
+      row.appendChild(el('p', 'ushpiz-about', g.about));
 
       // The Torah of the day, under the guest it belongs to.
       if (g.passage && g.passage.available) {
@@ -615,9 +642,10 @@
       // And a word on it from Rebbe Nachman or Reb Noson, where Sefaria
       // records one. Named by whoever actually said it.
       if (g.dvar && g.dvar.available) {
-        row.appendChild(el('div', 'dvar-label',
-          (g.dvar.says || 'Breslov') + ' on this'));
-        row.appendChild(passageBox(g.dvar, 'is-dvar'));
+        var said = el('div', 'dvar');
+        said.appendChild(el('div', 'dvar-label', (g.dvar.says || 'Breslov') + ' on this'));
+        said.appendChild(passageBox(g.dvar, 'is-dvar'));
+        row.appendChild(said);
       }
       wrap.appendChild(row);
     });
@@ -772,7 +800,7 @@
   function renderTehillim(teh) {
     setText('tehillimDayTag', teh && teh.available ? teh.label : '');
     if (!teh || !teh.available) {
-      fill($('tehillimBody'), unavailableNotice(teh, "day's Tehillim"));
+      fill($('tehillimBody'), unavailableNotice("day's Tehillim", teh && teh.reason, refresh));
       return;
     }
     // Each psalm gets somewhere to jump to, and a number to jump from. On a
@@ -808,14 +836,20 @@
     if (!weekly || !weekly.available) {
       setText('weeklyTag', '');
       setText('weeklyWhy', '');
-      fill($('weeklyBody'), unavailableNotice(weekly, 'weekly Torah'));
+      fill($('weeklyBody'), unavailableNotice('weekly Torah', weekly && weekly.reason, refresh));
       return;
     }
     setText('weeklyTag', weekly.parshaHe || weekly.parsha || '');
-    $('weeklyWhy').textContent =
-      (weekly.mode === 'parsha' ? 'Parashas ' + weekly.parsha + ' — ' + weekly.why : weekly.why) +
-      ' It stays the same all week.';
-    fill($('weeklyBody'), passage(weekly, weekly.ref));
+    $('weeklyWhy').textContent = weekly.mode === 'parsha'
+      ? 'On a verse in Parashas ' + weekly.parsha + '. It stays the same all week.'
+      : weekly.why + ' It stays the same all week.';
+
+    var weeklyWrap = document.createDocumentFragment();
+    // Whose Torah this is, said once and said plainly, above the piece
+    // itself -- the same line the Ushpizin card uses.
+    if (weekly.says) weeklyWrap.appendChild(el('div', 'dvar-label', weekly.says));
+    weeklyWrap.appendChild(passage(weekly, weekly.ref));
+    fill($('weeklyBody'), weeklyWrap);
   }
 
   /**
@@ -829,7 +863,11 @@
    */
   function renderTikkun(tikkun) {
     if (!tikkun || !tikkun.available) {
-      fill($('tikkunBody'), unavailableNotice(tikkun, 'Tikkun HaKlali'));
+      fill($('tikkunBody'), unavailableNotice('Tikkun HaKlali', tikkun && tikkun.reason, function () {
+        loaded.tikkun = false;
+        fill($('tikkunBody'), textSkeleton(10));
+        showPanel('tikkun');
+      }));
       return;
     }
 
