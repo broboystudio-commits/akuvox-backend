@@ -75,10 +75,26 @@ function pickRunForDay(items, date, salt = 0, count = 1) {
 
 /** Same idea, but the choice only changes once a week (Sunday to Shabbos). */
 function pickForWeek(items, date, salt = 0) {
-  if (!items || !items.length) return null;
+  return pickRunForWeek(items, date, salt, 1)[0] || null;
+}
+
+/**
+ * The week's pick, and the ones after it in the same order.
+ *
+ * The weekly equivalent of pickRunForDay, and it exists for a related reason:
+ * the week's first choice can turn out to be a piece Sefaria holds only in
+ * Hebrew. The card would rather move one along the same order than show a
+ * reader who asked for English a page they cannot read.
+ */
+function pickRunForWeek(items, date, salt = 0, count = 1) {
+  if (!items || !items.length) return [];
   const week = Math.floor((dayNumber(date) + 4) / 7); // +4 aligns the epoch to a Sunday
   const order = seededShuffle(items, 0xbee5 + salt);
-  return order[week % order.length];
+  const run = [];
+  for (let i = 0; i < Math.min(count, order.length); i++) {
+    run.push(order[(week + i) % order.length]);
+  }
+  return run;
 }
 
 /**
@@ -187,6 +203,7 @@ module.exports = {
   pickForDay,
   pickRunForDay,
   pickForWeek,
+  pickRunForWeek,
   stripHtml,
   flattenText,
   snippet,

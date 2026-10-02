@@ -9,7 +9,7 @@
 
 const sefaria = require('./sefaria');
 const library = require('./library');
-const { pickForDay, pickRunForDay, pickForWeek, snippet, dayNumber } = require('./util');
+const { pickForDay, pickRunForDay, pickForWeek, pickRunForWeek, snippet, dayNumber } = require('./util');
 
 /** A short, uniform "sorry" object so the app never shows invented text. */
 /**
@@ -29,6 +29,50 @@ function unavailable(what, err) {
   };
 }
 
+/**
+ * Is there an English translation here, or only the shape of one?
+ *
+ * Sefaria answers for a text it has not had translated with an array the
+ * right length and empty at every position, so `english.length` is true for
+ * an untranslated sefer and tells you nothing. Likutei Halachot is the case
+ * this was written for: it is almost entirely untranslated, and the weekly
+ * card landed on it and showed a block of Hebrew with no English under it and
+ * no word about why.
+ */
+function hasEnglish(text) {
+  return ((text && text.english) || []).some((line) => String(line || '').trim().length > 0);
+}
+
+/**
+ * Load references in order and prefer one that carries English.
+ *
+ * Every picker in this file used to take the first reference that had any
+ * Hebrew in it. That is the right rule for whether a piece exists and the
+ * wrong one for whether it can be read: a reader with English turned on got
+ * a Hebrew-only passage with nothing said about it. So: sweep the candidates,
+ * return the first translated one, and if the whole sweep is untranslated,
+ * fall back to the first that loaded at all -- marked, so the card can say so
+ * rather than leave a gap where the English belongs.
+ */
+async function firstReadable(refs, note) {
+  const say = (ref, why) => { if (typeof note === 'function') note(ref, why); };
+  let fallback = null;
+  for (const ref of refs) {
+    let text = null;
+    try {
+      text = await sefaria.getText(ref);
+    } catch (err) {
+      say(ref, `fetch failed: ${err.message}`);
+      continue;
+    }
+    if (!text || !(text.hebrew || []).length) { say(ref, 'no Hebrew in this piece'); continue; }
+    if (hasEnglish(text)) { say(ref, 'ok'); return { text, ref, translated: true }; }
+    say(ref, 'Hebrew only -- no translation on Sefaria');
+    if (!fallback) fallback = { text, ref, translated: false };
+  }
+  return fallback;
+}
+
 /** Wrap a fetched passage in the shape the website and widgets expect. */
 function present(text, extra = {}) {
   const hebrew = text.hebrew || [];
@@ -40,6 +84,9 @@ function present(text, extra = {}) {
     url: text.url,
     hebrew,
     english,
+    // Whether Sefaria has this piece in English at all. The page says so
+    // plainly when it does not; see passage() in public/app.js.
+    translated: hasEnglish(text),
     snippetHe: snippet(hebrew.join(' '), 200),
     snippetEn: snippet(english.join(' '), 260),
     credit: {
@@ -50,23 +97,6 @@ function present(text, extra = {}) {
     },
     ...extra,
   };
-}
-
-/**
- * Try a few references in rotation order until one actually loads.
- * Protects against a single missing chapter breaking the whole day.
- */
-async function firstThatLoads(refs, attempts = 3) {
-  let lastErr = null;
-  for (let i = 0; i < Math.min(attempts, refs.length); i++) {
-    try {
-      const text = await sefaria.getText(refs[i]);
-      if (text) return { text, ref: refs[i] };
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  throw lastErr || new Error('No text available');
 }
 
 /**
@@ -108,7 +138,11 @@ async function dailySpark(date) {
       const ordered = refs.slice(start).concat(refs.slice(0, start));
 
       try {
-        const { text, ref } = await firstThatLoads(ordered);
+        // The day's lesson, and the few after it in the same rotation, so a
+        // piece Sefaria holds only in Hebrew does not become the whole day.
+        const got = await firstReadable(ordered.slice(0, 4));
+        if (!got) throw new Error(`No text available in ${book.label}`);
+        const { text, ref } = got;
         return present(text, {
           book: { key: book.key, label: book.label, he: book.he, unit: book.unit },
           heading: `${book.label} ${ref.replace(`${book.title}, `, '').replace(`${book.title} `, '')}`,
@@ -294,16 +328,18 @@ async function breslovAbout(terms, date, salt, tried) {
     const refs = [...new Set(ours.map((h) => h.ref).filter(Boolean))];
     if (!refs.length) { note(word, `${(found.hits || []).length} hits, none from the ten`); continue; }
 
-    const choice = pickForWeek(refs, date, salt || 83);
-    const meta = ours.find((h) => h.ref === choice);
-    try {
-      const text = await sefaria.getText(choice);
-      if (!text || !(text.hebrew || []).length) { note(word, `${choice} had no Hebrew`); continue; }
-      note(word, `ok: ${choice} (${ours.length} of ${(found.hits || []).length} hits were ours)`);
-      return { text, book: library.bookOfHit(meta) || null, word };
-    } catch (err) {
-      note(word, `${choice} would not load: ${err.message}`);
-    }
+    // The week's choice, and the next few in the same weekly order. A search
+    // for a chag mostly lands in Likutei Halachot, which Sefaria carries in
+    // Hebrew and barely in English; one candidate meant the card was Hebrew
+    // only. The order is still fixed for the week, so everyone sees the same
+    // piece -- it is just allowed to step past an untranslated one.
+    const order = pickRunForWeek(refs, date, salt || 83, 6);
+    const got = await firstReadable(order);
+    if (!got) { note(word, `none of ${order.length} candidates loaded`); continue; }
+    const meta = ours.find((h) => h.ref === got.ref);
+    note(word, `${got.translated ? 'ok' : 'Hebrew only'}: ${got.ref} ` +
+      `(${ours.length} of ${(found.hits || []).length} hits were ours)`);
+    return { text: got.text, book: library.bookOfHit(meta) || null, word, translated: got.translated };
   }
   return null;
 }
@@ -503,35 +539,27 @@ async function yahrzeitPassage(titles, date, tried) {
         // Say which sefer, not just that it was the wrong one. "A different
         // sefer answers to this name" is exactly as useful as silence when
         // the question is whether the guard or the title is at fault.
-        var got = shapeNames(shape);
+        var answers = shapeNames(shape);
         note(title, 'a different sefer answers to this name: Sefaria calls it ' +
-          (got.slice(0, 4).join(' / ') || 'nothing at all'));
+          (answers.slice(0, 4).join(' / ') || 'nothing at all'));
         continue;
       }
       const refs = library.refsFromShape(shape, { title });
       if (!refs.length) { note(title, 'the shape described no pieces'); continue; }
 
       // The same piece all day, and a different one next year -- and, if that
-      // piece turns out to be a heading with no text under it, the next few
-      // in the same rotation rather than nothing at all.
-      for (const ref of pickRunForDay(refs, date, 29, 8)) {
-        let text = null;
-        try {
-          text = await sefaria.getText(ref);
-        } catch (err) {
-          note(ref, `fetch failed: ${err.message}`);
-          continue;
-        }
-        if (!text || !(text.hebrew || []).length) { note(ref, 'no Hebrew in this piece'); continue; }
-
+      // piece turns out to be a heading with no text under it, or one Sefaria
+      // holds only in Hebrew, the next few in the same rotation rather than
+      // nothing at all.
+      const got = await firstReadable(pickRunForDay(refs, date, 29, 8), note);
+      if (got) {
         // An excerpt, not the whole piece.
         //
         // Keter Shem Tov resolves to two references -- its two parts -- so
         // "a passage" from it is an entire half of the sefer. A yahrzeit card
         // is not the place for that, whichever sefer it is, and the link goes
         // to the whole thing on Sefaria.
-        const full = present(text, { book: title });
-        note(ref, 'ok');
+        const full = present(got.text, { book: title });
         return {
           available: true,
           ref: full.ref,
@@ -539,6 +567,7 @@ async function yahrzeitPassage(titles, date, tried) {
           url: full.url,
           he: full.snippetHe,
           en: full.snippetEn,
+          translated: full.translated,
           credit: full.credit,
         };
       }
@@ -572,15 +601,13 @@ async function dvarOnPassage(refs, date, salt) {
     }
     if (!linked.length) continue;
 
-    const choice = pickForDay(linked.map((l) => l.ref), date, salt || 53);
-    const meta = linked.find((l) => l.ref === choice);
-    let text = null;
-    try {
-      text = await sefaria.getText(choice);
-    } catch (err) {
-      continue;
-    }
-    if (!text || !(text.hebrew || []).length) continue;
+    // The day's pick and the few behind it, so a dvar Torah that exists only
+    // in Hebrew gives way to one that can also be said over in English.
+    const order = pickRunForDay(linked.map((l) => l.ref), date, salt || 53, 5);
+    const got = await firstReadable(order);
+    if (!got) continue;
+    const text = got.text;
+    const meta = linked.find((l) => l.ref === got.ref);
 
     const full = present(text, {});
     return {
@@ -594,6 +621,7 @@ async function dvarOnPassage(refs, date, salt) {
       // The link is there for whoever wants the rest.
       he: snippet((text.hebrew || []).join(' '), 150),
       en: snippet((text.english || []).join(' '), 200),
+      translated: full.translated,
       credit: full.credit,
       says: library.saidBy(meta && meta.title) || null,
       book: (meta && meta.title) || null,
@@ -634,34 +662,25 @@ async function ushpizinPassage(refs, date, tried) {
     if (chapter && !list.includes(chapter)) attempts.push(chapter);
   });
 
-  for (const ref of attempts) {
-    let text = null;
-    try {
-      text = await sefaria.getText(ref);
-    } catch (err) {
-      note(ref, `fetch failed: ${err.message}`);
-      continue;
-    }
-    if (!text || !(text.hebrew || []).length) { note(ref, 'no Hebrew in this passage'); continue; }
+  const got = await firstReadable(attempts, note);
+  if (!got) return null;
 
-    const full = present(text, {});
-    note(ref, 'ok');
-    return {
-      available: true,
-      ref: full.ref,
-      heRef: full.heRef,
-      url: full.url,
-      he: full.snippetHe,
-      en: full.snippetEn,
-      credit: full.credit,
-    };
-  }
-  return null;
+  const full = present(got.text, {});
+  return {
+    available: true,
+    ref: full.ref,
+    heRef: full.heRef,
+    url: full.url,
+    he: full.snippetHe,
+    en: full.snippetEn,
+    translated: full.translated,
+    credit: full.credit,
+  };
 }
 
 module.exports = {
   yahrzeitPassage, ushpizinPassage, dvarOnPassage, answersTo, shapeNames,
   yomTovAhead, YOM_TOV, breslovAbout,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
-  lessonsLinkedToParsha, present, unavailable, dayKey,
+  lessonsLinkedToParsha, present, unavailable, dayKey, hasEnglish, firstReadable,
 };

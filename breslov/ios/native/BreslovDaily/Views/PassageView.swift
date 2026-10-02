@@ -67,6 +67,14 @@ struct PassageView: View {
                                 .foregroundStyle(Palette.inkSoft(dark))
                         }
                     }
+                } else if settings.showEnglish, passage.translated == false {
+                    // Said where the English would be. Sefaria has not had
+                    // every sefer translated, and a block of Hebrew ending in
+                    // nothing leaves the reader wondering what went wrong.
+                    Text("Sefaria has no English for this piece yet, so only the Hebrew is here. Nothing is translated by this app.")
+                        .font(.system(size: englishSize * 0.82))
+                        .italic()
+                        .foregroundStyle(Palette.inkSoft(dark))
                 }
 
                 credit(dark)

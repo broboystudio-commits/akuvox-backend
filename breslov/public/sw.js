@@ -14,12 +14,16 @@
  * anything, and they are the heavy part.
  */
 
-var VERSION = 'breslov-v60';
+var VERSION = 'breslov-v61';
 
 var SHELL = [
-  '/', '/index.html', '/styles.css?v=60', '/app.js?v=60',
+  '/', '/index.html', '/styles.css?v=61', '/app.js?v=61',
   '/manifest.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-180.png',
+  // The Hebrew face the app opens with. It is served from this server now
+  // rather than from Google, which means it can be held here -- so the first
+  // time the app is opened with no signal, the Hebrew is still the Hebrew.
+  '/fonts/frank-ruhl-libre-hebrew.woff2',
 ];
 
 self.addEventListener('install', function (event) {

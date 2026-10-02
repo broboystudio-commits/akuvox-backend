@@ -377,6 +377,54 @@ async function main() {
     new Date(shkia.getTime() + 60 * 60 * 1000));
   check('A date you asked for does not move', nextWeek.hebrew.afterSunset === false, nextWeek.hebrew.en);
 
+  console.log('\nAn untranslated sefer does not become the whole card');
+
+  // Sefaria answers for a sefer it has not had translated with an English
+  // array the right length and empty at every position -- so english.length
+  // is true for Likutei Halachot and tells you nothing. That is the trap the
+  // weekly card fell into: it showed a block of Hebrew with no English under
+  // it and no word about why.
+  //
+  // The real text client is swapped out here and put back afterwards, because
+  // the whole point is to hand the picker the exact shape Sefaria returns for
+  // an untranslated piece, which no live call would reliably produce.
+  const realGetText = sefaria.getText;
+  const untranslated = /Likutei Halakhot/;
+  sefaria.getText = async (ref) => ({
+    ref, heRef: ref,
+    hebrew: ['דַּע כִּי צָרִיךְ לָדוּן אֶת כָּל אָדָם לְכַף זְכוּת'],
+    english: untranslated.test(ref) ? ['', '', ''] : ['Know that one must judge every person favourably.'],
+    hebrewVersion: 'test', englishVersion: untranslated.test(ref) ? null : 'test',
+    license: 'CC0', url: 'https://www.sefaria.org/',
+  });
+  try {
+    check('An array of empty strings is not a translation',
+      daily.hasEnglish({ english: ['', '', ''] }) === false, "Likutei Halachot's actual shape");
+    check('And real English is', daily.hasEnglish({ english: ['', 'Know that...'] }) === true);
+
+    const choices = [
+      'Likutei Halakhot, Choshen Mishpat, Laws of Artisans 3:20:1',
+      'Likutei Halakhot, Orach Chaim, Laws of Sukkah 4:1',
+      'Likutei Moharan 48:1',
+    ];
+    const stepped = await daily.firstReadable(choices);
+    check('It steps past the untranslated ones to one that can be read',
+      !!stepped && stepped.ref === 'Likutei Moharan 48:1' && stepped.translated === true,
+      stepped ? stepped.ref : 'nothing came back');
+
+    const noneTranslated = await daily.firstReadable(choices.slice(0, 2));
+    check('With nothing translated it still shows the Hebrew, marked',
+      !!noneTranslated && noneTranslated.translated === false,
+      noneTranslated ? noneTranslated.ref : 'nothing came back');
+
+    const shown = daily.present(await sefaria.getText(choices[0]), {});
+    check('And the page is told, so it can say so',
+      shown.translated === false && shown.snippetEn === '',
+      `translated=${shown.translated}, snippetEn="${shown.snippetEn}"`);
+  } finally {
+    sefaria.getText = realGetText;
+  }
+
   console.log('\nThe widget always has something to show');
 
   // The widget used to say "No more zmanim today" every evening, and on the

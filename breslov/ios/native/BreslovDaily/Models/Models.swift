@@ -139,6 +139,10 @@ enum Api {
         var english: [String]?
         var snippetHe: String?
         var snippetEn: String?
+        /// Whether Sefaria has this piece in English at all. Nil on an older
+        /// server, which is treated as "yes" so nothing is said that is not
+        /// known to be true.
+        var translated: Bool?
         var credit: Credit?
 
         // Set on some passages only.

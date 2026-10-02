@@ -92,7 +92,14 @@
   /* ---- ink */
   --ink:   #2b2530;
   --ink-2: #635b6d;
-  --ink-3: #938b9d;
+  /* The quietest tier of text. It was #938b9d, which is 3.17:1 on a card --
+     well under the 4.5:1 that small text needs, and it was carrying real
+     words in fourteen places: the Hebrew name beside each zman, the
+     footnotes, the sources, the search placeholder. Darker, still plainly
+     the quiet tier, and legible. Measured against the page's own warm
+     background (251,241,236) and not against white -- the cards are
+     translucent, so white was never what any of this sat on. */
+  --ink-3: #6f6878;
   /* For a label on the rose-gold fill. White looked right and measured 1.7:1
      against that pastel, which is not readable; this is 7.6:1 on the same
      fill and still reads as the chosen one, because the fill says that. */
@@ -241,7 +248,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   border-bottom: 1px solid var(--rose-200);
   transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
 }
-.linkish:hover { border-color: var(--rose-300); color: var(--rose-500); }
+.linkish:hover { border-color: var(--rose-300); color: var(--rose-700); }
 
 .aa {
   flex: 0 0 auto;
@@ -577,6 +584,22 @@ main { max-width: 720px; margin: 0 auto; padding: 20px 16px 0; }
 
 body.hide-english .en { display: none; }
 
+/**
+ * Where the English would have been.
+ *
+ * Quieter than the text and plainly not part of it: this is the app talking,
+ * not the sefer. It hides with the English, because somebody reading only
+ * Hebrew is not missing anything and does not need to be told.
+ */
+.no-en {
+  margin: 16px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  font-style: italic;
+}
+body.hide-english .no-en { display: none; }
+
 .source {
   margin-top: 18px;
   padding-top: 13px;
@@ -635,9 +658,9 @@ body.hide-english .en { display: none; }
 }
 .zman.is-next + .zman { border-top: 0; }
 .zman.is-next .name { color: var(--rose-700); font-weight: 600; }
-.zman.is-next .he-label { color: var(--rose-500); }
+.zman.is-next .he-label { color: var(--rose-700); }
 .zman.is-next .t { color: var(--gold-700); }
-.zman.is-next .note { margin-top: 3px; font-size: 0.75rem; color: var(--rose-500); }
+.zman.is-next .note { margin-top: 3px; font-size: 0.75rem; color: var(--rose-700); }
 
 /* Ten numbers on one line, on a track of their own.
    The band they sit in runs the full width of the card, because it has to
@@ -1032,7 +1055,7 @@ body.hide-english .en { display: none; }
   font-size: 0.66em;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--rose-500);
+  color: var(--rose-700);
   vertical-align: 0.25em;
   unicode-bidi: isolate;
 }
@@ -1098,7 +1121,7 @@ body.hide-english .en { display: none; }
      for what you glance at. */
   --ink:   #ffffff;
   --ink-2: rgba(235, 235, 245, 0.72);
-  --ink-3: rgba(235, 235, 245, 0.42);
+  --ink-3: rgba(235, 235, 245, 0.58);   /* 0.42 measured 3.5:1 on a dark card */
   /* The rose-gold fill stays light, so its label stays dark. */
   --on-accent: #1c1c1e;
 
@@ -1634,7 +1657,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--rose-500);
+  color: var(--rose-700);
 }
 
 .shelf-list {
@@ -1667,7 +1690,7 @@ body.hide-english .verse-card .verse-en { display: none; }
   direction: rtl;
   unicode-bidi: isolate;
   font-size: 0.9375rem;
-  color: var(--rose-500);
+  color: var(--rose-700);
 }
 .shelf-book:active, .shelf-book.is-pressed { transform: scale(0.97); }
 @media (hover: hover) and (pointer: fine) {
@@ -2594,7 +2617,18 @@ body.hide-english .verse-card .verse-en { display: none; }
 :root .sidebar .stepper { gap: 14px; }
 :root .sidebar .stepper button { width: auto; min-width: 30px; height: 34px; }
 :root .sidebar .pill { padding: 6px 2px; }
-:root .sidebar .icon-btn { width: 34px; height: 34px; color: var(--ink-3); }
+:root .sidebar .icon-btn { width: 34px; height: 34px; color: var(--ink-3); position: relative; }
+:root .sidebar .icon-btn::before {
+  display: block;
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
 /* They still answer to a finger; they simply do it with light rather than
    with a box. */
 .sidebar .choice:active,
@@ -2820,4 +2854,235 @@ body.hide-english .verse-card .verse-en { display: none; }
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--rose-700);
+}
+
+/* ================================================= the Hebrew faces, ours
+
+   These used to come from fonts.googleapis.com, which meant a request to
+   Google carrying the reader's address before a word of Tehillim was on the
+   screen, a second blocking stylesheet in the way of the first paint, and no
+   Hebrew face at all with no signal. They are served from /fonts now and
+   nothing on the page talks to anyone but this server. See public/fonts/.
+
+   Each face names the range of letters it covers, so the browser fetches
+   only the family that is actually chosen, and within it only the Hebrew
+   file unless Latin letters are set in the same face. "Your device's font"
+   downloads nothing.                                                      */
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/frank-ruhl-libre-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/frank-ruhl-libre-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/heebo-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/heebo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/david-libre-400-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/david-libre-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/david-libre-500-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/david-libre-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/david-libre-700-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'David Libre';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/david-libre-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ================================== a thumb is 44px across, every control
+
+   Apple has asked for 44 points since the first iPhone and it is not a round
+   number somebody liked: it is roughly the contact patch of an adult thumb.
+   Eight controls here were smaller -- the two round header buttons at 40, the
+   two text-size steppers at 42x33, the place name in the subline at 83x21,
+   the font menu at 41 tall.
+
+   Several of them are the right SIZE: a 44px circle in the header would
+   crowd the date beside it, and the look is settled. So the circle stays 40
+   and an invisible 44x44 square is laid over it -- the target grows, nothing
+   moves, nothing is redrawn. A <select> cannot carry a pseudo-element, so
+   that one is simply made taller.
+
+   The test for this measures what is under the thumb with elementFromPoint,
+   not the width of the box, which is the only way a transparent overlay can
+   be told apart from a control that is genuinely too small. */
+
+/* Two of them simply grow. The round header buttons go 40 -> 44, which is
+   four pixels of header and no change to anything else; the text-size
+   steppers go 42x33 -> 44x44. */
+.icon-btn { width: 44px; height: 44px; }
+.stepper button { width: 44px; height: 44px; }
+
+/* The switch and the place name keep the size they are drawn at and get an
+   invisible square laid over them instead, because 29px and 21px tall are
+   what those two are meant to look like. ::before, not ::after -- ::after is
+   the switch's own knob and the specular arc on the glass controls, and this
+   rule would have quietly replaced both. */
+/* The place name in the header is clipped (`overflow: hidden`, for the
+   ellipsis when the place name is long), and a clipped element clips its own
+   pseudo-element too -- the invisible square was being cut back to the 21px
+   line of text. So this one grows for real, with the growth taken straight
+   back out again as negative margin so nothing around it moves, and the
+   underline redrawn as a background line at the foot of the text instead of
+   a border, which padding would otherwise push 12px down the page. */
+.linkish {
+  position: relative;
+  /* Above the next-zman strip, which is drawn after it in the header and was
+     taking the bottom third of the enlarged target back off it again. The
+     strip is not something you can tap, so nothing is lost by this. */
+  z-index: 2;
+  display: inline-block;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-top: -12px;
+  margin-bottom: -12px;
+  border-bottom: 0;
+  background-image: linear-gradient(var(--rose-200), var(--rose-200));
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: 0 calc(100% - 12px);
+}
+.linkish:hover {
+  background-image: linear-gradient(var(--rose-300), var(--rose-300));
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+  border-radius: inherit;
+  /* Nothing to see. This is only here to be touched. */
+}
+
+/* A <select> is as wide as its longest option unless it is told otherwise,
+   and "From alos 72 minutes" at double size is wider than the phone. */
+.choice { min-height: 44px; min-width: 0; }
+.sheet-row, .choice-row { flex-wrap: wrap; }
+
+/* ======================================== a ring you can see, everywhere
+
+   Two elements in the whole app had a focus ring. Everything else -- the
+   tabs, the switches, the place button, every link -- was focusable and gave
+   no sign of it, so somebody working down the page with the Tab key, or with
+   a switch control, or with a keyboard because a touchscreen is hard to use,
+   had no way to tell what they were about to press.
+
+   :focus-visible and not :focus, so the ring appears for the keyboard and
+   never flashes up under a thumb. It is drawn outside the element with an
+   offset, so it does not change any layout, and it is declared once here for
+   everything rather than remembered control by control. The shadow underneath
+   is what makes it visible on the glass bars, where a thin outline alone
+   disappears into whatever is scrolling past behind it. */
+:focus-visible {
+  outline: 2px solid var(--rose-700);
+  outline-offset: 2px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--white) 70%, transparent);
+}
+:root[data-theme="dark"] :focus-visible {
+  outline-color: #f4ccd2;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.55);
+}
+/* The tab bar and the number bars are capsules; the ring follows their shape
+   rather than sitting as a rectangle around a round control. */
+.tab:focus-visible, .switch:focus-visible, .icon-btn:focus-visible,
+.chapters a:focus-visible, .pill:focus-visible, .linkish:focus-visible {
+  border-radius: 999px;
+}
+
+
+/* ===================================== room for somebody else's text size
+
+   A reader who has set their phone's text to the largest size, or zoomed the
+   page to 200%, is the reader most likely to need this app. At 320px and
+   double text the zmanim rows were 374px wide inside a 320px window, so the
+   whole page scrolled sideways and the times were off the edge.
+
+   The name, its Hebrew and the time are a row only while a row fits. When it
+   does not, the time drops onto its own line underneath rather than pushing
+   the page wider -- the one thing that must never happen, because a page that
+   scrolls sideways is a page whose words run off into nowhere. */
+.zman, .up-row {
+  flex-wrap: wrap;
+}
+.zman .t, .up-row .up-time {
+  margin-left: auto;
+}
+.zman .labels, .up-row .up-labels, .up-row > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

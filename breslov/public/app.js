@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '60';
+  var BUILD = '61';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -94,60 +94,39 @@
   /**
    * Hebrew typefaces to read in.
    *
-   * Three are fetched from Google Fonts and only when chosen, so nothing is
-   * downloaded for a setting nobody touched. Each falls back to whatever the
-   * device already has, so a slow connection, a blocked request or no signal
-   * at all still leaves readable Hebrew rather than empty boxes. "Your
-   * device's font" downloads nothing and is the one to pick to stay wholly
-   * offline.
+   * Three of them are served from /fonts on this same server -- see
+   * public/fonts/README.md for why they are no longer fetched from Google --
+   * and the browser downloads only the one actually chosen, because each
+   * @font-face in styles.css names the letters it covers. Each falls back to
+   * whatever the device already has, so a slow connection or no signal at all
+   * still leaves readable Hebrew rather than empty boxes. "Your device's
+   * font" downloads nothing at all.
    */
   var FONTS = {
     frank: {
       label: 'Frank Ruhl — traditional',
-      google: 'Frank+Ruhl+Libre:wght@400;500;700',
       hebrew: "'Frank Ruhl Libre', 'Taamey Frank CLM', 'Frank Ruehl CLM', 'SBL Hebrew', David, 'Times New Roman', serif",
       english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
     },
     david: {
       label: 'David — classic',
-      google: 'David+Libre:wght@400;500;700',
       hebrew: "'David Libre', David, 'Taamey Frank CLM', 'Times New Roman', serif",
       english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
     },
     modern: {
       label: 'Heebo — modern',
-      google: 'Heebo:wght@400;500;700',
       hebrew: "'Heebo', 'Arial Hebrew', 'Noto Sans Hebrew', system-ui, sans-serif",
       english: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif",
     },
     system: {
       label: "Your device's font",
-      google: null,
       hebrew: "'SBL Hebrew', 'Taamey Frank CLM', 'Arial Hebrew', David, 'Times New Roman', serif",
       english: "'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif",
     },
   };
 
-  var fontsAsked = {};
-
-  /** Fetch a Google font once, and only because someone chose it. */
-  function requestFont(key) {
-    var font = FONTS[key];
-    if (!font || !font.google || fontsAsked[key]) return;
-    fontsAsked[key] = true;
-
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    // display=swap: show the fallback immediately and swap when it arrives,
-    // rather than leaving the page blank while waiting.
-    link.href = 'https://fonts.googleapis.com/css2?family=' + font.google + '&display=swap';
-    link.crossOrigin = 'anonymous';
-    document.head.appendChild(link);
-  }
-
   function applyFont() {
     var font = FONTS[state.font] || FONTS.frank;
-    requestFont(state.font);
     document.documentElement.style.setProperty('--hebrew', font.hebrew);
     document.documentElement.style.setProperty('--serif', font.english);
   }
@@ -244,6 +223,74 @@
     return node;
   }
 
+  /**
+   * Hebrew marked as Hebrew, wherever it ends up.
+   *
+   * Without lang="he" a screen reader keeps whatever voice the page declared
+   * -- English -- and reads לִקּוּטֵי מוֹהֲרַ״ן letter by letter, as "lamed, qof,
+   * ..." or as nothing at all. Forty-seven separate runs of Hebrew on the
+   * page were unmarked: the date, every psalm, every lesson, every guest's
+   * name. The <html lang="en"> is right for the app's own words, so the
+   * marking has to go on the Hebrew itself.
+   *
+   * It is done by sweeping the page rather than at each of the fifty-odd
+   * places that write Hebrew into it, because the last two times something
+   * had to be remembered at every call site -- the Ushpizin line in the
+   * widgets, and the arguments to unavailableNotice -- it was forgotten at
+   * some of them. A sweep cannot be forgotten at a call site that does not
+   * exist yet.
+   *
+   * Only the element that directly holds the Hebrew text is marked, never an
+   * ancestor: a row reading "Chesed · חֶסֶד" would otherwise have its English
+   * half declared Hebrew too.
+   */
+  var HEBREW_LETTERS = /[\u0590-\u05FF\uFB1D-\uFB4F]/;
+
+  function markHebrew(root) {
+    var scope = root && root.querySelectorAll ? root : document.body;
+    if (!scope) return;
+    var all = [scope].concat([].slice.call(scope.querySelectorAll('*')));
+    for (var i = 0; i < all.length; i++) {
+      var node = all[i];
+      if (node.nodeType !== 1 || node.lang === 'he') continue;
+      var own = false;
+      for (var k = 0; k < node.childNodes.length; k++) {
+        var child = node.childNodes[k];
+        if (child.nodeType === 3 && HEBREW_LETTERS.test(child.nodeValue)) { own = true; break; }
+      }
+      if (!own) continue;
+      node.setAttribute('lang', 'he');
+      // Only where the page is not already laying it out right-to-left, so
+      // this never reorders a line that was reading correctly before.
+      var dir = node.getAttribute('dir');
+      if (!dir) {
+        var flow = window.getComputedStyle ? getComputedStyle(node).direction : 'ltr';
+        if (flow === 'rtl') node.setAttribute('dir', 'rtl');
+      }
+    }
+  }
+
+  /**
+   * ...and it keeps up with the page on its own.
+   *
+   * Everything here is drawn after the fact, from the API, so a single sweep
+   * at startup would mark an empty page. The observer runs the sweep again
+   * whenever nodes or text change, once per frame -- it watches childList and
+   * characterData only, so the lens sliding along the number bar (which moves
+   * by changing a style attribute, many times a second) does not wake it.
+   */
+  function watchForHebrew() {
+    if (!window.MutationObserver) return;
+    var pending = false;
+    var observer = new MutationObserver(function () {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(function () { pending = false; markHebrew(document.body); });
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    markHebrew(document.body);
+  }
+
   function fill(node, child) {
     if (!node) return;
     node.textContent = '';
@@ -336,6 +383,34 @@
       : paragraphBlock(clean, className);
   }
 
+  /**
+   * Said where the English would be, when there is no English.
+   *
+   * Sefaria has not had every sefer translated -- Likutei Halachot, where a
+   * search for a chag most often lands, is almost entirely Hebrew. The app
+   * now steps past an untranslated piece where it can; where it cannot, the
+   * card says so in a line instead of ending in a block of Hebrew and no
+   * explanation. Nothing is ever translated here: an invented translation of
+   * Torah is worse than none.
+   */
+  function noTranslation() {
+    return el('p', 'no-en',
+      'Sefaria has no English for this piece yet, so only the Hebrew is here. ' +
+      'Nothing is translated by this app.');
+  }
+
+  /**
+   * Does this piece need the "no English" line under it?
+   *
+   * Only the question of whether a translation exists is asked here, not
+   * whether English is switched on: the switch is a class on <body> and the
+   * page is not re-drawn when it flips, so the line is always put in and CSS
+   * hides it along with the English it stands in for.
+   */
+  function wantsEnglish(data) {
+    return !!data && data.translated === false;
+  }
+
   /** One passage: Hebrew, then English, then the credit line. */
   function passage(data, label) {
     var box = el('div', 'passage');
@@ -345,6 +420,7 @@
     if (he) box.appendChild(he);
     var en = textBlock(data.english, 'en', data.startVerse);
     if (en) box.appendChild(en);
+    else if (wantsEnglish(data)) box.appendChild(noTranslation());
 
     var bits = [];
     if (data.credit) {
@@ -485,6 +561,7 @@
       var v = document.createDocumentFragment();
       if (spark.snippetHe) v.appendChild(el('p', 'verse-he', spark.snippetHe));
       if (spark.snippetEn) v.appendChild(el('p', 'verse-en', spark.snippetEn));
+      else if (wantsEnglish(spark)) v.appendChild(noTranslation());
       fillWith('verseBody', v);
 
       fill($('sparkFull'), passage(spark));
@@ -697,6 +774,7 @@
     if (p.ref) box.appendChild(el('div', 'passage-label', p.heRef || p.ref));
     if (p.he) box.appendChild(el('div', 'he', p.he));
     if (p.en && state.english) box.appendChild(el('div', 'en', p.en));
+    else if (!p.en && wantsEnglish(p)) box.appendChild(noTranslation());
 
     var src = el('div', 'source');
     if (p.credit) {
@@ -1931,8 +2009,73 @@
   var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
   var loaded = { tikkun: false, library: false };
 
-  function showPanel(name) {
+  /**
+   * What each page is called, for the browser's own title bar and history.
+   *
+   * The whole app lived at one address. Opening Tehillim changed nothing a
+   * browser could see, so: the phone's back gesture left the app instead of
+   * going back a page, the title said "Breslov Daily" whichever page you were
+   * on (which is also what the entry in the phone's app switcher said), and
+   * there was no way to send somebody the Tikkun HaKlali -- only the app.
+   */
+  var PANEL_TITLES = {
+    today: null,                         // the home page keeps the plain title
+    tehillim: "Today's Tehillim",
+    tikkun: 'Tikkun HaKlali',
+    weekly: 'Torah of the week',
+    zmanim: 'Zmanim',
+    search: 'Search',
+    about: 'Reminders & about',
+  };
+
+  /**
+   * The panel a web address asks for, or nothing if it asks for no panel.
+   *
+   * By path rather than by #hash, because the server already answers every
+   * path that is not an API call with the app itself, so /tikkun is a real
+   * address that can be bookmarked, shared or opened cold.
+   */
+  function panelFromUrl() {
+    var path = String(window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
+    return PANELS.indexOf(path) >= 0 ? path : null;
+  }
+
+  /**
+   * Put the current page in the browser's history and title.
+   *
+   * `replace` is for the first page of the session and for a panel opened
+   * because the address asked for it: pushing there would put a duplicate
+   * entry in the history and make the back gesture do nothing once.
+   */
+  function rememberPanel(name, replace) {
+    var title = PANEL_TITLES[name]
+      ? PANEL_TITLES[name] + ' · Breslov Daily'
+      : 'Breslov Daily';
+    document.title = title;
+    if (!window.history || !window.history.pushState) return;
+    var url = (name === 'today' ? '/' : '/' + name) + window.location.search;
+    try {
+      if (replace || panelFromUrl() === name) window.history.replaceState({ panel: name }, '', url);
+      else window.history.pushState({ panel: name }, '', url);
+    } catch (e) { /* a browser that will not take it still shows the page */ }
+  }
+
+  /**
+   * The back gesture, and an address pasted into a new tab.
+   *
+   * popstate covers back and forward; hashchange covers somebody editing the
+   * address bar in a browser that does not fire popstate for it.
+   */
+  function watchHistory() {
+    window.addEventListener('popstate', function () {
+      var want = panelFromUrl() || 'today';
+      if (want !== state.panel) showPanel(want, true);
+    });
+  }
+
+  function showPanel(name, fromHistory) {
     state.panel = name;
+    rememberPanel(name, !!fromHistory);
 
     // Moving to another page closes the sidebar. Without this, tapping
     // "Open" inside it left it hanging over the page you asked for.
@@ -2056,11 +2199,6 @@
    * password box sends you back to where you were going, landing somewhere
    * else makes it look as though it lost you.
    */
-  function panelFromAddress() {
-    var path = String(window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
-    return PANELS.indexOf(path) !== -1 ? path : '';
-  }
-
   function start() {
     applyTheme();
     applyFont();
@@ -2068,6 +2206,7 @@
     applyReadingPrefs();
     wakeUpTouchPresses();
     followPresses();
+    watchForHebrew();
     syncTopbarHeight();
     watchTopbarHeight();
     window.addEventListener('resize', syncTopbarHeight);
@@ -2143,8 +2282,11 @@
 
     learnAccessKey();
 
-    var asked = panelFromAddress();
-    if (asked) showPanel(asked);
+    watchHistory();
+    // The address decides which page opens, and the first page of the session
+    // replaces the history entry rather than adding one, so the very first
+    // back gesture leaves the app instead of doing nothing.
+    showPanel(panelFromUrl() || 'today', true);
 
     // Show the saved copy straight away, then bring it up to date.
     var saved = load(STORE.lastToday, null);

@@ -35,6 +35,16 @@ under each passage. Nothing is typed in by hand and nothing is paraphrased.
 If the server cannot reach Sefaria, the app says so plainly rather than showing
 you something that might be wrong.
 
+**Not everything has been translated.** Likutei Halachot in particular Sefaria
+carries almost entirely in Hebrew, and a search for a yom tov lands there more
+often than anywhere else — which is how the weekly card came out in Hebrew with
+nothing under it and no word about why. Where there is more than one piece to
+choose from, the app now steps past an untranslated one and takes the next in
+the same order, so the week's choice is still fixed for everyone and still
+about this week. Where there is nothing translated to step to, the card says so
+in a line under the Hebrew. It never translates anything itself: an invented
+translation of Torah is worse than none.
+
 Zmanim are calculated on the server with **kosher-zmanim** (the JavaScript
 version of KosherJava, the library most zmanim apps use). The Hebrew calendar,
 the parsha and candle lighting come from **@hebcal/core**. Both run locally —
@@ -288,8 +298,66 @@ different day.
 | The password on the Scriptable widget | `ios/scriptable/BreslovDaily.js`, the `ACCESS_KEY` line near the top |
 | Which seforim are in the rotation, or how often each comes up | `lib/library.js`, the `BOOKS` list — `weight` is how often |
 | The Tehillim division | `lib/library.js`, `TEHILLIM_BY_DAY` |
-| Colours and fonts | `public/styles.css`, the `:root` block at the top |
+| Colours | `public/styles.css`, the `:root` block at the top |
+| The Hebrew faces offered | `public/app.js`, the `FONTS` block — the files themselves are in `public/fonts/`, see the README there |
 | The app icon | `scripts/make-icons.js`, then run `node scripts/make-icons.js` |
+
+---
+
+## The twenty things a website has to get right
+
+Not a list of good intentions. Every line below is measured on the real page
+in a real browser, and each one was failing at some point — six of them were
+still failing when the list was first drawn up, and the measurement is what
+found them. Where a check once passed for the wrong reason, that is written
+down too, because a check that measures its own mechanism is worse than none.
+
+| | What it has to do | How it stands |
+|---|---|---|
+| 1 | **A skeleton while it loads, not a spinner.** A shape where the words will be, so the page is already the page. | 7 skeleton rules, no spinner anywhere |
+| 2 | **No dark patterns.** Every switch turns back, the settings close in one tap or on Escape, nothing nags and nothing is hidden. | 3 switches, all reversible |
+| 3 | **A tap answers before the work is done.** Every control presses under a finger, iPhone included. | 16 pressed-state rules |
+| 4 | **The bars never move.** The header and the tab bar sit in exactly the same place on all seven pages. | measured across every page |
+| 5 | **The backend never shows through.** No 404, no 500, no stack trace, no `[object Object]` — a plain sentence and a way to try again. | nothing leaks, even when the server refuses |
+| 6 | **It opens with no signal.** The shell, the last learning and the Hebrew font are all held on the phone. | reloads offline with everything there |
+| 7 | **Readable text.** Every run of words at 4.5:1 against what is actually behind it, translucent cards composited properly. | worst run 4.81:1 |
+| 8 | **The keyboard alone, with a ring you can see.** Tab reaches everything and shows where it is. | 21 controls, none without a ring |
+| 9 | **A screen reader reads it, and reads Hebrew as Hebrew.** `lang="he"` on every Hebrew run, one `h1`, named landmarks. | 15 of 15 Hebrew runs marked |
+| 10 | **Motion stops when the phone asks.** | every transition off under Reduce Motion |
+| 11 | **A thumb can hit every control.** 44px, measured by what is under the thumb rather than by the size of the box. | every control answers across a 44px square |
+| 12 | **Nothing jumps as the text arrives.** | cumulative layout shift 0 |
+| 13 | **It fits a 320px phone** and clears the home bar. | no sideways scroll |
+| 14 | **Somebody else's text size fits too.** 200% text on the smallest phone. | no sideways scroll |
+| 15 | **It installs to the home screen.** Manifest, three icons, standalone. | installs |
+| 16 | **Light enough to open on a train.** One blocking file in the head. | 8 requests |
+| 17 | **The back button works and a page can be linked.** `/tikkun` is a real address that opens cold; back goes back a page, not out of the app. | both |
+| 18 | **Dark mode follows the phone** without being asked. | follows |
+| 19 | **Every word says where it came from** — edition, translator, licence and a link to Sefaria. | every passage |
+| 20 | **Nobody else is watching.** No third party, no analytics, no cookies, no fonts fetched from anyone else. | no third-party request at all |
+
+Two of these were being reported wrongly rather than working: the "nobody
+else is watching" check could not read a single hostname because a constant
+had shadowed the browser's own `URL`, so it reported silence while the page
+was fetching fonts from Google on every load; and the keyboard check called
+`.focus()` from script, which deliberately does not count as keyboard focus,
+so it reported every control ringless whatever the stylesheet said.
+
+### What changed to get there
+
+- **The fonts are ours now.** They came from `fonts.googleapis.com` on every
+  load — a request to Google carrying the reader's address before a word of
+  Tehillim was on the screen, a second render-blocking stylesheet, and no
+  Hebrew face at all offline. They are served from `/fonts` and the browser
+  fetches only the family actually chosen. See `public/fonts/README.md`.
+- **A focus ring, once, for everything.** Two elements in the app had one.
+- **Hebrew marked as Hebrew,** by sweeping the page rather than by
+  remembering it at each of the fifty places that write Hebrew into it.
+- **Real addresses.** `/tehillim`, `/tikkun` and the rest, with the page's own
+  title, so the back gesture and the app switcher both say where you are.
+- **The quiet grey was too quiet.** `--ink-3` measured 3.17:1 and was carrying
+  real words in fourteen places.
+- **Room for somebody else's text size.** The zmanim rows wrap instead of
+  pushing the page sideways.
 
 ---
 

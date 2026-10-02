@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '60';
+const BUILD = '61';
 
 app.use(cors());
 
@@ -303,6 +303,7 @@ app.get('/api/diagnostics', route(async (req) => {
     guestRefs.every((g) => g.passage),
     `${guestRefs.filter((g) => g.passage).length} of ${guestRefs.length} guests have their Torah`);
 
+
   record('Yahrzeit seforim on Sefaria',
     yahrzeitBooks.some((b) => b.ok),
     `${yahrzeitBooks.filter((b) => b.ok).length} of ${yahrzeitBooks.length} found`);
@@ -390,9 +391,11 @@ app.get('/api/diagnostics', route(async (req) => {
   // Does the day's teaching actually load? The books resolving is not the same
   // as a reference in them being real.
   let teaching = null;
+  let sparkNow = null;
   if (texts.ok) {
     try {
       const spark = await daily.dailySpark(today);
+      sparkNow = spark;
       teaching = spark.available
         ? { ref: spark.ref, book: spark.book && spark.book.label }
         : null;
@@ -402,6 +405,29 @@ app.get('/api/diagnostics', route(async (req) => {
       record("Today's teaching", false, err.message);
     }
   }
+
+// Which of today's pieces Sefaria has in English.
+  //
+  // Asked because the weekly card came out in Hebrew only and nothing on the
+  // page or in here said why. A chag search lands most often in Likutei
+  // Halachot, which Sefaria carries in Hebrew and barely at all in English,
+  // and the picker took the first piece with Hebrew in it. It now steps past
+  // an untranslated piece where there is a translated one to step to -- so
+  // this line is how you tell whether it had anywhere to step.
+  //
+  // It is reported, never failed: a sefer nobody has translated is not a
+  // fault in this app, and the page says so plainly under the Hebrew.
+  const todayPieces = [
+    ['The day\'s teaching', sparkNow],
+    ["This week's Torah", weeklyNow],
+  ].filter(([, piece]) => piece && piece.available);
+  const translated = todayPieces.filter(([, piece]) => piece.translated);
+  record('English translations', true,
+    `${translated.length} of ${todayPieces.length} of today's pieces have English` +
+    (todayPieces.length
+      ? ' -- ' + todayPieces.map(([what, piece]) =>
+          `${what}: ${piece.translated ? 'yes' : 'Hebrew only'} (${piece.ref})`).join('; ')
+      : ''));
 
   // How many references each book yields, against what it should hold. A book
   // reporting far more pieces than it has lessons means the references being
@@ -462,6 +488,9 @@ app.get('/api/diagnostics', route(async (req) => {
           parsha: weeklyNow.parsha || null, says: weeklyNow.says || null }
       : { mode: null, reason: weeklyNow && weeklyNow.reason },
     chagWords,
+    translations: todayPieces.map(([what, piece]) => ({
+      what, ref: piece.ref, english: !!piece.translated,
+    })),
     yahrzeits: {
       total: yahrzeits.all().length,
       today: yahrzeits.yahrzeitsOn(dates.calendarFor(today, place, new Date()).hebrew).map((y) => y.name),
