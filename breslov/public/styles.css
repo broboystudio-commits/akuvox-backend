@@ -4504,3 +4504,135 @@ button.row:active, button.row.is-pressed {
 :root .tabs .tab { color: var(--text-2); }
 :root[data-theme="dark"] .tab,
 :root[data-theme="dark"] .tabs .tab { color: var(--text-2); }
+
+/* A yahrzeit that is today is marked by a word, not by a colour nobody can
+   read the meaning of. */
+.row-now {
+  margin-left: 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.row-value.he { font-family: var(--hebrew); direction: rtl; unicode-bidi: isolate; max-width: 48%; text-align: right; }
+.row.is-today .row-title { font-weight: 600; }
+
+
+/* ── the number wheel ────────────────────────────────────────────────── */
+
+/* Three rows, the chosen one in the middle. The height is exactly three rows
+   so the wheel cannot show a fourth half-row at the bottom, which is what
+   makes a scroller look like a list that has been cut off. */
+.wheel {
+  --wheel-row: 40px;
+  position: relative;
+  height: calc(var(--wheel-row) * 3);
+  margin: 0;
+}
+.wheel-list {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;      /* the page does not move with it */
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch; /* momentum, from the platform */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+  /* A row of padding top and bottom so the first and last numbers can reach
+     the middle. Without it you can never choose either of them. */
+  padding: var(--wheel-row) 0;
+  text-align: center;
+}
+.wheel-list::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.wheel-list:focus { outline: none; }
+.wheel-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+
+.wheel-item {
+  display: block;
+  width: 100%;
+  height: var(--wheel-row);
+  scroll-snap-align: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  /* --near is 1 in the middle and falls to 0 a couple of rows out. One
+     property drives both the size and the fade, so they cannot disagree. */
+  opacity: calc(0.28 + 0.72 * var(--near, 0));
+  transform: scale(calc(0.86 + 0.14 * var(--near, 0)));
+  transition: color 160ms var(--glide);
+}
+.wheel-item.is-chosen {
+  color: var(--accent);
+  font-weight: 650;
+  font-size: 1.1875rem;
+}
+.wheel-item:active { color: var(--accent); }
+
+/* Where the middle is: two hairlines, nothing else. A box round the chosen
+   number would be a third way of saying what the size and the colour already
+   say twice. */
+.wheel-rails {
+  position: absolute;
+  left: 0; right: 0;
+  top: var(--wheel-row);
+  height: var(--wheel-row);
+  pointer-events: none;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+
+/* In the page it sits in the card's own margin, with the psalm scrolling
+   past behind nothing: the wheel is on the surface, so there is nothing to
+   blur. */
+.card > .chapters {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--surface);
+  -webkit-mask-image: none;
+  mask-image: none;
+  padding: 4px var(--card-pad) 10px;
+  border-bottom: 1px solid var(--hair-soft);
+}
+.card > .chapters::before { display: none; }
+.chapters:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-list { scroll-behavior: auto; }
+  .wheel-item { transition: none; }
+}
+
+/* The wheel's numbers were inheriting the old lozenge: a 999px pill with a
+   border and a shadow on every one of them, which is what the row of
+   numbers used to be made of. A number in a wheel is a number. */
+.wheel .wheel-item,
+:root .wheel .wheel-item,
+:root[data-theme="dark"] .wheel .wheel-item {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+  padding: 0;
+  letter-spacing: 0;
+}
+.wheel .wheel-item::before,
+.wheel .wheel-item::after { display: none !important; }
+
+/* The bar is 68px tall and the page was leaving 66px for it. Two pixels of
+   the last line sat under it. */
+body { padding-bottom: calc(76px + var(--safe-bottom)); }
+
+/* The bar's own rim: a conic-gradient ring masked to the edge, left over
+   from the capsule. On a flush bar it shows as two pale warm smudges at the
+   far left and far right -- measured as 254,246,241 against a page of
+   250,247,244, which is exactly the sort of thing you see without being able
+   to say what it is. */
+.tabs::before,
+.tabs::after { display: none !important; }
+.topbar::before,
+.topbar::after { display: none !important; }

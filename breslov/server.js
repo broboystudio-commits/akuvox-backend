@@ -698,6 +698,19 @@ app.get('/api/inspiration', route(async (req) => {
   return cached(`nekuda:${daily.dayKey(date)}`, DAY, () => inspiration.forDay(date, calendar));
 }));
 
+/** Whoever's yahrzeit falls this Hebrew month, today's marked. */
+app.get('/api/yahrzeits', route(async (req) => {
+  const place = placeFromQuery(req);
+  const date = dateFromQuery(req, place);
+  const calendar = dates.calendarFor(date, place, new Date());
+  return {
+    month: calendar.hebrew.monthName,
+    monthHe: calendar.hebrew.monthHe || null,
+    day: calendar.hebrew.day,
+    people: yahrzeits.yahrzeitsIn(calendar.hebrew),
+  };
+}));
+
 app.get('/api/tehillim', route(async (req) => {
   const place = placeFromQuery(req);
   const date = dateFromQuery(req, place);

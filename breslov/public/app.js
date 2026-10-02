@@ -783,6 +783,189 @@
     return 'ten psalms, in order';
   }
 
+  /**
+   * The month's yahrzeits, as rows.
+   *
+   * Only the built-in figures, and only the ones whose date is settled: a
+   * yahrzeit on the wrong day is worse than no yahrzeit, so where the
+   * sources disagree the name is left out of the list rather than guessed
+   * at. The names here are the ones that are not in doubt.
+   */
+  /**
+   * A number wheel, the way a phone picks a number.
+   *
+   * The horizontal strip this replaces was ten 27px targets with a lens
+   * sliding along them. It was called ugly more than once and the complaint
+   * was right: that is a control from a settings screen, not something you
+   * pick a psalm with.
+   *
+   * Three rows at a time, the chosen one in the middle, the ones either side
+   * smaller and fainter so the eye knows which is chosen without anything
+   * being drawn round it.
+   *
+   * The scrolling is the browser's own, which is the whole point: momentum,
+   * rubber-banding at the ends and the feel of the platform come free and
+   * cannot be imitated convincingly in script. Snapping is CSS. What is left
+   * for JavaScript is reading which number is in the middle.
+   */
+  function numberWheel(numbers, options) {
+    var opts = options || {};
+    var wrap = el('div', 'wheel');
+    var list = el('div', 'wheel-list');
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', opts.label || 'Choose a number');
+    list.tabIndex = 0;
+
+    var items = numbers.map(function (n, i) {
+      var item = el('button', 'wheel-item', String(n));
+      item.type = 'button';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', 'false');
+      item.setAttribute('data-index', String(i));
+      list.appendChild(item);
+      return item;
+    });
+
+    wrap.appendChild(list);
+    // Two hairlines marking the middle, not a box: the chosen number is
+    // already the biggest and darkest thing in the wheel.
+    wrap.appendChild(el('div', 'wheel-rails'));
+
+    var chosen = -1;
+    var settling = 0;
+    // Set while the wheel is being moved by something other than a finger --
+    // the page scrolling past a psalm, say. Without it the two chase each
+    // other: the page turns the wheel, the wheel reports a pick, the pick
+    // scrolls the page, and a smooth scroll through five psalms leaves the
+    // wheel wherever the race finished rather than where it was sent.
+    var quiet = false;
+
+    function paint() {
+      var box = list.getBoundingClientRect();
+      if (!box.height) return;
+      var middle = box.top + box.height / 2;
+      var near = 0;
+      var gap = Infinity;
+      items.forEach(function (item, i) {
+        var r = item.getBoundingClientRect();
+        var away = Math.abs((r.top + r.height / 2) - middle);
+        if (away < gap) { gap = away; near = i; }
+        // One row away is faded and a little smaller; two away is nearly
+        // gone. The falloff is what makes it read as a wheel.
+        var steps = Math.min(3, away / Math.max(1, r.height));
+        item.style.setProperty('--near', String(Math.max(0, 1 - steps)));
+      });
+      items.forEach(function (item, i) {
+        item.classList.toggle('is-chosen', i === near);
+        item.setAttribute('aria-selected', String(i === near));
+      });
+      if (near !== chosen) {
+        chosen = near;
+        if (opts.onMove) opts.onMove(numbers[near], near);
+      }
+    }
+
+    function centre(index, how) {
+      var item = items[index];
+      if (!item) return;
+      var to = item.offsetTop - (list.clientHeight - item.offsetHeight) / 2;
+      try { list.scrollTo({ top: to, behavior: how || 'smooth' }); }
+      catch (e) { list.scrollTop = to; }
+    }
+
+    var waiting = false;
+    list.addEventListener('scroll', function () {
+      if (!waiting) {
+        waiting = true;
+        window.requestAnimationFrame(function () { waiting = false; paint(); });
+      }
+      // Settled is the only moment worth telling anybody about: firing on
+      // every frame of a flick would open ten psalms on the way past.
+      window.clearTimeout(settling);
+      settling = window.setTimeout(function () {
+        paint();
+        if (quiet) { quiet = false; return; }
+        if (opts.onPick) opts.onPick(numbers[chosen], chosen);
+      }, 150);
+    }, { passive: true });
+
+    items.forEach(function (item, i) {
+      item.addEventListener('click', function () {
+        centre(i);
+        if (opts.onPick) opts.onPick(numbers[i], i);
+      });
+    });
+
+    // A wheel that only answers to a finger is a wheel half the people
+    // cannot use.
+    list.addEventListener('keydown', function (e) {
+      var step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      var want = Math.max(0, Math.min(items.length - 1, chosen + step));
+      centre(want);
+      if (opts.onPick) opts.onPick(numbers[want], want);
+    });
+
+    /**
+     * Put a number in the middle without saying anything about it.
+     *
+     * Jumped rather than eased, deliberately: an eased move fires scroll
+     * events for a third of a second, and every one of them is a chance for
+     * the page to be told something it is in the middle of doing itself.
+     */
+    wrap.setTo = function (index, how) {
+      if (index === chosen) return;
+      quiet = true;
+      centre(index, how || 'auto');
+      paint();
+      window.clearTimeout(settling);
+      settling = window.setTimeout(function () { quiet = false; }, 200);
+    };
+    window.requestAnimationFrame(function () {
+      centre(Math.max(0, opts.start || 0), 'auto');
+      paint();
+    });
+    return wrap;
+  }
+
+  function renderYahrzeitMonth(data) {
+    var into = $('yahrzeitMonth');
+    if (!into) return;
+    var people = (data && data.people) || [];
+
+    var frag = document.createDocumentFragment();
+    var head = el('h2', 'rows-head', (data.month || 'This month'));
+    frag.appendChild(head);
+
+    if (!people.length) {
+      frag.appendChild(el('p', 'rows-note',
+        'Nobody on the built-in list has a yahrzeit in ' + (data.month || 'this month') + '.'));
+      fill(into, frag);
+      return;
+    }
+
+    var rows = el('div', 'rows');
+    people.forEach(function (p) {
+      var row = el('div', 'row row-static' + (p.today ? ' is-today' : ''));
+      var main = el('span', 'row-main');
+      var title = el('span', 'row-title', p.name);
+      if (p.today) title.appendChild(el('span', 'row-now', 'today'));
+      main.appendChild(title);
+      var sub = [p.day + ' ' + (p.month || '')];
+      if (p.years) sub.push(p.years + ' years');
+      main.appendChild(el('span', 'row-sub', sub.join(' · ')));
+      row.appendChild(main);
+      row.appendChild(el('span', 'row-value he', p.he || ''));
+      rows.appendChild(row);
+    });
+    frag.appendChild(rows);
+    frag.appendChild(el('p', 'rows-note',
+      'A Torah from whoever\'s yahrzeit it is appears on the Today screen. ' +
+      'It never takes the place of the day\'s נקודה.'));
+    fill(into, frag);
+  }
+
   function renderUshpizin(data) {
     var card = $('ushpizinCard');
     if (!card) return;
@@ -1018,20 +1201,20 @@
     });
     fillWith('tehillimBody', wrap);
 
-    var track = el('div', 'chapter-track');
-    teh.parts.forEach(function (part, i) {
-      var b = el('button', null, String(part.chapter || (i + 1)));
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        var node = $('teh-ch-' + i);
-        if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      track.appendChild(b);
-    });
     // One psalm is not a list to choose from.
-    if (teh.parts.length > 1) fillWith('tehillimNav', track);
-    else fillWith('tehillimNav', document.createDocumentFragment());
-    wireNumberBars();
+    if (teh.parts.length > 1) {
+      fillWith('tehillimNav', numberWheel(
+        teh.parts.map(function (part, i) { return part.chapter || (i + 1); }),
+        {
+          label: "Which of today's psalms",
+          onPick: function (chapter, i) {
+            var node = $('teh-ch-' + i);
+            if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          },
+        }));
+    } else {
+      fillWith('tehillimNav', document.createDocumentFragment());
+    }
     watchTehillim(teh.parts.length);
   }
 
@@ -1111,16 +1294,14 @@
     // band can run the full width of the card -- covering the words as they
     // pass behind it -- while the numbers themselves stay a sensible size
     // together on the left, the way a segmented control does.
-    var track = el('div', 'chapter-track');
-    tikkun.parts.forEach(function (part, i) {
-      var b = el('button', null, String(part.chapter));
-      b.type = 'button';
-      b.setAttribute('data-index', String(i));
-      b.addEventListener('click', function () { goToChapter(i); });
-      track.appendChild(b);
-    });
-    fillWith('tikkunNav', track);
-    wireNumberBars();
+    tikkunWheel = numberWheel(
+      tikkun.parts.map(function (part) { return part.chapter; }),
+      {
+        label: 'Which psalm of the Tikkun HaKlali',
+        start: state.tikkunChapter || 0,
+        onPick: function (chapter, i) { goToChapter(i); },
+      });
+    fillWith('tikkunNav', tikkunWheel);
 
     markChapter(state.tikkunChapter || 0, total);
     offerResume(tikkun, total);
@@ -1128,21 +1309,16 @@
   }
 
   /** Highlight a number and update the "3 of 10" counter. */
+  /**
+   * Scrolling the psalms turns the wheel, and turning the wheel scrolls the
+   * psalms. The guard is what stops those two chasing each other: a wheel
+   * moved by the page must not then tell the page to move.
+   */
   function markChapter(index, total) {
     state.tikkunChapter = index;
-    var nav = $('tikkunNav');
-    if (nav) {
-      Array.prototype.forEach.call(nav.querySelectorAll('button'), function (b) {
-        var on = Number(b.getAttribute('data-index')) === index;
-        b.classList.toggle('is-active', on);
-        // A number that has scrolled out of the track is no use; bring it
-        // back into view on the narrow screens where the track can scroll.
-        if (on && b.parentElement && b.parentElement.scrollWidth > b.parentElement.clientWidth) {
-          var left = b.offsetLeft - (b.parentElement.clientWidth - b.offsetWidth) / 2;
-          b.parentElement.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
-        }
-      });
-    }
+    // The wheel keeps itself quiet while it is being moved from here, so
+    // this can simply say where the reading has got to.
+    if (tikkunWheel) tikkunWheel.setTo(index);
     setText('tikkunProgress', (index + 1) + ' of ' + total);
   }
 
@@ -2200,7 +2376,8 @@
     search: 'more', settings: 'more', about: 'more',
     sources: 'more', privacy: 'more', terms: 'more',
   };
-  var loaded = { tikkun: false, library: false, site: false };
+  var tikkunWheel = null;
+  var loaded = { tikkun: false, library: false, site: false, yahrzeits: false };
 
   /**
    * What each page is called, for the browser's own title bar and history.
@@ -2405,6 +2582,21 @@
         .catch(function () { setText('aboutBuild', ''); });
     }
     if (name === 'settings') setText('settingsPlace', state.place.name);
+
+    // The month's yahrzeits. Today's is on the home screen; this page is
+    // about who else is coming, which is the question somebody opens it to
+    // ask.
+    if (name === 'yahrzeit' && !loaded.yahrzeits) {
+      loaded.yahrzeits = true;
+      api('yahrzeits')
+        .then(renderYahrzeitMonth)
+        .catch(function () {
+          loaded.yahrzeits = false;
+          fill($('yahrzeitMonth'), unavailableNotice('yahrzeits', null, function () {
+            loaded.yahrzeits = false; showPanel('yahrzeit');
+          }));
+        });
+    }
 
     // A policy page that says when it last changed, taken from the build the
     // page is actually running rather than from a date typed in by hand --

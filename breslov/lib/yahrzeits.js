@@ -206,9 +206,36 @@ function yahrzeitsOn(hebrew) {
     }));
 }
 
+/**
+ * Everyone whose yahrzeit falls in a given Hebrew month, in date order.
+ *
+ * For the Yahrzeits page, which is a page about the month rather than about
+ * today: today's is on the home screen already, and what this answers is
+ * "who else is coming".
+ */
+function yahrzeitsIn(hebrew) {
+  if (!hebrew || !hebrew.monthName) return [];
+  return YAHRZEITS
+    .filter((y) => monthsMatching(y.month, hebrew.monthName))
+    .sort((a, b) => a.day - b.day)
+    .map((y) => ({
+      id: y.id,
+      name: y.name,
+      he: y.he,
+      about: y.about,
+      day: y.day,
+      month: y.month,
+      year: y.year || null,
+      book: y.book || null,
+      years: y.year ? hebrew.year - y.year : null,
+      today: y.day === hebrew.day,
+      passed: y.day < hebrew.day,
+    }));
+}
+
 /** Everything in the list, for the diagnostics page. */
 function all() {
   return YAHRZEITS.map((y) => Object.assign({}, y));
 }
 
-module.exports = { YAHRZEITS, yahrzeitsOn, all };
+module.exports = { YAHRZEITS, yahrzeitsOn, yahrzeitsIn, all };
