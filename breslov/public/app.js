@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '65';
+  var BUILD = '66';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -1160,6 +1160,75 @@
     return bar ? Math.round(bar.getBoundingClientRect().height) : 96;
   }
 
+  /**
+   * The top bar gets out of the way while you read.
+   *
+   * Scroll down a psalm and it slides up out of sight; scroll back and it
+   * comes straight down again, the way Safari's own bar does. On a phone the
+   * header is 154px of a 844px screen -- nearly a fifth of the page given to
+   * a date you have already read and a button you are not reaching for.
+   *
+   * Four things make it behave rather than flicker:
+   *
+   *   A dead zone. Three pixels of movement is a thumb resting, not a scroll,
+   *   and reacting to it means the bar twitches while you hold the phone.
+   *
+   *   Nothing hides until you are past the bar's own height. Hiding it in the
+   *   first few pixels takes the date away before it has gone anywhere, and
+   *   the page jumps as it goes.
+   *
+   *   It always comes back at the top, whatever the last direction was.
+   *
+   *   And it never hides while the search field is open, while the menu is
+   *   open, or while something in the bar has focus -- taking a text field
+   *   off the screen while somebody is typing in it is its own kind of rude,
+   *   and a keyboard user would lose the control they were on.
+   */
+  function hideBarWhileReading() {
+    var bar = document.querySelector('.topbar');
+    if (!bar) return;
+    var lastY = window.scrollY || 0;
+    var hidden = false;
+    var waiting = false;
+
+    var decide = function () {
+      waiting = false;
+      var y = Math.max(0, window.scrollY || 0);
+      var dy = y - lastY;
+      if (Math.abs(dy) < 3) return;            // a thumb resting on the glass
+      lastY = y;
+
+      // Only a field somebody is typing in holds the bar open. The first
+      // version held it for anything focused inside it -- and closing the
+      // menu hands focus back to the menu button, which is in the bar, so
+      // after one visit to the settings the header never hid again.
+      var on = document.activeElement;
+      var typing = !!on && bar.contains(on) &&
+        /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName);
+      var busy = searchBarOpen() || sidebarOpen() || typing || stillness();
+      var tall = bar.offsetHeight || 120;
+
+      var wantHidden = !busy && dy > 0 && y > tall;
+      if (y <= 2) wantHidden = false;          // the top always shows it
+      if (wantHidden === hidden) return;
+      hidden = wantHidden;
+      bar.classList.toggle('is-tucked', hidden);
+    };
+
+    window.addEventListener('scroll', function () {
+      if (waiting) return;
+      waiting = true;
+      window.requestAnimationFrame(decide);
+    }, { passive: true });
+
+    // Changing page starts again from the top with the bar showing.
+    document.addEventListener('bd:panel', function () {
+      hidden = false;
+      lastY = 0;
+      bar.classList.remove('is-tucked');
+    });
+  }
+
   function syncTopbarHeight() {
     document.documentElement.style.setProperty('--topbar-h', topbarHeight() + 'px');
   }
@@ -1736,22 +1805,24 @@
   }
 
   /**
-   * Push the sheet down with a finger.
+   * Push the menu back into the corner it came out of.
    *
-   * A sheet that can only be dismissed by finding a small cross in its corner
-   * is a dialog wearing a sheet's clothes. This one follows the finger: it
-   * goes down as far as it is pushed, never up, the page behind it dims less
-   * the further it travels, and letting go either sends it the rest of the
-   * way or springs it back.
+   * A panel that can only be dismissed by finding a small cross in its corner
+   * is a dialog. This one follows the finger: it goes up, towards the button
+   * that opened it, as far as it is pushed; the page behind it dims less the
+   * further it travels; and letting go either sends it the rest of the way or
+   * springs it back.
    *
-   * It goes either on a long push -- past a third of its own height -- or on
-   * a short fast flick, because those are two different ways of saying the
-   * same thing and an iPhone honours both. Velocity is measured over the last
-   * 120ms rather than the whole gesture, so a slow drag that ends with a
-   * flick counts as a flick.
+   * Up, because the panel hangs off a button in the top right and that is
+   * where it belongs. For one build it was a sheet rising from the floor and
+   * pushed back down, which put the whole height of a phone between the thing
+   * you touched and the thing that answered.
    *
-   * Only below 900px, where it is a sheet. Above that it is a centred modal
-   * and there is nowhere for it to go.
+   * It goes on a long push -- past a quarter of its own height -- or on a
+   * short fast flick, because those are two different ways of saying the same
+   * thing and an iPhone honours both. The flick is measured over the last few
+   * frames, not the whole gesture, so a slow drag that ends in a flick counts
+   * as one.
    */
   function dragToDismiss() {
     var menu = $('sideMenu');
@@ -1782,11 +1853,11 @@
 
     menu.addEventListener('pointermove', function (e) {
       if (!dragging) return;
-      travelled = Math.max(0, e.clientY - startY);   // down only
-      // Rubber band: the first hundred pixels are one to one, and past that
-      // it gets heavier, the way every list on an iPhone does at its end.
-      var shown = travelled <= 100 ? travelled : 100 + (travelled - 100) * 0.45;
-      menu.style.transform = 'translate3d(0,' + shown.toFixed(1) + 'px,0)';
+      travelled = Math.max(0, startY - e.clientY);   // up only
+      // Rubber band: the first eighty pixels are one to one, and past that it
+      // gets heavier, the way every list on an iPhone does at its end.
+      var shown = travelled <= 80 ? travelled : 80 + (travelled - 80) * 0.45;
+      menu.style.transform = 'translate3d(0,' + (-shown).toFixed(1) + 'px,0)';
       if (scrim) {
         var height = menu.offsetHeight || 1;
         scrim.style.opacity = String(Math.max(0, 1 - (travelled / height) * 0.9));
@@ -1800,8 +1871,8 @@
       try { menu.releasePointerCapture(e.pointerId); } catch (err) { /* already gone */ }
 
       var over = e.timeStamp - lastAt;
-      var speed = over > 0 ? (e.clientY - lastY) / over : 0;   // px per ms, down is +
-      var far = travelled > (menu.offsetHeight || 1) * 0.33;
+      var speed = over > 0 ? (lastY - e.clientY) / over : 0;   // px per ms, up is +
+      var far = travelled > (menu.offsetHeight || 1) * 0.25;
       var flicked = speed > 0.5;
 
       menu.style.transition = '';
@@ -2312,6 +2383,7 @@
       replay(panel);
     }
     window.scrollTo({ top: 0, behavior: 'auto' });
+    document.dispatchEvent(new CustomEvent('bd:panel', { detail: name }));
 
     if (name === 'search' && !searchState.query) runSearch('');
 
@@ -2516,6 +2588,7 @@
     wakeUpTouchPresses();
     followPresses();
     watchForHebrew();
+    hideBarWhileReading();
     syncTopbarHeight();
     watchTopbarHeight();
     window.addEventListener('resize', syncTopbarHeight);

@@ -3203,25 +3203,39 @@ body.hide-english .verse-card .verse-en { display: none; }
    It was neither: a panel pinned to the top-right corner with square top
    corners against the edge of the screen, which read as something that had
    come loose rather than something that had been presented. */
+/* The menu belongs to the button that opens it.
+
+   It was a bottom sheet for one build and that was wrong, as soon as it was
+   in front of somebody: you reach for a button in the top right corner and a
+   panel arrives from the bottom of the screen, with the whole height of the
+   phone between the thing you touched and the thing that answered. A sheet is
+   right when it is summoned by the page -- a share sheet, a date picker. A
+   menu hangs off its button.
+
+   So it grows out of the top right corner, which is where the button is, and
+   it is dismissed by pushing it back up there. */
 @media (max-width: 719px) {
   .sidebar {
-    top: auto;
-    right: 0;
-    left: 0;
-    bottom: 0;
-    width: 100%;
+    top: calc(var(--safe-top) + 64px);
+    right: 10px;
+    left: auto;
+    bottom: auto;
+    width: min(340px, calc(100vw - 20px));
     max-width: none;
-    max-height: min(86vh, calc(100vh - var(--safe-top) - 24px));
-    border-radius: 24px 24px 0 0;
-    padding: 10px 22px 0;
-    /* Starts below the screen and rides up on the glide. The old one faded
-       and scaled from the corner, which is the gesture of a popover, not of
-       a sheet. */
-    transform: translate3d(0, 100%, 0);
-    opacity: 1;
-    transition: transform var(--glide-ms) var(--glide);
+    max-height: calc(100vh - var(--safe-top) - var(--safe-bottom) - 100px);
+    border-radius: 24px;
+    padding: 12px 20px 16px;
+    /* Out of the corner it belongs to, not up from the floor. */
+    transform-origin: top right;
+    transform: translate3d(0, -10px, 0) scale(0.94);
+    opacity: 0;
+    transition: transform var(--glide-ms) var(--glide),
+                opacity 160ms var(--glide);
   }
-  .sidebar.is-open { transform: translate3d(0, 0, 0); }
+  .sidebar.is-open {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
 
   /* Deeper than the bars -- this one has to separate itself from a whole
      page, not pass over a line of text -- but not so deep that the page
@@ -3234,19 +3248,10 @@ body.hide-english .verse-card .verse-en { display: none; }
     -webkit-backdrop-filter: blur(30px) saturate(190%);
   }
 
-  /* The grabber, at iOS's own size: 36 x 5, centred, and nothing else on its
-     line. */
-  .sheet-grabber {
-    width: 36px;
-    height: 5px;
-    margin: 0 auto 14px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--ink) 22%, transparent);
-  }
-
-  /* Room under the last row for the home bar, so the sheet can reach the
-     bottom edge of the screen without its last control sitting on it. */
-  .sheet-floor { height: calc(var(--safe-bottom) + 18px); }
+  /* The grabber was a sheet's affordance -- the handle you pull it down by.
+     A menu hanging off a button is not pulled anywhere, so it goes. */
+  .sheet-grabber { display: none; }
+  .sheet-floor { height: 2px; }
 }
 
 @media (min-width: 720px) {
@@ -3635,9 +3640,8 @@ main {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
-/* The grabber is the obvious place to take hold of, so it says so. */
-.sheet-grabber { cursor: grab; }
-.sidebar:active .sheet-grabber { cursor: grabbing; }
+/* The grabber went with the sheet it belonged to; the menu is pushed back up
+   into its own corner instead, which needs no handle. */
 
 /* While a finger is on it nothing eases -- the sheet IS the finger. The drag
    turns the transitions off with an inline style and clears it on release, so
@@ -3652,4 +3656,195 @@ body.no-scroll {
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition-duration: 0.001ms !important; }
+}
+
+
+/* ═════════════════════════════════════════════ the numbers lose their box
+
+   Said more than once and said plainly: the number row was ugly. It was a
+   capsule of frosted glass with a lit top edge, a shaded bottom edge, a
+   refracting rim, a contact shadow and a soft one -- a segmented control, and
+   a heavy one, sitting in the middle of a page of Tehillim. Every piece of
+   that was doing its job; the job was wrong. A row of psalm numbers is a
+   reference, like the numbers down the margin of a sefer, and it should sit
+   on the page rather than on a slab laid over it.
+
+   The glass that slides stays. That was the part worth having -- a lens that
+   comes to the finger and magnifies what it passes -- and it reads properly
+   once there is nothing else made of glass an inch away from it.           */
+
+.chapters .chapter-track {
+  padding: 5px 2px;
+  border-radius: 0;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+/* The rim went with the box it was the rim of. */
+.chapters .chapter-track::after { display: none; }
+
+/* A numeral you are not on, with no lozenge of its own either. The track used
+   to be glass and the numbers on it had to be legible against glass; on the
+   page they are simply numbers, in the quiet tier, a little apart from each
+   other so ten of them do not read as one long number. */
+:root .chapters .chapter-track button:not(.is-active),
+:root[data-theme="dark"] .chapters .chapter-track button:not(.is-active) {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+/* All ten across a phone, still. A track that scrolls hides half the psalms
+   behind a gesture nobody is told about -- and the lens switches itself off
+   when the row overflows, because it cannot be positioned against something
+   that is also sliding underneath it. Widening these to 34px was enough to
+   tip the row over on a 390px phone, and the lens simply disappeared. */
+.chapters .chapter-track { gap: 2px; }
+.chapters .chapter-track button {
+  min-width: 27px;
+  padding: 8px 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+/* The lens had to change colour as well as lose its frame.
+   It was white -- which it could be, because it sat on a tinted glass
+   capsule. On a cream card a white pill is invisible: the first version of
+   this showed the number you are on in bold rose and nothing else at all, and
+   the lens was still there, still sliding, simply unable to be seen.
+   In daylight it is the same soft rose the next zman is marked with, so the
+   page has one way of saying "this one"; in the dark it stays the bright
+   pane, which is what reads there. */
+.chapters .chapter-track .bar-lens {
+  top: 4px;
+  height: calc(100% - 8px);
+  background: linear-gradient(120deg, var(--rose-100) 0%, var(--gold-100) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--rose-300) 45%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+}
+:root[data-theme="dark"] .chapters .chapter-track .bar-lens {
+  background: var(--bar-lens);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 4px 10px -5px rgba(0, 0, 0, 0.5);
+}
+/* The chromatic rim was the loudest thing on the page once the box went. A
+   plain specular highlight is enough to say "glass" when it is the only
+   glass there is. */
+.chapters .chapter-track .bar-lens::before { display: none; }
+
+/* And the number riding in the lens is read against the lens, not the page. */
+:root .chapters .chapter-track button.is-active {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  /* Darker than --rose-700, which works out at 4.73:1 on paper and measured
+     4.18:1 on the page -- the rim inside the lens and the blur behind it both
+     take a little off, and the number sits at the rose end of a gradient
+     rather than the mean of it. 5.87:1 on the rose, which leaves room for
+     both. --bar-on is the near-black for reading off a bright pane and
+     belongs to the dark theme, where the lens is still white. */
+  color: #7a4650;
+  font-weight: 650;
+}
+:root[data-theme="dark"] .chapters .chapter-track button.is-active {
+  color: var(--bar-on);
+}
+:root .chapters .chapter-track button.is-active::before,
+:root .chapters .chapter-track button.is-active::after { display: none; }
+
+/* Room where the capsule's padding used to be, so the row does not sit tight
+   against the words above and below it. */
+.chapters { margin-bottom: 20px; }
+
+
+/* ── the top bar gets out of the way ─────────────────────────────────── */
+
+/* It slides up by exactly its own height, so nothing of it is left peeping
+   over the edge, and comes back on the same curve as everything else.
+
+   `position: sticky` is kept rather than swapped for fixed: sticky leaves its
+   space in the flow, so the page under it does not jump by 154px the moment
+   the bar tucks away. The transform is the only thing that moves. */
+.topbar {
+  transition: transform var(--glide-ms) var(--glide);
+  /* No `will-change: transform` here, however much it looks like it belongs.
+     will-change makes an element its own backdrop root, and this element's
+     whole job is to blur the page behind it -- with the hint on, there is no
+     "behind" left to blur and the bar goes from frosted glass to flat tint.
+     Measured at 0.00 against 9.45 without it. The same hint is safe on the
+     tab bar, which is why it is there and not here. */
+}
+.topbar.is-tucked {
+  transform: translate3d(0, -100%, 0);
+}
+
+/* The psalm numbers park themselves just under the header. When the header
+   goes they come up with it, on the same curve and over the same time, or
+   the row would be left floating in the middle of nothing with the psalm
+   scrolling past above it.
+
+   `top` is the sticky offset and it is animatable; the two moving together is
+   the point, so they share the one duration and the one curve. */
+.card > .chapters {
+  transition: top var(--glide-ms) var(--glide);
+}
+.topbar.is-tucked ~ main .card > .chapters {
+  top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar { transition: none; }
+  .topbar.is-tucked { transform: none; }
+}
+
+
+/* ── the numbers stay legible with a psalm running behind them ───────── */
+
+/* The capsule was doing two jobs. One was decoration and it is gone. The
+   other was this: the row is sticky, so once you are reading, the words of
+   the psalm scroll up through it, and ten numerals laid straight over moving
+   Hebrew are unreadable -- both of them are.
+
+   What replaces it is not a slab. It is the full width of the card, has no
+   edge, no rim and no corners, and does nothing at all until there is
+   something behind it: a blur, and the faintest wash of the page's own
+   colour, faded out top and bottom so it has no boundary anywhere. You see
+   the text go soft behind the numbers rather than disappear behind a box. */
+.card > .chapters {
+  padding: 10px 0 12px;
+  /* Wider than the card's text column by the card's own padding, so the blur
+     runs edge to edge and a word does not appear sharp beside the first
+     numeral. */
+  margin-left: calc(var(--card-pad) * -1);
+  margin-right: calc(var(--card-pad) * -1);
+  padding-left: var(--card-pad);
+  padding-right: var(--card-pad);
+}
+/* The blur and the wash go on a layer BEHIND the numbers, not on the row
+   itself. Putting the fade on the row meant the mask took the numerals and
+   the lens with it: the fade reached far enough into the row to make the
+   number you are on semi-transparent, and it measured 4.18:1 over moving
+   Hebrew where it needs 4.5. A mask also makes an element its own backdrop
+   root, so the blur it was carrying had nothing left to blur. */
+.card > .chapters::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  /* 72% left a numeral you are not on at 4.37:1 with a line of Hebrew
+     passing under it. The wash has to carry the row, not merely hint at it. */
+  background: color-mix(in srgb, var(--card-bg-top) 86%, transparent);
+  /* No edge anywhere: it fades out top and bottom so you see the words go
+     soft rather than disappear behind a box. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }
