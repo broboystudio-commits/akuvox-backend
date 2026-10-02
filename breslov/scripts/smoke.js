@@ -163,8 +163,50 @@ async function checkTheLock(server, report) {
   if (health.body && health.body.locked === true) console.log(`${locked} ok`);
   else { console.log(`${locked} FAIL  health says locked=${health.body && health.body.locked}`); report(); }
 
+  // "Forget everything you hold about me" has to actually expire the cookie,
+  // not just answer cheerfully. The whole promise on the privacy page is that
+  // one tap removes the one thing this server put on the device.
+  const { port } = server.address();
+  const dropped = await fetch(`http://127.0.0.1:${port}/api/forget`, {
+    method: 'POST',
+    headers: { Cookie: cookie.split(';')[0] },
+  });
+  const sent = dropped.headers.get('set-cookie') || '';
+  const forgot = '  forget expires the access cookie'.padEnd(42);
+  if (dropped.status === 200 && /bd_access=;/.test(sent) && /Max-Age=0/.test(sent)) {
+    console.log(`${forgot} ok`);
+  } else {
+    console.log(`${forgot} FAIL  ${dropped.status}, Set-Cookie: ${sent || 'none'}`);
+    report();
+  }
+
   delete process.env.SITE_PASSWORD;
   delete process.env.SITE_USER;
+
+  // Who runs the site comes from the environment and nowhere else. An empty
+  // answer is the right answer when nothing has been set -- what must never
+  // happen is a name appearing because it was written into a file.
+  const blank = await call(server, '/api/site');
+  const noOwner = '  site details are empty until set'.padEnd(42);
+  if (blank.status === 200 && blank.body.owner === '' && blank.body.contact === '') {
+    console.log(`${noOwner} ok`);
+  } else {
+    console.log(`${noOwner} FAIL  ${JSON.stringify(blank.body)}`);
+    report();
+  }
+
+  process.env.SITE_OWNER = 'A Test Owner';
+  process.env.SITE_CONTACT = 'test@example.invalid';
+  const filled = await call(server, '/api/site');
+  delete process.env.SITE_OWNER;
+  delete process.env.SITE_CONTACT;
+  const owner = '  and carry what the server is given'.padEnd(42);
+  if (filled.body.owner === 'A Test Owner' && filled.body.contact === 'test@example.invalid') {
+    console.log(`${owner} ok`);
+  } else {
+    console.log(`${owner} FAIL  ${JSON.stringify(filled.body)}`);
+    report();
+  }
 
   // Back to open: proves the lock really is off when no password is set,
   // rather than leaving the site shut for anybody running it at home.

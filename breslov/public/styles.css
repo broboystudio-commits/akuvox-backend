@@ -3086,3 +3086,30 @@ body.hide-english .verse-card .verse-en { display: none; }
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+
+/* ====================================== the way through to the two policies
+
+   Two plain buttons, laid out as a row that wraps rather than as a list, so
+   on the narrowest phone they sit one above the other instead of squeezing.
+   They are ordinary pills: a privacy policy behind a faint grey link at the
+   foot of a page is the thing the dark-patterns rule is about. */
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.legal-links .pill { flex: 0 1 auto; }
+
+/* The two policy pages read like documents, so they are given a document's
+   measure rather than the app's. */
+#panel-privacy .sources h3,
+#panel-terms .sources h3 { margin-top: 22px; }
+#panel-privacy code,
+#panel-terms code {
+  font-size: 0.875em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}

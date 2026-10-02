@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="61">
+<html lang="en" data-build="62">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=61" />
+<link rel="stylesheet" href="/styles.css?v=62" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -82,13 +82,19 @@
     </button>
   </div>
 
+  <!-- The words beside each switch are what names it. Without the
+       aria-labelledby a screen reader reached a switch with no name at all
+       and could only say "switch, off" -- which of the two, it had no way of
+       telling you. -->
   <div class="sheet-row">
-    <span>Dark mode</span>
-    <button class="switch" id="themeBtn" type="button" role="switch" aria-checked="false"></button>
+    <span id="labelDarkMode">Dark mode</span>
+    <button class="switch" id="themeBtn" type="button" role="switch"
+            aria-checked="false" aria-labelledby="labelDarkMode"></button>
   </div>
   <div class="sheet-row">
-    <span>English translation</span>
-    <button class="switch" id="toggleEnglish" type="button" role="switch" aria-checked="true"></button>
+    <span id="labelEnglish">English translation</span>
+    <button class="switch" id="toggleEnglish" type="button" role="switch"
+            aria-checked="true" aria-labelledby="labelEnglish"></button>
   </div>
   <div class="sheet-row">
     <span>Font</span>
@@ -319,9 +325,10 @@
         opened once a day and read, not browsed.
       </p>
       <p class="hint">
-        Everything here is free, there is nothing to sign up for, and nothing
-        about you is collected or sent anywhere. Your location, if you share it,
-        is used to work out your zmanim and is not stored on the server.
+        Everything here is free, there is nothing to sign up for, no account
+        and no tracking of any kind. The place your zmanim are set to is sent
+        to this server to work the times out, and is not stored anywhere. The
+        privacy page says exactly what happens to it.
       </p>
     </article>
 
@@ -331,9 +338,11 @@
         It is not random. The day's number picks a place in a fixed shuffled
         order of every lesson, so everyone opening the app on the same day sees
         the same teaching, and every lesson comes up once before any repeats.
-        The Torah of the week works the same way but changes only on Sunday,
-        and looks first for a lesson where Rebbe Nachman darshans a verse from
-        that week's parsha.
+        The Torah of the week works the same way but changes only on Sunday.
+        On a week with a yom tov in it, it looks for a lesson about the yom tov;
+        otherwise for one where Rebbe Nachman or Reb Noson darshans a verse
+        from that week's parsha. If it finds neither, the card says so rather
+        than showing a lesson that has nothing to do with the week.
       </p>
       <p class="hint">
         The Tehillim follow the usual monthly division, by the day of the
@@ -368,69 +377,21 @@
     </article>
 
     <article class="card">
-      <header class="card-head"><h2>Privacy</h2></header>
-      <div class="sources">
-        <p>
-          There are no accounts, no analytics, no advertising and no tracking of
-          any kind. Nothing you do here is recorded against you, because there
-          is no "you" for it to be recorded against.
-        </p>
-
-        <h3>What stays on your device</h3>
-        <p>
-          Your location, chosen minhag, theme, font, text size, reminder time and
-          the psalm you last reached in the Tikkun HaKlali are kept in your
-          browser's own storage. They never leave your device except as described
-          below. Clearing your browser data removes all of it.
-        </p>
-
-        <h3>What the server sees</h3>
-        <p>
-          To work out your zmanim the app sends your coordinates and time zone to
-          its own server with each request. They are used to calculate the times
-          and are not written to any database, because the app has no database.
-          As with any website, the hosting provider keeps ordinary server logs,
-          which include IP addresses for a short period.
-        </p>
-        <p>
-          If you tap "Use my current location", your device asks your permission
-          first, and the coordinates are rounded before being sent.
-        </p>
-
-        <h3>Who else is contacted</h3>
-        <p>
-          The texts come from <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>,
-          but they are fetched by the server rather than by your device, so
-          Sefaria never sees your address or anything about you.
-        </p>
-        <p>
-          The one exception is fonts. If you choose Frank Ruhl, David or Heebo,
-          your device downloads that font from Google Fonts, and Google will see
-          your IP address as it would for any website using them. Choosing
-          <strong>"Your device's font"</strong> in the reading options downloads
-          nothing and avoids this entirely.
-        </p>
-
-        <h3>The daily reminder</h3>
-        <p>
-          If you subscribe to the reminder calendar, your phone's Calendar app
-          fetches it from this server periodically, which the server sees as an
-          ordinary request. You can remove the subscription in Calendar at any
-          time and that stops.
-        </p>
-
-        <h3>Children</h3>
-        <p>
-          Nothing here is collected from anyone, of any age.
-        </p>
-
-        <h3>Changes</h3>
-        <p class="small">
-          If any of this ever changes it will be changed on this page, which is
-          part of the app itself rather than a separate document that can drift
-          out of date.
-        </p>
+      <header class="card-head"><h2>Privacy, and the rules</h2></header>
+      <p class="hint">
+        No accounts, no analytics, no advertising, no trackers, and nothing
+        sold. Your settings stay on this device. Nothing you read here is
+        recorded against you, because there is no account for it to be
+        recorded against.
+      </p>
+      <div class="legal-links">
+        <button class="pill" data-goto="privacy" type="button">Privacy policy</button>
+        <button class="pill" data-goto="terms" type="button">Terms of use</button>
       </div>
+      <p class="hint" style="margin-top:14px">
+        You can also <strong>delete everything saved about you</strong>, here
+        or on the privacy page — it takes one tap and nothing is kept back.
+      </p>
     </article>
 
     <!-- ------------------------------------------------ sources -->
@@ -480,6 +441,30 @@
           lighting, havdalah and the yomim tovim.
         </p>
 
+        <h3>The Hebrew faces</h3>
+        <p>
+          <strong>Frank Ruhl Libre</strong>, <strong>David Libre</strong> and
+          <strong>Heebo</strong>, each under the
+          <a href="https://openfontlicense.org" target="_blank" rel="noopener">SIL Open Font License 1.1</a>,
+          which allows them to be served like this. They are served from this
+          site rather than fetched from Google, so no third party sees you
+          opening the page, and the Hebrew is still the Hebrew with no signal.
+          The licences travel with the files, in <code>/fonts</code>.
+        </p>
+        <p class="small">
+          Frank Ruhl Libre © the Frank Ruhl Libre Project Authors · David Libre
+          © the David Libre Project Authors · Heebo © the Heebo Project
+          Authors. Choosing "Your device's font" downloads nothing at all.
+        </p>
+
+        <h3>The pictures</h3>
+        <p class="small">
+          There are none. Every symbol on this page is drawn by the page itself
+          in a line or two of SVG, and the app icon was generated by a script in
+          this project — so there is no photograph, no stock image and no
+          icon set from anybody else to be licensed.
+        </p>
+
         <h3>Everything else</h3>
         <p>
           Built with <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>
@@ -501,8 +486,183 @@
 
   </section>
 
+  <!-- -------------------------------------------------------- PRIVACY -->
+  <section class="panel" id="panel-privacy" role="region" aria-label="Privacy policy" hidden>
+
+    <article class="card">
+      <header class="card-head"><h2>Privacy policy</h2></header>
+      <p class="hint" id="privacyUpdated"></p>
+
+      <div class="sources">
+        <p>
+          The short version: this site has no accounts, no analytics, no
+          advertising, no trackers and no database. It does not know who you
+          are and has no way of finding out.
+        </p>
+
+        <h3>Who runs this site</h3>
+        <p id="siteOwner" class="small">—</p>
+
+        <h3>What stays on your device, and never leaves it</h3>
+        <p>
+          Your chosen place, minhag, theme, font, text size, reminder time,
+          whether you want the English, the psalm you last reached in the
+          Tikkun HaKlali, and a copy of the last day's learning so the app
+          opens with no signal. All of it is kept in this browser's own
+          storage. The only one that ever leaves this device is the place,
+          which goes to this server to work the times out — the next section
+          says exactly what happens to it. The button at the foot of this page
+          clears every bit of it.
+        </p>
+
+        <h3>The one cookie</h3>
+        <p>
+          If the site has a password on it, getting past the password sets one
+          cookie, <code>bd_access</code>, so you are not asked again on every
+          page. It holds a fingerprint of the password, never the password
+          itself. It cannot be read by any script, it is not sent to other
+          sites, and it lasts a year unless you clear it.
+        </p>
+        <p class="small">
+          That is the only cookie, and it exists solely to let you in — which
+          is why there is no cookie banner here. A banner asks consent for
+          cookies you did not need; there are none to ask about. Nothing is
+          measured, remembered or shared.
+        </p>
+
+        <h3>What the server sees</h3>
+        <p>
+          To work out zmanim, the app sends a place — coordinates and a time
+          zone — with each request. They are used to calculate the times and
+          are then gone; there is nowhere to put them. If you tap "Use my
+          current location", your phone asks your permission first, and the
+          coordinates are rounded to about a kilometre before being sent —
+          still far more precise than the times need, and nowhere near precise
+          enough to point at an address.
+        </p>
+        <p>
+          Searches you type are sent to this server and passed on to Sefaria to
+          be answered. The answer is held in the server's memory for a few
+          hours so the same search is instant the second time — filed under the
+          words you typed and nothing else, with no record of who asked, and
+          gone whenever the server restarts. Nothing is written to disk, and
+          there is no search history here or anywhere.
+        </p>
+        <p class="small">
+          Like any website, the company hosting this one keeps ordinary server
+          logs for a short period, and those include IP addresses. That is
+          their doing, not this app's, and nothing here adds to it.
+        </p>
+
+        <h3>Who else is contacted</h3>
+        <p>
+          <strong>From your device: nobody but this server.</strong> No fonts,
+          no scripts, no images, no analytics from anywhere else. You can check
+          it yourself in any browser's network panel.
+        </p>
+        <p>
+          The server fetches the texts from
+          <a href="https://www.sefaria.org" target="_blank" rel="noopener">Sefaria</a>
+          on your behalf, so Sefaria sees this server and never sees you.
+          Zmanim and the Hebrew calendar are worked out on this server with no
+          outside request at all.
+        </p>
+
+        <h3>The daily reminder</h3>
+        <p>
+          The reminder is a calendar subscription, not email. This site never
+          sends email and has no mailing list, so there is nothing to
+          unsubscribe from. Your Calendar app fetches the feed from this server
+          now and then, which the server sees as an ordinary request; removing
+          the subscription in Calendar stops it immediately.
+        </p>
+
+        <h3>Children</h3>
+        <p>
+          Nothing is collected from anyone of any age, so there is nothing to
+          ask a parent's permission for. There is no sign-up, no age gate and
+          no profile, for a child or for anybody else.
+        </p>
+
+        <h3>Delete everything</h3>
+        <p>
+          There is no account to close, because there is no account. What there
+          is, you can remove right here: the settings saved in this browser,
+          and the cookie that remembers you got past the password.
+        </p>
+        <button class="btn ghost" id="forgetMe" type="button">Delete everything saved about me</button>
+        <p class="hint" id="forgetNote" style="margin-top:12px" role="status" aria-live="polite"></p>
+
+        <h3>Changes</h3>
+        <p class="small">
+          If any of this changes, it changes here. This page is part of the app
+          rather than a separate document that can quietly go out of date, and
+          the version it belongs to is shown at the foot of the About page.
+        </p>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- ---------------------------------------------------------- TERMS -->
+  <section class="panel" id="panel-terms" role="region" aria-label="Terms of use" hidden>
+
+    <article class="card">
+      <header class="card-head"><h2>Terms of use</h2></header>
+
+      <div class="sources">
+        <h3>What this is</h3>
+        <p>
+          A way of reading things that are already freely available: Rebbe
+          Nachman's seforim and the Tehillim from Sefaria, zmanim calculated
+          with KosherJava, and the Hebrew calendar from Hebcal. It is given
+          free, there is nothing to buy, nothing to subscribe to and no fee of
+          any kind — now or later.
+        </p>
+
+        <h3>The Torah is not ours</h3>
+        <p>
+          Every passage belongs to whoever published that edition or made that
+          translation, and each one is named under the text it belongs to, with
+          a link to it on Sefaria. Licences differ from one edition to the
+          next. Nothing here is written, paraphrased or translated by this app;
+          where a text cannot be fetched, the app says so instead of filling
+          the gap.
+        </p>
+
+        <h3>Times are a guide</h3>
+        <p>
+          Zmanim are calculated, and calculations rest on the opinion chosen,
+          the place given and a model of the horizon that no model gets exactly
+          right. <strong>Follow your rav and your shul's luach.</strong> Do not
+          rely on this app for anything that matters halachically, and do not
+          rely on it where being wrong would be serious.
+        </p>
+
+        <h3>No warranty</h3>
+        <p>
+          It is offered as it is. It may be unavailable, it may be out of date,
+          and the free hosting it runs on sleeps when nobody has opened it for a
+          while. No promise is made that it will keep working, and whoever runs
+          it is not answerable for any loss that comes of using it.
+        </p>
+
+        <h3>Using it</h3>
+        <p>
+          Read it, learn from it, and share the address with whoever you like.
+          Do not use it to attack the server, and do not pass the password on
+          to people the person who gave it to you did not mean to include.
+        </p>
+
+        <h3>Who to ask</h3>
+        <p id="termsOwner" class="small">—</p>
+      </div>
+    </article>
+
+  </section>
+
 </main>
 
-<script src="/app.js?v=61"></script>
+<script src="/app.js?v=62"></script>
 </body>
 </html>

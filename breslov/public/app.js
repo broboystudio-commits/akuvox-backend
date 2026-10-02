@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '61';
+  var BUILD = '62';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -863,6 +863,10 @@
     var sw = el('button', 'switch');
     sw.type = 'button';
     sw.setAttribute('role', 'switch');
+    // Named, like the two in the sidebar. An empty button with role="switch"
+    // is announced as "switch, off" and nothing else, which tells a screen
+    // reader user there is a control and not what it does.
+    sw.setAttribute('aria-label', 'Show every opinion');
     sw.setAttribute('aria-checked', String(!!state.zmanim.showAll));
     sw.addEventListener('click', function () {
       state.zmanim = Object.assign({}, state.zmanim, { showAll: !state.zmanim.showAll });
@@ -2006,8 +2010,9 @@
 
   // ------------------------------------------------------------- navigation
 
-  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about'];
-  var loaded = { tikkun: false, library: false };
+  var PANELS = ['today', 'tehillim', 'tikkun', 'weekly', 'zmanim', 'search', 'about',
+                'privacy', 'terms'];
+  var loaded = { tikkun: false, library: false, site: false };
 
   /**
    * What each page is called, for the browser's own title bar and history.
@@ -2026,6 +2031,8 @@
     zmanim: 'Zmanim',
     search: 'Search',
     about: 'Reminders & about',
+    privacy: 'Privacy policy',
+    terms: 'Terms of use',
   };
 
   /**
@@ -2134,6 +2141,22 @@
         .catch(function () { setText('aboutBuild', ''); });
     }
 
+    // A policy page that says when it last changed, taken from the build the
+    // page is actually running rather than from a date typed in by hand --
+    // which is the one thing on a policy page that always goes stale.
+    if (name === 'privacy') {
+      setText('privacyUpdated', 'This is version ' + BUILD + ' of the app, and of this page.');
+    }
+
+    // Who runs this site, on both pages that promise you can write to them.
+    if ((name === 'privacy' || name === 'terms') && !loaded.site) {
+      loaded.site = true;
+      fetch('/api/site', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(fillSite)
+        .catch(function () { loaded.site = false; fillSite(null); });
+    }
+
     if (name === 'tikkun' && !loaded.tikkun) {
       loaded.tikkun = true;
       api('tikkun').then(renderTikkun).catch(function (err) {
@@ -2146,6 +2169,83 @@
     }
   }
 
+  /**
+   * The name and address of whoever put this online.
+   *
+   * It comes from the server's own settings, not from a file in the code: a
+   * policy that says "write to us" has to say where, and it is not for this
+   * app to decide whose name goes on it. Until it is set, the page says so --
+   * which is the truth, and better than a blank line that reads like an
+   * oversight.
+   */
+  function fillSite(site) {
+    var owner = (site && site.owner) || '';
+    var contact = (site && site.contact) || '';
+    var where = (site && site.where) || '';
+
+    var said;
+    if (owner || contact) {
+      said = [owner, where, contact].filter(Boolean).join(' · ');
+    } else {
+      said = 'This copy has not had its owner set yet. Whoever put it online ' +
+             'can add SITE_OWNER and SITE_CONTACT to the server settings and ' +
+             'their name and address will appear here.';
+    }
+    setText('siteOwner', said);
+    setText('termsOwner', owner || contact
+      ? 'Questions about this site: ' + [owner, contact].filter(Boolean).join(' · ')
+      : said);
+  }
+
+  /**
+   * "Delete everything saved about me", and it means it.
+   *
+   * Two things exist and both go: the settings in this browser's own storage,
+   * and the cookie that remembers you got past the password. There is no
+   * account, no database and no record of what anyone read, so there is
+   * nothing else -- and the page says that rather than implying some larger
+   * erasure is happening out of sight.
+   *
+   * It is deliberately one tap with one confirmation. The whole point of the
+   * dark-patterns rule is that leaving is as easy as arriving; a five-step
+   * "are you sure you want to lose everything" would be the thing it is
+   * meant to prevent.
+   */
+  function wireForgetMe() {
+    var button = $('forgetMe');
+    if (!button) return;
+    button.addEventListener('click', function () {
+      var locked = window.confirm(
+        'This clears your settings on this device and signs you out of this ' +
+        'site. You will need the password again. Carry on?');
+      if (!locked) return;
+
+      setText('forgetNote', 'Clearing…');
+
+      // The storage first, so it is gone even if the server cannot be reached.
+      var cleared = [];
+      try {
+        Object.keys(STORE).forEach(function (which) {
+          if (localStorage.getItem(STORE[which]) !== null) cleared.push(which);
+          localStorage.removeItem(STORE[which]);
+        });
+      } catch (e) { /* private browsing: there was nothing to clear */ }
+
+      fetch('/api/forget', { method: 'POST', headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .catch(function () { return null; })
+        .then(function (answer) {
+          setText('forgetNote',
+            cleared.length + ' saved setting' + (cleared.length === 1 ? '' : 's') +
+            ' cleared from this device' +
+            (answer && answer.ok ? ', and the access cookie is gone.' :
+              '. The server could not be reached, so the access cookie is still here; ' +
+              'clearing this site\'s data in your browser removes it.') +
+            ' Nothing else was held.');
+        });
+    });
+  }
+
   function askForLocation() {
     if (!navigator.geolocation) {
       alert('This device will not share a location, so the app is using ' + state.place.name + '.');
@@ -2154,10 +2254,16 @@
     navigator.geolocation.getCurrentPosition(function (pos) {
       var tz = DEFAULT_PLACE.tz;
       try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { /* keep default */ }
+      // Rounded to two places -- about a kilometre -- because that is all the
+      // precision zmanim need and a great deal less than an address. A whole
+      // minute of time is roughly 28km of longitude, so this cannot move a
+      // printed time, and the privacy page can honestly say the coordinates
+      // are rounded. Four places, which is what this used to send, is eleven
+      // metres: close enough to point at a house.
       state.place = {
         name: 'My location',
-        lat: Number(pos.coords.latitude.toFixed(4)),
-        lng: Number(pos.coords.longitude.toFixed(4)),
+        lat: Number(pos.coords.latitude.toFixed(2)),
+        lng: Number(pos.coords.longitude.toFixed(2)),
         tz: tz,
       };
       save(STORE.place, state.place);
@@ -2235,6 +2341,7 @@
 
     wireSearchBar();
     wireSidebar();
+    wireForgetMe();
 
     var form = $('searchForm');
     if (form) {

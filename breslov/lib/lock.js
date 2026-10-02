@@ -161,6 +161,27 @@ function remember(req, res) {
 }
 
 /**
+ * Throw the cookie away.
+ *
+ * The other half of "remember", and the reason it exists is the right to ask
+ * for your data to be deleted: the access cookie is the only thing this
+ * server ever puts on a device, so "delete everything you hold about me" has
+ * to be able to reach it. Same name, same path, no lifetime -- which is how a
+ * browser is told to drop one.
+ */
+function forget(req, res) {
+  const bits = [
+    `${COOKIE}=`,
+    'Path=/',
+    'Max-Age=0',
+    'HttpOnly',
+    'SameSite=Lax',
+  ];
+  if (isSecure(req)) bits.push('Secure');
+  res.setHeader('Set-Cookie', bits.join('; '));
+}
+
+/**
  * The locked page: a password box, drawn here rather than left to the
  * browser. Deliberately one self-contained file with no stylesheet and no
  * script of its own -- everything else on the site is behind the lock, so
@@ -281,4 +302,4 @@ function status() {
   return { locked: isLocked(), keySet: isLocked() && key() !== '' };
 }
 
-module.exports = { middleware, isLocked, status, key, accepts, remember, page, safeNext, ALWAYS_OPEN, COOKIE };
+module.exports = { middleware, isLocked, status, key, accepts, remember, forget, page, safeNext, ALWAYS_OPEN, COOKIE };

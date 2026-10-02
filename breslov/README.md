@@ -157,6 +157,16 @@ trying to reach. It remembers for a year.
 There is no username to type. (`SITE_USER` still exists for anything sending
 an old-fashioned browser login, but nothing here needs it.)
 
+While you are in there, three more are worth setting, though none is
+required — they put your name and a way to reach you on the privacy policy and
+the terms page. See **The legal and privacy checklist** further down.
+
+| Name | What to put |
+|---|---|
+| `SITE_OWNER` | Your name, or your shul's |
+| `SITE_CONTACT` | An email address or phone number |
+| `SITE_WHERE` | A town, or a full address if you want one |
+
 **To turn the lock off again**, delete `SITE_PASSWORD` and save. The site is
 open to everyone the moment the redeploy finishes.
 
@@ -358,6 +368,65 @@ so it reported every control ringless whatever the stylesheet said.
   real words in fourteen places.
 - **Room for somebody else's text size.** The zmanim rows wrap instead of
   pushing the page sideways.
+
+---
+
+## The legal and privacy checklist
+
+The twenty items of the website-compliance list, with the ones that apply
+applied and the ones that do not shown as what they are. These are measured
+too, on the real page, not ticked off.
+
+| | Item | Where it stands |
+|---|---|---|
+| 1 | **Privacy policy** | A page of its own at `/privacy` — what stays on your phone, the one cookie, what the server sees, who else is contacted, children, and a delete button that works |
+| 2 | **Terms of use** | `/terms` — it is free, the Torah belongs to its publishers, the times are a guide, no warranty |
+| 3 | Refund policy | **Does not apply.** Nothing is sold. Checked: no price, plan or trial anywhere in the app |
+| 4 | **Cookie policy** | One cookie, `bd_access`, named and explained. HttpOnly, SameSite=Lax, a fingerprint of the password rather than the password |
+| 5 | Cookie consent banner | **Not needed, and saying why is part of the policy.** The only cookie is the one that lets you past the password — strictly necessary, and exempt. Nothing measures anything |
+| 6 | Checkbox consents | **Does not apply.** The only input on the whole site is the search box. No form asks for anything about you |
+| 7 | **No unnecessary data** | A shared location was rounded to 11 metres; it is rounded to about a kilometre now. A minute of time is 28 km of longitude, so no printed time moves |
+| 8 | **Third-party audit** | From your phone: nobody but this server. No script, style, font, frame or request from anyone else. The server fetches from Sefaria on your behalf |
+| 9 | **No dark patterns** | Every switch turns back, the settings close on one tap or Escape, and leaving is one button with one confirmation |
+| 10 | Hidden fees | **Does not apply.** Free, with nothing to buy now or later |
+| 11 | Fake reviews | **Does not apply.** No reviews, ratings or testimonials exist to remove |
+| 12 | **Unsupported claims** | Three were found and fixed: the privacy page still said fonts come from Google (they stopped in build 61), "nothing about you is sent anywhere" (the place is sent), and the weekly Torah described a rule it no longer follows |
+| 13 | **Alt text** | No images at all — every symbol is drawn by the page in SVG and marked decorative, with words beside it. Three switches had no name at all for a screen reader; they do now |
+| 14 | **Colour contrast** | Worst run 4.81:1 against what is actually behind it |
+| 15 | **Keyboard navigation** | Tab reaches 21 controls, every one with a ring you can see |
+| 16 | **Business details** | `SITE_OWNER`, `SITE_CONTACT`, `SITE_WHERE` in the server settings. Until they are filled in the page says so plainly rather than leaving a blank that reads like an oversight |
+| 17 | **Children** | Nothing is collected from anyone of any age, so there is no age gate to build and the policy says why |
+| 18 | Unsubscribe in emails | **Does not apply.** This site never sends email and has no list. The reminder is a calendar subscription you remove in Calendar |
+| 19 | **Font and image licences** | The three Hebrew faces are SIL OFL 1.1, named on the Sources page, with the licence files served alongside them. There are no images to licence |
+| 20 | **Data deletion** | A button on the privacy page. It clears every saved setting from the device and expires the access cookie, and says exactly how many it cleared |
+
+### Filling in who runs it
+
+Three optional settings, added the same way as the password — in Render under
+**Environment → Add Environment Variable**:
+
+| Name | What to put | Shown where |
+|---|---|---|
+| `SITE_OWNER` | Your name, or the name of the shul or organisation | Privacy policy and Terms |
+| `SITE_CONTACT` | An email address or phone number people can use | Privacy policy and Terms |
+| `SITE_WHERE` | A town, or a full address if you want one | Privacy policy |
+
+None of them is required and none is written into the code. Leave them out and
+the pages say the owner has not been set yet, which is true and better than a
+blank line.
+
+### What the site actually holds about a person
+
+Nothing on the server. There is no database, no account and no record of what
+anybody read. The complete list is:
+
+- **In your browser**: your place, minhag, theme, font, text size, reminder
+  time, whether you want the English, where you stopped in the Tikkun HaKlali,
+  and a copy of yesterday's learning so it opens with no signal.
+- **One cookie**: `bd_access`, only if the site has a password on it, holding a
+  fingerprint of that password so you are not asked again.
+
+Both go when you press **Delete everything saved about me** on `/privacy`.
 
 ---
 

@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '61';
+const BUILD = '62';
 
 app.use(cors());
 
@@ -114,6 +114,45 @@ app.get('/api/health', route(async () => ({
   cache: sefaria.cacheStats(),
   memoryKeys: cache.size,
 })));
+
+/**
+ * Who runs this site, and how to reach them.
+ *
+ * A site that holds a policy saying "write to us about your data" has to say
+ * where. These are set in Render's environment, never written into the code:
+ * whoever puts this online decides what name and address go on it, and until
+ * they do the page says plainly that it has not been filled in rather than
+ * printing somebody's details because a file in a repository had them.
+ */
+app.get('/api/site', route(async () => {
+  const text = (name) => String(process.env[name] || '').trim();
+  return {
+    owner: text('SITE_OWNER'),
+    contact: text('SITE_CONTACT'),
+    where: text('SITE_WHERE'),
+  };
+}));
+
+/**
+ * "Forget everything you hold about me."
+ *
+ * There is exactly one thing: the cookie that remembers you got past the
+ * password. There are no accounts, no database and no logs of anybody's
+ * doings, so this is the whole of it -- and the page says so rather than
+ * implying some larger erasure is going on behind it.
+ *
+ * Settings live in the browser's own storage and are cleared by the page
+ * itself; the server has never seen them and cannot clear them from here.
+ */
+app.post('/api/forget', (req, res) => {
+  lock.forget(req, res);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    ok: true,
+    cleared: ['the access cookie'],
+    note: 'Nothing else is held: no account, no database, no record of what anyone read.',
+  });
+});
 
 /**
  * The password box posts here.
@@ -298,6 +337,21 @@ app.get('/api/diagnostics', route(async (req) => {
         (weeklyNow.parsha && !weeklyNow.yomTov ? ` -- on Parashas ${weeklyNow.parsha}` : '') +
         (weeklyNow.says ? ` (${weeklyNow.says})` : '')
       : `nothing found${chagNow ? ' for ' + chagNow.en : ''}`);
+
+  // Whether the two policy pages can say who runs this site. Reported from
+  // here because the alternative is opening the page and squinting at it, and
+  // because getting an environment variable's name slightly wrong in Render
+  // looks exactly like not having set it at all.
+  const siteSet = ['SITE_OWNER', 'SITE_CONTACT', 'SITE_WHERE']
+    .map((name) => ({ name, set: !!String(process.env[name] || '').trim() }));
+  record('Who runs this site', true,
+    siteSet.some((v) => v.set)
+      ? siteSet.filter((v) => v.set).map((v) => v.name).join(', ') + ' set' +
+        (siteSet.some((v) => !v.set)
+          ? ' (not set: ' + siteSet.filter((v) => !v.set).map((v) => v.name).join(', ') + ')'
+          : '')
+      : 'none set yet -- the privacy and terms pages say so plainly, which is ' +
+        'true but not what you want on a site other people use');
 
   record('Ushpizin passages arrive',
     guestRefs.every((g) => g.passage),
