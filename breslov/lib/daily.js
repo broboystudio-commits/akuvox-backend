@@ -225,18 +225,30 @@ async function parshaRefFromSefaria(israel) {
  * means to anybody saying it over.
  */
 const YOM_TOV = [
-  { is: /rosh hashana/i,            en: 'Rosh Hashanah',  he: 'רֹאשׁ הַשָּׁנָה',    look: 'ראש השנה' },
-  { is: /yom kippur/i,              en: 'Yom Kippur',     he: 'יוֹם כִּפּוּר',       look: 'יום כיפור' },
-  { is: /sukkot|hoshana/i,          en: 'Sukkos',         he: 'סֻכּוֹת',            look: 'סוכות' },
-  { is: /shmini atzeret/i,          en: 'Shmini Atzeres', he: 'שְׁמִינִי עֲצֶרֶת',   look: 'שמיני עצרת' },
-  { is: /simchat torah/i,           en: 'Simchas Torah',  he: 'שִׂמְחַת תּוֹרָה',    look: 'שמחת תורה' },
-  { is: /chanukah/i,                en: 'Chanukah',       he: 'חֲנֻכָּה',           look: 'חנוכה' },
-  { is: /purim/i,                   en: 'Purim',          he: 'פּוּרִים',           look: 'פורים' },
-  { is: /pesach|passover/i,         en: 'Pesach',         he: 'פֶּסַח',             look: 'פסח' },
-  { is: /shavuot/i,                 en: 'Shavuos',        he: 'שָׁבוּעוֹת',          look: 'שבועות' },
-  { is: /lag b.?omer/i,             en: 'Lag BaOmer',     he: 'ל״ג בָּעֹמֶר',        look: 'לג בעומר' },
-  { is: /tu b.?shvat|tu bishvat/i,  en: 'Tu BiShvat',     he: 'ט״ו בִּשְׁבָט',       look: 'טו בשבט' },
-  { is: /tish.?a b.?av/i,           en: "Tisha B'Av",     he: 'תִּשְׁעָה בְּאָב',     look: 'תשעה באב' },
+  { is: /rosh hashana/i,            en: 'Rosh Hashanah',  he: 'רֹאשׁ הַשָּׁנָה',
+    look: ['ראש השנה', 'שופר', 'Rosh Hashanah'] },
+  { is: /yom kippur/i,              en: 'Yom Kippur',     he: 'יוֹם כִּפּוּר',
+    look: ['יום כיפור', 'יום הכיפורים', 'תשובה', 'Yom Kippur'] },
+  { is: /sukkot|hoshana/i,          en: 'Sukkos',         he: 'סֻכּוֹת',
+    look: ['סוכות', 'סוכה', 'ארבעה מינים', 'אתרוג', 'Sukkot'] },
+  { is: /shmini atzeret/i,          en: 'Shmini Atzeres', he: 'שְׁמִינִי עֲצֶרֶת',
+    look: ['שמיני עצרת', 'שמחת תורה', 'סוכות', 'Shemini Atzeret'] },
+  { is: /simchat torah/i,           en: 'Simchas Torah',  he: 'שִׂמְחַת תּוֹרָה',
+    look: ['שמחת תורה', 'הקפות', 'שמחה של תורה', 'סוכות', 'Simchat Torah'] },
+  { is: /chanukah/i,                en: 'Chanukah',       he: 'חֲנֻכָּה',
+    look: ['חנוכה', 'נר חנוכה', 'Chanukah'] },
+  { is: /purim/i,                   en: 'Purim',          he: 'פּוּרִים',
+    look: ['פורים', 'מגילה', 'Purim'] },
+  { is: /pesach|passover/i,         en: 'Pesach',         he: 'פֶּסַח',
+    look: ['פסח', 'חמץ', 'מצה', 'יציאת מצרים', 'Pesach'] },
+  { is: /shavuot/i,                 en: 'Shavuos',        he: 'שָׁבוּעוֹת',
+    look: ['שבועות', 'מתן תורה', 'Shavuot'] },
+  { is: /lag b.?omer/i,             en: 'Lag BaOmer',     he: 'ל״ג בָּעֹמֶר',
+    look: ['לג בעומר', 'רבי שמעון בן יוחאי', 'Lag BaOmer'] },
+  { is: /tu b.?shvat|tu bishvat/i,  en: 'Tu BiShvat',     he: 'ט״ו בִּשְׁבָט',
+    look: ['טו בשבט', 'אילנות', 'Tu BiShvat'] },
+  { is: /tish.?a b.?av/i,           en: "Tisha B'Av",     he: 'תִּשְׁעָה בְּאָב',
+    look: ['תשעה באב', 'חורבן', 'בית המקדש', "Tisha B'Av"] },
 ];
 
 /** The yom tov in the days ahead, if there is one. */
@@ -258,28 +270,38 @@ function yomTovAhead(calendar) {
  * claim than a recorded link and it is still a real one, and the card says
  * which of the two it is.
  */
-async function breslovAbout(term, date, salt) {
-  let found;
-  try {
-    found = await sefaria.search(term, { size: 40 });
-  } catch (err) {
-    return null;
-  }
-  const ours = (found.hits || []).filter((h) => h.book && BRESLOV_TITLES.has(h.book));
-  if (!ours.length) return null;
+async function breslovAbout(terms, date, salt, tried) {
+  const words = (Array.isArray(terms) ? terms : [terms]).filter(Boolean);
+  const note = (word, why) => { if (Array.isArray(tried)) tried.push({ word, why }); };
 
-  const refs = [...new Set(ours.map((h) => h.ref).filter(Boolean))];
-  if (!refs.length) return null;
+  // Several words for the same chag, because one of them may find nothing.
+  // Sukkos is also the sukkah and the arba minim; Simchas Torah is also the
+  // hakafos. A chag with one word to its name is a chag that can come up
+  // empty on a quirk of how a lesson happens to be worded.
+  for (const word of words) {
+    let found;
+    try {
+      found = await sefaria.search(word, { size: 40 });
+    } catch (err) {
+      note(word, `search failed: ${err.message}`);
+      continue;
+    }
+    const ours = (found.hits || []).filter((h) => h.book && BRESLOV_TITLES.has(h.book));
+    const refs = [...new Set(ours.map((h) => h.ref).filter(Boolean))];
+    if (!refs.length) { note(word, `${(found.hits || []).length} hits, none from the ten`); continue; }
 
-  const choice = pickForWeek(refs, date, salt || 83);
-  const meta = ours.find((h) => h.ref === choice);
-  try {
-    const text = await sefaria.getText(choice);
-    if (!text || !(text.hebrew || []).length) return null;
-    return { text, book: (meta && meta.book) || null };
-  } catch (err) {
-    return null;
+    const choice = pickForWeek(refs, date, salt || 83);
+    const meta = ours.find((h) => h.ref === choice);
+    try {
+      const text = await sefaria.getText(choice);
+      if (!text || !(text.hebrew || []).length) { note(word, `${choice} had no Hebrew`); continue; }
+      note(word, `ok: ${choice}`);
+      return { text, book: (meta && meta.book) || null, word };
+    } catch (err) {
+      note(word, `${choice} would not load: ${err.message}`);
+    }
   }
+  return null;
 }
 
 /**
@@ -635,7 +657,7 @@ async function ushpizinPassage(refs, date, tried) {
 
 module.exports = {
   yahrzeitPassage, ushpizinPassage, dvarOnPassage, answersTo, shapeNames,
-  yomTovAhead, YOM_TOV,
+  yomTovAhead, YOM_TOV, breslovAbout,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

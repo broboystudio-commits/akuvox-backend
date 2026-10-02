@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '58';
+const BUILD = '59';
 
 app.use(cors());
 
@@ -222,7 +222,9 @@ app.get('/api/diagnostics', route(async (req) => {
       return { name: y.name, book: y.book, ok: false, detail: err.message };
     }
   }));
-  const guests = ushpizin.ushpizinOn(dates.calendarFor(today, place, new Date()).hebrew);
+  // One calendar for the rest of this page, rather than a fresh one per line.
+  const calendarNow = dates.calendarFor(today, place, new Date());
+  const guests = ushpizin.ushpizinOn(calendarNow.hebrew);
   record('Ushpizin', true, guests
     ? `day ${guests.day} of ${guests.of}: ` +
       guests.guests.map((g) => g.name + (g.minhag ? ` (${g.minhag})` : '')).join(' / ')
@@ -277,6 +279,25 @@ app.get('/api/diagnostics', route(async (req) => {
       ? `yes: ${haveSatmar.map((b) => `${b.title} (${b.pieces} pieces)`).join(', ')}`
       : `no -- ${satmar.map((b) => `${b.title}: ${b.pieces === 0 ? 'empty' : b.why}`).join('; ')}` +
         ' -- so nothing is quoted from him');
+
+  // What the weekly card will actually show, right now, and why. Asked for
+  // because the whole point of that card is that it is about this week, and
+  // from this sandbox I cannot reach Sefaria's search to find out whether it
+  // is. The chag's words are tried in order and each says what it found.
+  const weeklyNow = await daily.weeklyTorah(today, calendarNow);
+  const chagNow = daily.yomTovAhead(calendarNow);
+  let chagWords = null;
+  if (chagNow) {
+    chagWords = [];
+    await daily.breslovAbout(chagNow.look, today, 83, chagWords);
+  }
+  record("This week's Torah", weeklyNow && weeklyNow.available,
+    weeklyNow && weeklyNow.available
+      ? `${weeklyNow.mode}: ${weeklyNow.ref}` +
+        (weeklyNow.yomTov ? ` -- on ${weeklyNow.yomTov}` : '') +
+        (weeklyNow.parsha && !weeklyNow.yomTov ? ` -- on Parashas ${weeklyNow.parsha}` : '') +
+        (weeklyNow.says ? ` (${weeklyNow.says})` : '')
+      : `nothing found${chagNow ? ' for ' + chagNow.en : ''}`);
 
   record('Ushpizin passages arrive',
     guestRefs.every((g) => g.passage),
@@ -436,6 +457,11 @@ app.get('/api/diagnostics', route(async (req) => {
     checks,
     ushpizinRefs: guestRefs,
     satmar,
+    weekly: weeklyNow && weeklyNow.available
+      ? { mode: weeklyNow.mode, ref: weeklyNow.ref, yomTov: weeklyNow.yomTov || null,
+          parsha: weeklyNow.parsha || null, says: weeklyNow.says || null }
+      : { mode: null, reason: weeklyNow && weeklyNow.reason },
+    chagWords,
     yahrzeits: {
       total: yahrzeits.all().length,
       today: yahrzeits.yahrzeitsOn(dates.calendarFor(today, place, new Date()).hebrew).map((y) => y.name),
