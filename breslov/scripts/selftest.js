@@ -13,6 +13,7 @@ const dates = require('../lib/dates');
 const zmanim = require('../lib/zmanim');
 const library = require('../lib/library');
 const ushpizin = require('../lib/ushpizin');
+const daily = require('../lib/daily');
 const { dateFromIso, pickForDay, pickRunForDay } = require('../lib/util');
 const sefaria = require('../lib/sefaria');
 
@@ -273,6 +274,43 @@ async function main() {
   check('A real one does',
     library.refsFromShape([{ title: 'Likutei Moharan', length: 286 }],
       { title: 'Likutei Moharan' }).length === 286);
+
+  console.log('\nThe weekly Torah is about this week');
+
+  // Exactly the strings hebcal produces, which is the only thing the picker
+  // ever sees. A regex that is nearly right here shows up as a lesson on
+  // next Shabbos's parsha in the middle of Pesach.
+  const weekOf = (...names) => daily.yomTovAhead({ holidays: names.map((en) => ({ en })) });
+  const cases = [
+    [['Sukkot VII (Hoshana Raba)', 'Shmini Atzeret'], 'Sukkos'],
+    [['Shmini Atzeret', 'Simchat Torah'], 'Shmini Atzeres'],
+    [['Simchat Torah'], 'Simchas Torah'],
+    [['Rosh Hashana 5787'], 'Rosh Hashanah'],
+    [['Yom Kippur'], 'Yom Kippur'],
+    [['Chanukah: 1 Candle'], 'Chanukah'],
+    [['Purim'], 'Purim'],
+    [['Erev Pesach', 'Pesach I'], 'Pesach'],
+    [['Shavuot I'], 'Shavuos'],
+    [['Lag BaOmer'], 'Lag BaOmer'],
+    [['Tu BiShvat'], 'Tu BiShvat'],
+    [["Tish'a B'Av"], "Tisha B'Av"],
+    // Not a yom tov for this purpose: it comes round every month and would
+    // take the parsha's week twelve times a year.
+    [['Rosh Chodesh Cheshvan'], null],
+    [['Shabbat Shekalim'], null],
+    [[], null],
+  ];
+  const wrong = cases.filter(([names, want]) => {
+    const got = weekOf(...names);
+    return (got ? got.en : null) !== want;
+  });
+  check('Every yom tov is recognised from what hebcal calls it',
+    wrong.length === 0,
+    wrong.length ? wrong.map(([n, w]) => `${n.join('/')} wanted ${w}`).join('; ')
+                 : `${cases.length} weeks`);
+  check('And each one knows what to look for it under',
+    daily.YOM_TOV.every((y) => y.look && y.en && y.he),
+    `${daily.YOM_TOV.length} yomim tovim`);
 
   console.log('\nThe Jewish day turns at nightfall');
 

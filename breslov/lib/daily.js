@@ -217,6 +217,72 @@ async function parshaRefFromSefaria(israel) {
 }
 
 /**
+ * The yomim tovim a week can be anchored to, and the word to look for each
+ * one under in the seforim.
+ *
+ * Rosh Chodesh is deliberately not here. It comes round twelve times a year
+ * and would displace the parsha every month, which is not what a yom tov
+ * means to anybody saying it over.
+ */
+const YOM_TOV = [
+  { is: /rosh hashana/i,            en: 'Rosh Hashanah',  he: 'רֹאשׁ הַשָּׁנָה',    look: 'ראש השנה' },
+  { is: /yom kippur/i,              en: 'Yom Kippur',     he: 'יוֹם כִּפּוּר',       look: 'יום כיפור' },
+  { is: /sukkot|hoshana/i,          en: 'Sukkos',         he: 'סֻכּוֹת',            look: 'סוכות' },
+  { is: /shmini atzeret/i,          en: 'Shmini Atzeres', he: 'שְׁמִינִי עֲצֶרֶת',   look: 'שמיני עצרת' },
+  { is: /simchat torah/i,           en: 'Simchas Torah',  he: 'שִׂמְחַת תּוֹרָה',    look: 'שמחת תורה' },
+  { is: /chanukah/i,                en: 'Chanukah',       he: 'חֲנֻכָּה',           look: 'חנוכה' },
+  { is: /purim/i,                   en: 'Purim',          he: 'פּוּרִים',           look: 'פורים' },
+  { is: /pesach|passover/i,         en: 'Pesach',         he: 'פֶּסַח',             look: 'פסח' },
+  { is: /shavuot/i,                 en: 'Shavuos',        he: 'שָׁבוּעוֹת',          look: 'שבועות' },
+  { is: /lag b.?omer/i,             en: 'Lag BaOmer',     he: 'ל״ג בָּעֹמֶר',        look: 'לג בעומר' },
+  { is: /tu b.?shvat|tu bishvat/i,  en: 'Tu BiShvat',     he: 'ט״ו בִּשְׁבָט',       look: 'טו בשבט' },
+  { is: /tish.?a b.?av/i,           en: "Tisha B'Av",     he: 'תִּשְׁעָה בְּאָב',     look: 'תשעה באב' },
+];
+
+/** The yom tov in the days ahead, if there is one. */
+function yomTovAhead(calendar) {
+  for (const holiday of (calendar && calendar.holidays) || []) {
+    const match = YOM_TOV.find((y) => y.is.test(holiday.en || ''));
+    if (match) return Object.assign({}, match, { on: holiday.date || null });
+  }
+  return null;
+}
+
+/**
+ * A piece of Breslov Torah that actually talks about something.
+ *
+ * Sefaria's links tie a lesson to a verse, which is how the parsha lesson is
+ * found. A yom tov has no verse, so this asks the other way: search the
+ * seforim for the name of the chag and keep only what is answered from one
+ * of the ten. A lesson that says "Sukkos" is about Sukkos; that is a weaker
+ * claim than a recorded link and it is still a real one, and the card says
+ * which of the two it is.
+ */
+async function breslovAbout(term, date, salt) {
+  let found;
+  try {
+    found = await sefaria.search(term, { size: 40 });
+  } catch (err) {
+    return null;
+  }
+  const ours = (found.hits || []).filter((h) => h.book && BRESLOV_TITLES.has(h.book));
+  if (!ours.length) return null;
+
+  const refs = [...new Set(ours.map((h) => h.ref).filter(Boolean))];
+  if (!refs.length) return null;
+
+  const choice = pickForWeek(refs, date, salt || 83);
+  const meta = ours.find((h) => h.ref === choice);
+  try {
+    const text = await sefaria.getText(choice);
+    if (!text || !(text.hebrew || []).length) return null;
+    return { text, book: (meta && meta.book) || null };
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
  * This week's Torah from Reb Nachman.
  *
  * First choice: a lesson Sefaria links to a verse in this week's parsha.
@@ -226,6 +292,24 @@ async function parshaRefFromSefaria(israel) {
 async function weeklyTorah(date, calendar) {
   const parshaName = calendar?.parsha?.en || null;
   try {
+    // A yom tov in the days ahead takes the week. On Sukkos nobody wants a
+    // lesson on next Shabbos's parsha, and that is what this card gave them.
+    const chag = yomTovAhead(calendar);
+    if (chag) {
+      const got = await breslovAbout(chag.look, date, 83);
+      if (got) {
+        return present(got.text, {
+          mode: 'yomtov',
+          yomTov: chag.en,
+          yomTovHe: chag.he,
+          parsha: parshaName,
+          parshaHe: calendar?.parsha?.he || null,
+          says: library.saidBy(got.book) || null,
+          why: `On ${chag.en}.`,
+        });
+      }
+    }
+
     const parshaRef = await parshaRefFromSefaria(calendar?.place?.israel);
     const linked = parshaRef ? await lessonsLinkedToParsha(parshaRef) : [];
 
@@ -250,24 +334,30 @@ async function weeklyTorah(date, calendar) {
       }
     }
 
-    // Nothing linked to the parsha this week -- give a featured lesson instead.
-    const refs = [];
-    for (const book of library.weeklyBooks()) {
-      refs.push(...(await library.refsFor(book.key)));
+    // Nothing linked to the parsha this week. Search for it by name instead:
+    // a lesson that says "Bereishis" is about Bereishis. Weaker than a
+    // recorded link, still a real connection, and the card says which it is.
+    const byName = parshaName
+      ? await breslovAbout(calendar?.parsha?.he || parshaName, date, 91)
+      : null;
+    if (byName) {
+      return present(byName.text, {
+        mode: 'parsha-named',
+        parsha: parshaName,
+        parshaHe: calendar?.parsha?.he || null,
+        says: library.saidBy(byName.book) || null,
+        why: `Mentions Parashas ${parshaName}.`,
+      });
     }
-    if (!refs.length) return unavailable('weekly Torah');
 
-    const chosen = pickForWeek(refs, date, 77);
-    const start = refs.indexOf(chosen);
-    const ordered = refs.slice(start).concat(refs.slice(0, start));
-    const { text } = await firstThatLoads(ordered);
-
-    return present(text, {
-      mode: 'featured',
-      parsha: parshaName,
-      parshaHe: calendar?.parsha?.he || null,
-      why: 'A featured lesson for this week.',
-    });
+    // And if none of that finds anything, nothing is shown.
+    //
+    // There used to be a featured lesson here, picked for the week out of the
+    // whole shelf and having nothing to do with either the parsha or the
+    // chag. It filled the card, which is not the same as belonging on it --
+    // the one thing this card promises is that it is about this week.
+    return unavailable('weekly Torah',
+      new Error(`No Breslov lesson found for ${parshaName || 'this week'}`));
   } catch (err) {
     return unavailable('weekly Torah', err);
   }
@@ -545,6 +635,7 @@ async function ushpizinPassage(refs, date, tried) {
 
 module.exports = {
   yahrzeitPassage, ushpizinPassage, dvarOnPassage, answersTo, shapeNames,
+  yomTovAhead, YOM_TOV,
   dailySpark, dailyTehillim, tikkunHaklali, weeklyTorah,
   lessonsLinkedToParsha, present, unavailable, dayKey,
 };

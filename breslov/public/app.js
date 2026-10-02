@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '57';
+  var BUILD = '58';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -839,10 +839,24 @@
       fill($('weeklyBody'), unavailableNotice('weekly Torah', weekly && weekly.reason, refresh));
       return;
     }
-    setText('weeklyTag', weekly.parshaHe || weekly.parsha || '');
-    $('weeklyWhy').textContent = weekly.mode === 'parsha'
-      ? 'On a verse in Parashas ' + weekly.parsha + '. It stays the same all week.'
-      : weekly.why + ' It stays the same all week.';
+    // On a yom tov week the card belongs to the chag, not to next Shabbos.
+    var isChag = weekly.mode === 'yomtov';
+    setText('weeklyTitle', isChag ? 'Torah for ' + weekly.yomTov : 'Torah of the week');
+    setText('weeklyTag', (isChag ? weekly.yomTovHe : weekly.parshaHe) || weekly.parsha || '');
+
+    var why;
+    if (isChag) {
+      why = 'A lesson that speaks about ' + weekly.yomTov + '.';
+    } else if (weekly.mode === 'parsha') {
+      // The strong case: Sefaria records this lesson against a verse in it.
+      why = 'On a verse in Parashas ' + weekly.parsha + '.';
+    } else if (weekly.mode === 'parsha-named') {
+      // The weaker one, and said as such rather than dressed up as the other.
+      why = 'A lesson that mentions Parashas ' + weekly.parsha + '.';
+    } else {
+      why = weekly.why || '';
+    }
+    $('weeklyWhy').textContent = why + ' It stays the same all week.';
 
     var weeklyWrap = document.createDocumentFragment();
     // Whose Torah this is, said once and said plainly, above the piece
