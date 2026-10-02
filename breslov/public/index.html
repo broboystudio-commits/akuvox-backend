@@ -152,7 +152,7 @@
     <nav class="rows" id="todayRows" aria-label="Today at a glance"></nav>
 
     <!-- ---- at most two more, and only when they are worth it. -->
-    <section class="more-today" id="moreToday" hidden>
+    <section class="more-today strip" id="moreToday" hidden>
       <h2 class="rows-head">More for today</h2>
       <div id="moreTodayBody"></div>
     </section>
@@ -192,14 +192,15 @@
       <div class="kv" id="shabbosTimes"></div>
     </section>
 
-    <!-- The whole lesson, kept so nothing that worked is lost: the old Today
-         screen could open the day's teaching in full and this still can. -->
-    <div class="full" id="sparkFull" hidden></div>
-    <span id="verseRef" hidden></span>
-    <span id="verseBody" hidden></span>
-    <span id="quickTehillim" hidden></span>
-    <span id="quickWeekly" hidden></span>
-    <button id="openFull" type="button" hidden></button>
+    <!-- Six hidden leftovers from the old Today screen used to sit here:
+         #sparkFull, #openFull, #verseRef, #verseBody, #quickTehillim and
+         #quickWeekly. The lesson they held opens on its own page now. They
+         were not harmless. #openFull was a button with no words and no
+         label, which is a thing a screen reader has to announce and cannot
+         name, and the day's failure notice was being written into
+         #verseBody -- so when the day could not be fetched and nothing was
+         saved from last time, the apology was rendered into a box nobody
+         could see. -->
 
   </section>
 
@@ -371,11 +372,26 @@
 
   <!-- ---------------------------------------------------------- ZMANIM -->
   <section class="panel" id="panel-zmanim" role="region" aria-label="Zmanim" hidden>
+    <header class="hubhead">
+      <h1>Zmanim</h1>
+      <p class="hubsub" id="zmanimPlace"></p>
+    </header>
+
+    <!-- The one time anybody opens this page for. It used to be the fourth or
+         fifth line of a list of eighteen, told apart from the rest by a tint:
+         to find out when Mincha was you read the whole page. -->
+    <article class="card nextzman-card" id="zmanimNextCard" hidden
+             role="status" aria-live="polite">
+      <p class="nextzman-label">Next</p>
+      <p class="nextzman-name"><span id="zmanimNextName"></span>
+        <span class="he" id="zmanimNextHe"></span></p>
+      <p class="nextzman-time" id="zmanimNextTime"></p>
+      <p class="nextzman-away" id="zmanimNextAway"></p>
+      <p class="nextzman-note" id="zmanimNextNote" hidden></p>
+    </article>
+
     <article class="card">
-      <header class="card-head">
-        <h2>Zmanim</h2>
-        <span class="ref" id="zmanimPlace"></span>
-      </header>
+      <h2 class="rows-head">The whole day</h2>
       <div class="zmanim" id="zmanimList"><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
     </article>
 

@@ -40,6 +40,33 @@ async function main() {
   check('Candle lighting', !!calendar.candles,
     calendar.candles ? calendar.candles.en : 'none in range');
 
+  // The Omer and the fast times. Both are facts about a day that the app
+  // shows and nothing else on the screen says, and both arrive from hebcal
+  // categories that have to be asked for by name -- the Omer is not counted
+  // unless `omer: true`, and the fast times come in as `zmanim+fast`, which
+  // the occasion filter deliberately throws away. Either is silently absent
+  // if the asking is dropped, and nothing else would notice.
+  {
+    const noon = (y, m, d) => new Date(y, m, d, 12, 0, 0);
+    const omerDay = dates.calendarFor(noon(2026, 3, 20), place);
+    check('The Omer is counted', !!omerDay.omer && omerDay.omer.day === 18,
+      omerDay.omer ? `${omerDay.omer.day} — ${omerDay.omer.en}` : 'not counted');
+    check('And broken into weeks and days',
+      !!omerDay.omer && omerDay.omer.weeks === 2 && omerDay.omer.days === 4,
+      omerDay.omer ? `${omerDay.omer.weeks}w ${omerDay.omer.days}d` : '-');
+
+    const plainDay = dates.calendarFor(noon(2026, 0, 1), place);
+    check('And only when it is being counted', plainDay.omer === null,
+      plainDay.omer ? 'counted on a day in Teves' : 'nothing in Teves');
+
+    const fastDay = dates.calendarFor(noon(2026, 6, 2), place);
+    check('A fast says when it begins and ends',
+      !!fastDay.fast && !!fastDay.fast.begins && !!fastDay.fast.ends,
+      fastDay.fast ? `${fastDay.fast.begins} to ${fastDay.fast.ends}` : 'no times');
+    check('And an ordinary day has no fast times', plainDay.fast === null,
+      plainDay.fast ? 'times on a day with no fast' : 'none');
+  }
+
   console.log('\nZmanim (no internet needed)');
   const z = zmanim.zmanimFor(today, place);
   check('All times calculated', z.times.length >= 12, `${z.times.length} times`);

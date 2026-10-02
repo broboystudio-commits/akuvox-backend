@@ -180,6 +180,11 @@ function shabbosTimes(date, place) {
     location,
     candlelighting: true,
     sedrot: false,
+    // The Omer is its own category and hebcal does not count it unless asked.
+    // It is the one thing that is true of a day for forty-nine days running
+    // and is said out loud every one of them, so a day's calendar that leaves
+    // it out is not describing the day.
+    omer: true,
     il: !!place.israel,
     havdalahMins: undefined,
   });
@@ -190,6 +195,11 @@ function shabbosTimes(date, place) {
   let havdalah = null;
   const holidays = [];
   const today = [];
+  let omer = null;
+  // When a fast begins and ends. These arrive as `zmanim+fast` events, which
+  // the occasion filter below deliberately drops -- they are times, not
+  // occasions -- so they are picked up here instead and kept together.
+  let fast = null;
 
   for (const ev of events) {
     const cats = ev.getCategories();
@@ -208,6 +218,21 @@ function shabbosTimes(date, place) {
         : cats.includes('major') ? 'yomtov'
         : 'minor',
     };
+    if (cats.includes('omer') && entry.date === todayIso) {
+      omer = {
+        day: ev.omer,
+        en: entry.en,
+        he: entry.he,
+        // "Three weeks and four days", which is how it is actually counted.
+        weeks: Math.floor(ev.omer / 7),
+        days: ev.omer % 7,
+      };
+    }
+    if (cats.includes('zmanim') && cats.includes('fast') && entry.date === todayIso) {
+      fast = fast || { begins: null, ends: null };
+      if (/begins/i.test(entry.en)) fast.begins = entry.time;
+      if (/ends/i.test(entry.en)) fast.ends = entry.time;
+    }
     if (cats.includes('candles') && !candles && when >= now) candles = entry;
     if (cats.includes('havdalah') && candles && !havdalah && when >= now) havdalah = entry;
 
@@ -225,7 +250,7 @@ function shabbosTimes(date, place) {
   // wants: a yom tov coming on Wednesday is already this week's subject on
   // Sunday. `today` is only today, which is what the day's own teaching
   // wants. Keeping both apart stops one from answering the other's question.
-  return { candles, havdalah, holidays: holidays.slice(0, 8), today };
+  return { candles, havdalah, holidays: holidays.slice(0, 8), today, omer, fast };
 }
 
 /** Everything calendar-related for one day, in one object. */

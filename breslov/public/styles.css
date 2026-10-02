@@ -4815,3 +4815,94 @@ button.row.is-pressed { background: var(--surface-2); }
   max-width: 180px;
   margin-inline: auto;
 }
+
+/* The Hebrew beside a card's heading was tertiary grey: #837c8a on the card,
+   measured at 4.03:1 on אוּשְׁפִּיזִין. It is a 15px heading, not a footnote, so
+   4.5:1 is the bar and it was under it. Tertiary is for text that is there if
+   you look for it; the Hebrew name of the card is not that. */
+.card-head .ref { color: var(--text-2); }
+
+/* A row that states a fact rather than opening something: no chevron, no
+   press, no cursor. It looks like its neighbours because it is the same kind
+   of line; it just has nowhere to take you. */
+.row.is-plain { cursor: default; }
+.row.is-plain .row-sub .he { font-family: var(--hebrew); }
+
+/* ---------------------------------------------------------------------------
+   The Zmanim page, made glanceable.
+
+   The page is opened to answer one question -- when is the next one -- and it
+   used to answer it on the fourth or fifth line of eighteen, marked out by a
+   rose-and-gold gradient panel with a shadow. Two problems at once: you had
+   to read the list to find the line, and the line that mattered was the one
+   thing on the page still dressed in the old glass.
+
+   So: the next zman is said once, above the list, at a size you can read from
+   across a room. The list keeps its mark on the same line, because somebody
+   reading down the day wants to know where they are in it -- but the mark is
+   now what the rest of this app uses to say "this one": the accent colour and
+   a little weight. No slab.
+--------------------------------------------------------------------------- */
+.nextzman-card {
+  padding: 22px var(--card-pad, 18px) 24px;
+  text-align: left;
+}
+.nextzman-label {
+  margin: 0 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.nextzman-name {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text);
+}
+.nextzman-name .he {
+  font-family: var(--hebrew);
+  margin-inline-start: 8px;
+  color: var(--text-2);
+  unicode-bidi: isolate;
+}
+.nextzman-time {
+  margin: 8px 0 0;
+  /* Big, and on a tabular face so the digits do not shuffle as the minutes
+     tick over. */
+  font-size: clamp(2.25rem, 11vw, 3rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.nextzman-away {
+  margin: 8px 0 0;
+  font-size: 0.9375rem;
+  color: var(--text-2);
+}
+.nextzman-note {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+/* The line in the list below: marked, not mounted. */
+.zman.is-next {
+  margin: 0;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.zman.is-next:first-child { border-top: 0; padding-top: 0; }
+.zman.is-next + .zman { border-top: 1px solid var(--line); }
+.zman.is-next .name { color: var(--accent); font-weight: 600; }
+.zman.is-next .he-label { color: var(--accent); }
+.zman.is-next .t { color: var(--accent); font-weight: 700; }
+.zman.is-next .note { margin-top: 3px; font-size: 0.75rem; color: var(--text-3); }

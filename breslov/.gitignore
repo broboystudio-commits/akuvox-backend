@@ -6,3 +6,8 @@ data/cache/*.json
 # It is state, not source, and the disk it lives on is thrown away on every
 # restart anyway.
 data/history/
+
+# Screenshots written by the browser checks while they run.
+*.png
+!public/icons/*.png
+!icons/*.png

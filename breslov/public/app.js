@@ -590,6 +590,7 @@
 
     // ---- what there is to do today, as rows
     renderTodayRows(data);
+    renderMoreToday(cal);
 
     // ---- Shabbos
     setText('parshaTag', cal.parsha ? cal.parsha.en : '');
@@ -597,10 +598,15 @@
     if (cal.parsha) rows.push(['Parsha', cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '')]);
     if (cal.candles) rows.push(['Candle lighting', clock(cal.candles.time) + ' · ' + prettyDate(cal.candles.date)]);
     if (cal.havdalah) rows.push(['Havdalah', clock(cal.havdalah.time) + ' · ' + prettyDate(cal.havdalah.date)]);
-    (cal.holidays || []).forEach(function (h) {
-      if (h.date === today) return;                      // already a chip above
-      if (h.en.indexOf('Candle') === 0 || h.en.indexOf('Havdalah') === 0) return;
-      rows.push([prettyDate(h.date), h.en]);
+    // The yomim tovim still to come are NOT folded in here any more. They
+    // used to be appended to the same list as the candle lighting, which put
+    // "Sun, Oct 12 — Sukkos" directly under "Havdalah 7:16 PM" as though the
+    // two were the same kind of fact, and then the Shabbos page repeated the
+    // whole list again under a heading of its own. They are their own section
+    // now, below.
+    var coming = (cal.holidays || []).filter(function (h) {
+      if (h.date === today) return false;                // already said above
+      return h.en.indexOf('Candle') !== 0 && h.en.indexOf('Havdalah') !== 0;
     });
     // Built fresh for each place it goes: a fragment can only be put into the
     // page once, and the same Shabbos belongs on the weekly page too.
@@ -617,6 +623,7 @@
     fillWith('shabbosTimes', shabbosRows());
     fillWith('weeklyShabbos', shabbosRows());
     fillWith('shabbosFull', shabbosRows());
+    renderComingUp(coming);
     setText('shabbosParsha', cal.parsha
       ? 'Parashas ' + cal.parsha.en + (cal.parsha.isDouble ? ' (double)' : '') : '');
     setText('weekSub', cal.parsha ? 'Parashas ' + cal.parsha.en : '');
@@ -726,8 +733,6 @@
     var btn = $('torahFullBtn');
     if (btn) { btn.hidden = false; btn.textContent = 'Read the whole lesson'; }
 
-    // The old home screen could open it in full and so can this one.
-    fill($('sparkFull'), passage(spark));
   }
 
   /**
@@ -774,6 +779,106 @@
       frag.appendChild(b);
     });
     fill(into, frag);
+  }
+
+  /**
+   * The one or two things that are true of today and of no other day.
+   *
+   * This is deliberately not a place for everything the calendar knows. The
+   * rows above already say what there is to read; a yom tov already names
+   * itself in the line under the date. What is left is the small number of
+   * facts that change what somebody does today and are not written anywhere
+   * else on the screen: the Omer, which is counted out loud for forty-nine
+   * nights running, and when a fast begins and ends.
+   *
+   * Two at most, and the section hides itself when there are none. A "more"
+   * heading over an empty box is worse than no heading.
+   */
+  function renderMoreToday(cal) {
+    var into = $('moreTodayBody');
+    var section = $('moreToday');
+    if (!into || !section) return;
+
+    var items = [];
+
+    if (cal.omer && cal.omer.day) {
+      // "Thirty-three days, which are four weeks and five days" -- the way it
+      // is actually counted, not just a number.
+      var count = cal.omer.day + (cal.omer.day === 1 ? ' day' : ' days');
+      var parts = [];
+      if (cal.omer.weeks) {
+        parts.push(cal.omer.weeks + (cal.omer.weeks === 1 ? ' week' : ' weeks'));
+      }
+      if (cal.omer.days) {
+        parts.push(cal.omer.days + (cal.omer.days === 1 ? ' day' : ' days'));
+      }
+      var said = cal.omer.weeks && parts.length > 1
+        ? count + ', which are ' + parts.join(' and ')
+        : count;
+      items.push({ k: 'Sefiras HaOmer', v: said, he: cal.omer.he });
+    }
+
+    if (cal.fast && (cal.fast.begins || cal.fast.ends)) {
+      var when = [];
+      if (cal.fast.begins) when.push('begins ' + clock(cal.fast.begins));
+      if (cal.fast.ends) when.push('ends ' + clock(cal.fast.ends));
+      items.push({ k: 'The fast', v: when.join(' · '), he: '' });
+    }
+
+    if (!items.length) { section.hidden = true; fill(into, document.createDocumentFragment()); return; }
+
+    var frag = document.createDocumentFragment();
+    items.slice(0, 2).forEach(function (it) {
+      var row = el('div', 'kv-row');
+      row.appendChild(el('span', 'k', it.k));
+      var v = el('span', 'v', it.v);
+      if (it.he) {
+        v.appendChild(document.createTextNode(' '));
+        v.appendChild(el('span', 'he', it.he));
+      }
+      row.appendChild(v);
+      frag.appendChild(row);
+    });
+    var kv = el('div', 'kv');
+    kv.appendChild(frag);
+    fill(into, kv);
+    section.hidden = false;
+  }
+
+  /**
+   * What the calendar has coming, on the Shabbos page.
+   *
+   * A week or so forward, which is as far as anybody plans. Each one is a row
+   * rather than a line in a table of times, because a yom tov is a day and
+   * not a reading off a clock -- and because the section was in the markup
+   * with nothing ever put into it, so on most weeks the page simply ended
+   * early and on the rest it said the same thing twice.
+   */
+  function renderComingUp(coming) {
+    var strip = $('yomTovStrip');
+    var into = $('yomTovList');
+    if (!strip || !into) return;
+
+    if (!coming || !coming.length) {
+      strip.hidden = true;
+      fill(into, document.createDocumentFragment());
+      return;
+    }
+
+    var frag = document.createDocumentFragment();
+    coming.slice(0, 6).forEach(function (h) {
+      var row = el('div', 'row is-plain');
+      var main = el('span', 'row-main');
+      main.appendChild(el('span', 'row-title', h.en));
+      var sub = prettyDate(h.date);
+      if (h.he) sub += ' · ';
+      main.appendChild(el('span', 'row-sub', sub));
+      if (h.he) main.lastChild.appendChild(el('span', 'he', h.he));
+      row.appendChild(main);
+      frag.appendChild(row);
+    });
+    fill(into, frag);
+    strip.hidden = false;
   }
 
   /** Where the Tikkun was left, said in words. */
@@ -1102,6 +1207,29 @@
 
   function renderZmanim(zmanim, cal) {
     setText('zmanimPlace', cal.place.name);
+
+    // The next zman, said once and said large, above the list rather than
+    // inside it. The list still marks it, because somebody reading down the
+    // day wants to know where they are in it -- but nobody should have to
+    // read eighteen lines to find the one that has not happened yet.
+    var next = zmanim.next;
+    var card = $('zmanimNextCard');
+    if (card) {
+      if (next) {
+        card.hidden = false;
+        setText('zmanimNextName', next.en);
+        setText('zmanimNextHe', next.he);
+        setText('zmanimNextTime', next.time);
+        setText('zmanimNextAway', friendlyMinutes(next.minutesAway));
+        var note = $('zmanimNextNote');
+        if (note) {
+          note.textContent = next.note || '';
+          note.hidden = !next.note;
+        }
+      } else {
+        card.hidden = true;
+      }
+    }
 
     var list = document.createDocumentFragment();
     (zmanim.times || []).forEach(function (t) {
@@ -2767,10 +2895,19 @@
         if (banner) banner.hidden = false;
         renderToday(saved);
       } else {
-        fill($('verseBody'), unavailableNotice("day's learning", err, function () {
-          fill($('verseBody'), textSkeleton(6));
+        // Into the נקודה, which is the page. This used to write the apology
+        // into `#verseBody` -- a leftover from the old Today screen that is
+        // `hidden` in the markup -- so when the day's data could not be
+        // fetched and nothing was saved from last time, the screen simply sat
+        // there with its skeleton and said nothing. The check that was meant
+        // to catch it looked for a `.notice` inside the open panel, and found
+        // one: querySelector does not care whether you can see it.
+        fill($('nekudaBody'), unavailableNotice("day's learning", err, function () {
+          fill($('nekudaBody'), textSkeleton(6));
           refresh();
         }));
+        setText('nekudaWhy', '');
+        setHidden('nekudaSource', true);
       }
     });
   }
@@ -2858,15 +2995,6 @@
       if (field && !field.contains(e.target)) closeSuggest();
     });
 
-    on('openFull', 'click', function () {
-      var full = $('sparkFull');
-      if (!full) return;
-      var open = full.hidden;
-      full.hidden = !open;
-      setText('openFull', open ? 'Hide the lesson' : 'Read the whole lesson');
-      if (open) replay(full);
-    });
-
     on('toggleEnglish', 'click', function () {
       state.english = !state.english;
       save(STORE.english, state.english);
@@ -2924,8 +3052,11 @@
   }
 
   /** Everything that is meant to squash when you press it. */
+  // `.row:not(.is-plain)`: a row that only states a fact -- a yom tov coming
+  // on Wednesday -- is not a control, and lighting it up under a finger
+  // promises somewhere to go that does not exist.
   var PRESSABLE = '.btn, .pill, .stepper button, .icon-btn, .aa, .resume button,' +
-                  '.tab, .row, .wheel-item, .backrow, .nekuda-source';
+                  '.tab, .row:not(.is-plain), .wheel-item, .backrow, .nekuda-source';
 
   /**
    * Mark what is being pressed, rather than leaving it to :active.
