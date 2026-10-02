@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '62';
+  var BUILD = '64';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -164,7 +164,20 @@
 
   function applyTheme() {
     var theme = activeTheme();
-    document.documentElement.setAttribute('data-theme', theme);
+    var root = document.documentElement;
+    // Throw the switch with every transition off, then turn them back on a
+    // frame later. Each control eases its own colour, which is right when one
+    // control changes and wrong when the whole page does: without this, going
+    // dark dragged every pill, tab and card through a fifth of a second of
+    // colours belonging to neither theme.
+    root.classList.add('theme-switching');
+    root.setAttribute('data-theme', theme);
+    // Reading a layout property forces the browser to apply both the class
+    // and the attribute now, so the frame that follows has nothing to ease.
+    void root.offsetHeight;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { root.classList.remove('theme-switching'); });
+    });
     // Keep the iPhone status bar and the PWA chrome in step with the page.
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', theme === 'dark' ? '#14101a' : '#fdfbf9');
@@ -1594,16 +1607,30 @@
     return !!(drop && !drop.hidden);
   }
 
+  /**
+   * Search takes the date's place in the header rather than a row of its own.
+   *
+   * The class goes on the <header>, because what has to change is two things
+   * at once -- the date block steps aside and the search button turns into a
+   * cross -- and a class on the thing that contains both is how CSS is told
+   * that in one move. The header's height does not change, so nothing on the
+   * page under it moves; that was the bug.
+   */
   function openSearchBar() {
     var drop = $('searchDrop');
     var btn = $('searchBtn');
+    var topbar = document.querySelector('.topbar');
     if (!drop) return;
+    if (topbar) topbar.classList.add('is-searching');
     drop.hidden = false;
     // Restart the animation even if it was opened a moment ago.
     drop.classList.remove('is-dropping');
     void drop.offsetWidth;
     drop.classList.add('is-dropping');
-    if (btn) btn.setAttribute('aria-expanded', 'true');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'true');
+      btn.setAttribute('aria-label', 'Close search');
+    }
     syncTopbarHeight();
     var input = $('searchInput');
     if (input) { input.focus(); input.select(); }
@@ -1613,11 +1640,16 @@
   function closeSearchBar() {
     var drop = $('searchDrop');
     var btn = $('searchBtn');
+    var topbar = document.querySelector('.topbar');
     if (!drop || drop.hidden) return;
     closeSuggest();
+    if (topbar) topbar.classList.remove('is-searching');
     drop.hidden = true;
     drop.classList.remove('is-dropping');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Search the seforim');
+    }
     syncTopbarHeight();
   }
 

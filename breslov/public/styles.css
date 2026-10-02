@@ -3113,3 +3113,423 @@ body.hide-english .verse-card .verse-en { display: none; }
   border-radius: 5px;
   background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
+
+
+/* ═══════════════════════════════════════════════ the high-fidelity pass
+
+   Five things, each one measured before and after. Written at the very end
+   of this file on purpose: three times now a block put in the obvious place
+   has been silently beaten by a rule fourteen hundred lines further down,
+   and these are the rules that have to win.
+
+   One motion curve runs through all of it. 0.25, 1, 0.5, 1 is a fast start
+   that eases long into its landing with no overshoot -- the curve a sheet of
+   glass would travel on if it had mass and no bounce. The springy
+   0.34, 1.56, 0.64, 1 stays only where something should feel light enough to
+   overshoot: a button under a thumb.                                      */
+
+:root {
+  --glide: cubic-bezier(0.25, 1, 0.5, 1);
+  --glide-ms: 300ms;
+  --press: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+/* ── 1. the bottom bar ───────────────────────────────────────────────── */
+
+/* Fixed, and fixed against the things that unfix a fixed element: a
+   transform, a filter or a backdrop-filter on any ancestor makes `fixed`
+   resolve against that ancestor instead of the window, which is how a sticky
+   bar silently becomes a scrolling one. Declared here so the bar's own
+   position cannot be argued with.
+
+   Only below 900px. From there up this app deliberately takes the tab bar off
+   the bottom of the screen and puts it in the flow of the page as a row of
+   pills -- a floating bar across a 1280px window is a phone pattern in the
+   wrong place. Writing this rule without the query put the bar back over the
+   page on a laptop, where it covered the last line of the zmanim and left the
+   active label unreadable. Three checks caught it; all three were right. */
+@media (max-width: 899px) {
+  .tabs {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 10px);
+    z-index: 40;
+    backdrop-filter: blur(20px) saturate(200%) brightness(var(--bar-bright-tabs));
+    -webkit-backdrop-filter: blur(20px) saturate(200%) brightness(var(--bar-bright-tabs));
+    /* Its own compositing layer, so the blur is rasterised once and the pill
+       sliding across it does not re-blur the page on every frame. */
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* In the dark the bar is a darker pane than the page, which is what makes
+     it read as glass rather than as a hole. 0.56 was the page showing through
+     almost unchanged. */
+  :root[data-theme="dark"] .tabs {
+    background: rgba(22, 22, 26, 0.72);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 10px 34px -12px rgba(0, 0, 0, 0.85);
+  }
+}
+
+/* The pill. One element that travels, not a background that blinks off one
+   tab and on at another -- and it travels on the glide, so leaving a tab and
+   arriving at the next are one continuous movement. `all` is deliberate: the
+   width changes with the label under it ("Today" is narrower than "Tehillim")
+   and both have to move together or the pill visibly stretches after it
+   lands. */
+.tabs .bar-lens {
+  transition: all var(--glide-ms) var(--glide);
+}
+/* Under a finger there is nothing to ease: the pill IS the finger. */
+.tabs.is-dragging .bar-lens { transition: none; }
+/* The label and icon catch up on the same curve, so nothing arrives late. */
+.tabs .tab,
+.tabs .tab svg {
+  transition: color var(--glide-ms) var(--glide),
+              transform var(--glide-ms) var(--glide);
+}
+
+
+
+/* ── 2. the settings sheet ───────────────────────────────────────────── */
+
+/* A bottom sheet on a phone, because that is where a thumb is, and a centred
+   panel from a laptop's width up, because a sheet stuck to the bottom of a
+   27-inch screen is a phone pattern wearing the wrong clothes.
+
+   It was neither: a panel pinned to the top-right corner with square top
+   corners against the edge of the screen, which read as something that had
+   come loose rather than something that had been presented. */
+@media (max-width: 719px) {
+  .sidebar {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    max-height: min(86vh, calc(100vh - var(--safe-top) - 24px));
+    border-radius: 24px 24px 0 0;
+    padding: 10px 22px 0;
+    /* Starts below the screen and rides up on the glide. The old one faded
+       and scaled from the corner, which is the gesture of a popover, not of
+       a sheet. */
+    transform: translate3d(0, 100%, 0);
+    opacity: 1;
+    transition: transform var(--glide-ms) var(--glide);
+  }
+  .sidebar.is-open { transform: translate3d(0, 0, 0); }
+
+  /* Deeper than the bars -- this one has to separate itself from a whole
+     page, not pass over a line of text -- but not so deep that the page
+     behind it is erased. At 40 it was a flat wash; at 30 you can still see
+     there is a page under there, which is the point of a pane you look
+     through rather than a card laid on top. */
+  .sidebar,
+  :root[data-theme="dark"] .sidebar {
+    backdrop-filter: blur(30px) saturate(190%);
+    -webkit-backdrop-filter: blur(30px) saturate(190%);
+  }
+
+  /* The grabber, at iOS's own size: 36 x 5, centred, and nothing else on its
+     line. */
+  .sheet-grabber {
+    width: 36px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+
+  /* Room under the last row for the home bar, so the sheet can reach the
+     bottom edge of the screen without its last control sitting on it. */
+  .sheet-floor { height: calc(var(--safe-bottom) + 18px); }
+}
+
+@media (min-width: 720px) {
+  .sidebar {
+    top: 50%;
+    right: auto;
+    left: 50%;
+    bottom: auto;
+    width: min(420px, 90vw);
+    max-height: 84vh;
+    border-radius: 24px;
+    padding: 14px 24px 22px;
+    transform: translate3d(-50%, -50%, 0) scale(0.96);
+    opacity: 0;
+    transition: transform var(--glide-ms) var(--glide),
+                opacity 180ms var(--glide);
+  }
+  .sidebar.is-open {
+    transform: translate3d(-50%, -50%, 0) scale(1);
+    opacity: 1;
+  }
+  .sheet-grabber { display: none; }
+  .sheet-floor { height: 2px; }
+}
+
+/* The hierarchy. A title, a line saying what the sheet is for, then rows --
+   rather than one bold word and a list of equals. */
+.sidebar .side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0 10px;
+}
+.sidebar .side-title { min-width: 0; }
+.sidebar .side-head h2 {
+  margin: 0;
+  font-size: 1.3125rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.sidebar .side-sub {
+  margin: 3px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  /* Not --ink-3. The quiet tier is tuned against a card; on the sheet's own
+     glass it measured 3.99:1. */
+  color: var(--ink-2);
+}
+
+/* Every row the same shape: the name on the left, the control hard right,
+   a comfortable 52px of height so none of them is the odd one out. */
+.sidebar .sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 52px;
+  padding: 7px 0;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  border-top: 1px solid var(--panel-line);
+}
+.sidebar .sheet-row:first-of-type { border-top: 0; }
+.sidebar .sheet-row > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* The font menu was showing "Frank Ruhl — tradi…". Given the whole right
+   half of the row it fits. */
+.sidebar .choice {
+  flex: 0 1 62%;
+  max-width: none;
+  text-overflow: ellipsis;
+}
+
+
+/* ── 3. the number bars ──────────────────────────────────────────────── */
+
+/* Native scrolling: momentum on iOS, no scrollbar on any platform, and the
+   bar's own overscroll kept to itself so dragging past the last psalm does
+   not start the browser's back gesture. */
+.chapters .chapter-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* The lens is drawn against this element, so it has to be the one that
+     scrolls AND the one the lens is positioned in. */
+  position: relative;
+  touch-action: pan-x;
+}
+.chapters .chapter-track::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.chapters .chapter-track > button { scroll-snap-align: center; }
+
+/* The highlight morphs rather than jumps: it travels to the number you
+   tapped and takes on its width on the way, both on the same curve, so a
+   wide number ("137") and a narrow one ("16") are one movement and not a
+   slide followed by a stretch. */
+.chapters .chapter-track .bar-lens {
+  transition: transform var(--glide-ms) var(--glide),
+              width var(--glide-ms) var(--glide),
+              opacity 160ms var(--glide);
+}
+.chapters .chapter-track.is-dragging .bar-lens { transition: none; }
+/* Under a finger the bar must not also scroll itself, or the number under
+   the finger and the number under the lens drift apart. */
+.chapters .chapter-track.is-dragging {
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+}
+
+
+/* ── 4. the search field ─────────────────────────────────────────────── */
+
+/* It is a flex item in the header row now, in the place the date was. The
+   row keeps its height whether the field is in it or not, which is the whole
+   point: opening search used to add 78px to the header and push every card
+   on the page down by that much. */
+.bar { align-items: center; }
+
+/* One cell, two occupants. The date keeps its box while the field is up --
+   hidden, not removed -- so the cell is always as tall as the date and the
+   header cannot change height at all. Removing the date was the first
+   attempt and it still moved the page, by 5px instead of 78. */
+.bar-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  align-items: center;
+}
+.bar-slot > .dateblock,
+.bar-slot > .searchdrop {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.topbar.is-searching .dateblock { visibility: hidden; }
+
+.searchdrop {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.searchdrop[hidden] { display: none; }
+/* 14px of margin under the form, from when this was a band of its own. */
+.searchdrop .searchbar { margin: 0; }
+/* It grows out of the width the date left behind rather than dropping in
+   from above -- there is no longer anywhere above for it to drop from. */
+.searchdrop.is-dropping { animation: field-open 260ms var(--glide) both; }
+@keyframes field-open {
+  from { opacity: 0; transform: scaleX(0.92); transform-origin: right center; }
+  to   { opacity: 1; transform: none; }
+}
+
+.searchdrop .searchbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.searchdrop .search-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+/* A magnifier inside the field, so the field says what it is without needing
+   a word of placeholder to do it. */
+.searchdrop .search-glyph {
+  position: absolute;
+  left: 13px;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.searchdrop input[type="search"] {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px 0 38px;
+  font-size: 1rem;          /* 16px exactly: anything less and iOS zooms the
+                               whole page in when the field takes focus */
+  text-overflow: ellipsis;
+}
+/* The submit button keeps its words where there is room for them and becomes
+   nothing at all where there is not -- the field is where you type and Enter
+   is what sends it, and a button that squeezes the field is worse than no
+   button. */
+.searchdrop .search-go {
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+@media (max-width: 419px) {
+  .searchdrop .search-go { display: none; }
+}
+/* On the narrowest phone the magnifier inside the field costs more than it
+   earns: without it the placeholder fits, and with it the words were cut. */
+@media (max-width: 359px) {
+  .searchdrop .search-glyph { display: none; }
+  .searchdrop input[type="search"] { padding-left: 16px; }
+}
+
+/* One button, two faces. */
+#searchBtn .glyph-close { display: none; }
+.topbar.is-searching #searchBtn .glyph-search { display: none; }
+.topbar.is-searching #searchBtn .glyph-close { display: block; }
+
+
+/* ── 5. every button ─────────────────────────────────────────────────── */
+
+/* Transform only, never a size or a margin, so a press cannot move anything
+   around it -- and `will-change` so the first press is as smooth as the
+   tenth. The scale down is instant on the way in and springs on the way
+   back, which is what makes a tap feel like it was answered rather than
+   merely recorded. */
+.btn, .pill, .tab, .icon-btn, .chapters button, .stepper button,
+.quick-card, .shelf-book, .chip-tag, .aa, .resume button, .switch, .linkish {
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+  transition: transform 220ms var(--press),
+              background 200ms var(--glide),
+              color 200ms var(--glide),
+              box-shadow 200ms var(--glide),
+              border-color 200ms var(--glide);
+}
+.btn:active, .btn.is-pressed,
+.pill:active, .pill.is-pressed,
+.chapters button:active, .chapters button.is-pressed,
+.quick-card:active, .quick-card.is-pressed,
+.shelf-book:active, .shelf-book.is-pressed,
+.chip-tag:active, .chip-tag.is-pressed,
+.aa:active, .aa.is-pressed,
+.resume button:active, .resume button.is-pressed,
+.stepper button:active, .stepper button.is-pressed {
+  transform: scale(0.955);
+  transition-duration: 90ms;      /* down at once, back on the spring */
+}
+.icon-btn:active, .icon-btn.is-pressed,
+.switch:active, .switch.is-pressed {
+  transform: scale(0.92);
+  transition-duration: 90ms;
+}
+/* The tabs take the press on their contents, not on the tab: the tab is the
+   track the pill runs along, and scaling it would drag the pill with it. */
+.tab:active > *, .tab.is-pressed > * {
+  transform: scale(0.94);
+  transition: transform 90ms var(--press);
+}
+
+/* All of it stops when the phone asks for stillness. */
+@media (prefers-reduced-motion: reduce) {
+  .tabs .bar-lens,
+  .chapters .chapter-track .bar-lens,
+  .sidebar { transition-duration: 0.001ms !important; }
+  .chapters .chapter-track { scroll-behavior: auto; }
+}
+
+
+/* ── changing the theme is not an animation ──────────────────────────── */
+
+/* Every control now eases its colour and background, which is right when one
+   control changes and wrong when the whole page does: flipping to dark mode
+   dragged every pill, tab and card through 200ms of colours that belong to
+   neither theme. The class goes on for one frame while the switch is thrown.
+   (A contrast check caught it mid-flight and reported a perfectly good pill
+   at 1.48:1 -- it was reading a colour that exists for a fifth of a second.) */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}

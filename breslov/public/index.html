@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="62">
+<html lang="en" data-build="64">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=62" />
+<link rel="stylesheet" href="/styles.css?v=64" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -32,8 +32,20 @@
 <body>
 
 <header class="topbar">
+  <!-- The search field lives IN this row, not in a row of its own below it.
+       It used to be a separate band that appeared between the date and the
+       next-zman line: the header grew by 78px, everything under it jumped
+       down, and the field was squeezed into what was left beside the Search
+       button, which clipped its own placeholder mid-word. Now the date block
+       steps aside and the field takes its place, so the bar is the same
+       height open or shut and nothing below it moves at all. -->
   <div class="bar">
-    <div class="dateblock">
+    <!-- The date and the search field share one cell. The date keeps its box
+         while searching (hidden, not removed), so the cell -- and therefore
+         the header, and therefore everything below it -- stays exactly the
+         height it was. -->
+    <div class="bar-slot">
+    <div class="dateblock" id="dateBlock">
       <p class="hebdate" id="hebDate" aria-hidden="true">&nbsp;</p>
       <p class="subline">
         <span id="gregDate">Loading…</span>
@@ -41,10 +53,30 @@
         <button class="linkish" id="placeBtn" type="button">Brooklyn, NY</button>
       </p>
     </div>
+
+    <div class="searchdrop" id="searchDrop" hidden>
+      <form class="searchbar" id="searchForm" role="search">
+        <div class="search-field">
+          <svg class="search-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+          <input type="search" id="searchInput" placeholder="Search seforim"
+                 autocomplete="off" autocorrect="off" spellcheck="false"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                 aria-controls="searchSuggest" />
+          <div class="suggest" id="searchSuggest" role="listbox" hidden></div>
+        </div>
+        <button class="btn search-go" type="submit">Search</button>
+      </form>
+    </div>
+    </div>
+
     <div class="bar-actions">
       <button class="icon-btn" id="searchBtn" type="button"
               aria-label="Search the seforim" aria-expanded="false" aria-controls="searchDrop">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <!-- One button, two faces: a magnifier while the field is shut and a
+             cross while it is open, so there is always a way back out of
+             search without reaching for the keyboard. -->
+        <svg class="glyph-search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <svg class="glyph-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
       <!-- Everything that used to be three buttons and a popover: the theme,
            the translation, the font, the text size and the about page. -->
@@ -55,28 +87,23 @@
     </div>
   </div>
 
-  <!-- The search bar drops out of the header, centred, and springs in. -->
-  <div class="searchdrop" id="searchDrop" hidden>
-    <form class="searchbar" id="searchForm" role="search">
-      <div class="search-field">
-        <input type="search" id="searchInput" placeholder="A word, an idea, or a sefer…"
-               autocomplete="off" autocorrect="off" spellcheck="false"
-               role="combobox" aria-expanded="false" aria-autocomplete="list"
-               aria-controls="searchSuggest" />
-        <div class="suggest" id="searchSuggest" role="listbox" hidden></div>
-      </div>
-      <button class="btn" type="submit">Search</button>
-    </form>
-  </div>
-
   <div class="nextzman" id="nextZman" role="status" aria-live="polite" hidden></div>
 </header>
 
 <!-- The sidebar, and the dimmed page behind it. -->
 <div class="scrim" id="menuScrim" hidden></div>
-<aside class="sidebar" id="sideMenu" aria-label="Settings" hidden>
+<aside class="sidebar" id="sideMenu" aria-label="Settings" role="dialog" aria-modal="true" hidden>
+  <!-- The grabber. It is what tells you, before you have touched anything,
+       that this is a sheet that came up from the bottom of the screen and can
+       be sent back down. Decorative: the close button beside the title is the
+       control a screen reader or a keyboard uses. -->
+  <div class="sheet-grabber" aria-hidden="true"></div>
+
   <div class="side-head">
-    <h2>Settings</h2>
+    <div class="side-title">
+      <h2>Settings</h2>
+      <p class="side-sub">How this app reads</p>
+    </div>
     <button class="icon-btn" id="menuClose" type="button" aria-label="Close">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
@@ -111,6 +138,10 @@
     <span>Reminders &amp; about</span>
     <button class="pill small" data-goto="about" type="button">Open</button>
   </div>
+
+  <!-- Keeps the last row clear of the home bar on a phone, where the sheet
+       now reaches the bottom edge of the screen. -->
+  <div class="sheet-floor" aria-hidden="true"></div>
 </aside>
 
 <nav class="tabs" id="tabs" aria-label="Sections">
@@ -663,6 +694,6 @@
 
 </main>
 
-<script src="/app.js?v=62"></script>
+<script src="/app.js?v=64"></script>
 </body>
 </html>
