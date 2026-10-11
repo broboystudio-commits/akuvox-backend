@@ -1,126 +1,177 @@
 # The iPhone app
 
-A real app, not the website in a frame. Native screens, a native widget, and
-Apple's own text rendering — which matters, because Apple rejects apps that are
-just a website in a wrapper (their guideline 4.2, "minimum functionality").
+A real app, not the website in a frame. Native screens and Apple's own text
+rendering — which matters, because Apple rejects apps that are just a website
+in a wrapper (their guideline 4.2, "minimum functionality").
 
-**You can run this on your own phone without paying Apple anything.** The
-$99/year Developer Program is only needed to put it in the App Store for other
-people. See *Running it for free* below.
+**You no longer need a Mac to build it.** That changed with
+[xtool](https://github.com/xtool-org/xtool), which builds and signs iOS apps
+from a plain Swift package on Linux or Windows. This folder is laid out as an
+xtool project. The old instructions in this file told you to buy a Mac; they
+were right when they were written and they are not right now.
+
+**Read the two warnings below before you spend an evening on this.**
+
+---
+
+## Warning 1: the widget is switched off
+
+The native widget does not build. Not because of anything here —
+[xtool issue #313](https://github.com/xtool-org/xtool/issues/313), opened
+10 October 2026 and still open, reports that a WidgetKit extension comes out
+with an empty binary and then crashes on launch.
+
+So `BreslovWidget.swift` sits in `WidgetKit-parked/`, whole and unchanged,
+with the three lines needed to switch it back on written down in
+[`WidgetKit-parked/WHY.md`](WidgetKit-parked/WHY.md).
+
+**You lose nothing by this.** The widget on your home screen today is the
+Scriptable one (`../scriptable/BreslovDaily.js`) and it carries on exactly as
+it is — it has nothing to do with this app. The parked file is the *native*
+widget, which has never run anywhere.
+
+## Warning 2: the licence question
+
+Apple's Developer Program License Agreement says the SDK may only be installed
+on Apple-branded hardware, and xtool works by extracting that SDK from a copy
+of Xcode you download. Whether that matters is argued about —
+[OSNews](https://www.osnews.com/story/142331/xtool-cross-platform-xcode-replacement-for-linux-windows-and-macos/)
+reads it as a clear conflict. Nobody has been penalised for it that anyone
+knows of, and it is Apple's agreement to interpret, not mine.
+
+For putting this on your own phone, it is between you and that agreement. If
+you ever submit it to the App Store, know that you did it this way.
 
 ---
 
 ## What you need
 
-- **A Mac.** Xcode is Mac-only. There is no way around this for building an
-  iPhone app yourself.
-- **Xcode**, free from the Mac App Store.
-- **An Apple ID.** The free one you already have is enough to start.
+- **A PC running Linux, or Windows with WSL.** Not a Mac. (A Mac works too.)
+- **An Apple ID.** A free one is enough to run it on your own phone.
+- **About 8GB of download** — Xcode, from Apple, which xtool takes the SDK out
+  of. You never install or open it.
+- **Your iPhone and a cable.**
+- **$99/year** only if you want it in the App Store for other people.
 
 ---
 
-## Setting it up in Xcode, step by step
+## Setting it up, once
 
-You have never done this before, so every step is spelled out.
+These are xtool's own steps, not mine. If anything here disagrees with
+[their installation guide](https://xtool.sh/documentation/xtooldocs/installation-linux),
+believe theirs.
 
-### 1. Make the project
+### 1. Swift
 
-1. Open Xcode → **File → New → Project**
-2. Choose **iOS → App**, click **Next**
-3. Fill in:
-   - Product Name: `BreslovDaily`
-   - Interface: **SwiftUI**
-   - Language: **Swift**
-   - Storage: **None**
-   - Leave the test checkboxes unticked
-4. Click **Next**, and save it somewhere you can find again
+Install the Swift 6.4 toolchain from <https://swift.org/install/linux>, then:
 
-Xcode makes a project with two files, `BreslovDailyApp.swift` and
-`ContentView.swift`. You are about to replace them.
+```bash
+swift --version
+```
 
-### 2. Put this code in
+### 2. usbmuxd — how Linux talks to an iPhone
 
-1. In Xcode's left-hand list, select `ContentView.swift` and delete it
-   (**Move to Trash**)
-2. Drag these folders from `ios/native/BreslovDaily/` into the left-hand list,
-   dropping them onto the blue `BreslovDaily` folder:
-   - `Models`
-   - `Services`
-   - `Views`
-3. When Xcode asks, tick **Copy items if needed** and **Create groups**
-4. Drag `BreslovDailyApp.swift` in the same way, replacing the one Xcode made
+```bash
+sudo apt-get install usbmuxd libimobiledevice-utils
+ideviceinfo          # with the phone plugged in, this should print its name
+```
 
-### 3. Add the widget
+On Windows you also need USB passthrough into WSL — Microsoft's
+[USBIPD instructions](https://learn.microsoft.com/en-us/windows/wsl/connect-usb).
 
-1. **File → New → Target**
-2. Choose **iOS → Widget Extension**, click **Next**
-3. Product Name: `BreslovWidget`
-4. **Untick "Include Live Activity"** and **untick "Include Configuration
-   App Intent"**
-5. Click **Finish**, then **Activate** when asked
-6. Delete the `BreslovWidget.swift` Xcode made, and drag in
-   `ios/native/BreslovWidget/BreslovWidget.swift`
-7. Select `Models/Models.swift` in the list. On the right-hand panel, under
-   **Target Membership**, tick **BreslovWidget** as well as **BreslovDaily**.
-   The widget needs the same models the app uses.
+### 3. Xcode
 
-### 4. Allow it to ask for your location
+Download **Xcode 27** from
+<https://developer.apple.com/download/all/?q=Xcode>. Use a browser, not
+`curl` — it asks you to log in. Note where the `.xip` file lands.
 
-1. Select the blue `BreslovDaily` project at the top of the list
-2. Choose the **BreslovDaily** target → **Info** tab
-3. Hover a row, click **+**, and add:
-   - Key: `Privacy - When In Use Usage Description`
-   - Value: `Your location is used to work out your zmanim. It is not stored.`
+### 4. xtool
 
-### 5. Run it
+```bash
+curl -fL \
+  "https://github.com/xtool-org/xtool/releases/latest/download/xtool-$(uname -m).AppImage" \
+  -o xtool
+chmod +x xtool
+sudo mv xtool /usr/local/bin/
+xtool --help
+```
 
-1. Plug your iPhone in with a cable
-2. At the top of the Xcode window, pick your iPhone from the device list
-3. Press the **▶︎ play button**
+### 5. Log in and hand over the SDK
 
-The first time, your phone will refuse to open it. Go to
-**Settings → General → VPN & Device Management** on the phone, tap your Apple
-ID, and tap **Trust**.
+```bash
+xtool setup
+```
+
+It asks how you want to log in. Without a paid developer account, choose
+**Password** — it uses private Apple APIs, so if that makes you uneasy, make a
+throwaway Apple ID for it. Then it asks for the path to the `Xcode.xip` you
+downloaded, and extracts the SDK itself. That part is slow.
+
+```bash
+swift sdk list          # should print: darwin
+```
+
+---
+
+## Building and running it
+
+Plug the phone in, then from **this folder**:
+
+```bash
+cd ios/native
+xtool dev
+```
+
+That builds the app, signs it, installs it on the phone and launches it. The
+first build is slow — it is compiling the iOS SDK's Swift modules — and later
+ones are much faster.
+
+The first time, the phone refuses to open it. Go to **Settings → General →
+VPN & Device Management**, tap your Apple ID, tap **Trust**.
+
+### Before you build, change one line
+
+`xtool.yml` says:
+
+```yaml
+bundleID: com.example.BreslovDaily
+```
+
+Make that yours — `com.yourname.breslovdaily` or anything nobody else would
+pick. For your own phone it only has to be unique to you.
 
 ---
 
 ## Running it for free
 
-Signing in with an ordinary free Apple ID is enough to run this on your own
-phone, widget and all. Two limits:
+A free Apple ID is enough to run this on your own phone. Two limits:
 
-- **It expires after 7 days** and you have to press play again to reinstall.
+- **It expires after seven days.** Run `xtool dev` again to reinstall.
 - **Three apps at a time** signed this way.
 
-That is enough to decide whether the app is worth the $99/year. When it is,
-join the Apple Developer Program and the expiry goes away.
-
-Everything here is deliberately built to work under those limits. In
-particular the widget fetches its own copy of the day rather than reading one
-the app saved, because sharing storage between an app and its widget needs the
-App Groups capability, and that needs a paid account.
+Everything here is built to live inside those limits. In particular
+`Services/API.swift` caches to the app's own folder rather than a shared
+container, so the app needs no App Groups capability — which needs a paid
+account.
 
 ---
 
 ## Where its content comes from
 
-Nothing is bundled. The app reads from the same server the website uses:
+Nothing is bundled. The app reads the same server the website uses:
 
 ```
 https://akuvox-backend.onrender.com
 ```
 
-Change it under **Settings → Server** inside the app if it ever moves.
-
-If the site is locked with a password, put it in the box underneath the address
-on that same Settings screen. The widget reads the same one, so it only has to
-be entered once.
+Change it under **Settings → Server** inside the app if it ever moves. If the
+site is password-locked, the box underneath takes it.
 
 A word of warning for when the app is real: the free hosting plan puts the
-server to sleep after about fifteen quiet minutes, and waking it takes roughly
-half a minute. The app and the widget both wait that out rather than showing an
-error, but it makes a poor first impression. Render's paid plan at $7/month
-removes it, and is worth doing before anyone else installs this.
+server to sleep after about fifteen quiet minutes and waking it takes roughly
+half a minute. The app waits that out rather than showing an error, but it
+makes a poor first impression. Render's $7/month plan removes it, and is worth
+doing before anyone else installs this.
 
 ---
 
@@ -128,30 +179,42 @@ removes it, and is worth doing before anyone else installs this.
 
 | File | What it does |
 |---|---|
-| `BreslovDailyApp.swift` | The app's entry point |
-| `Models/Models.swift` | The shapes the server sends. Shared with the widget |
-| `Services/API.swift` | Fetching, caching, and keeping the last good copy on screen when the network fails |
-| `Services/Settings.swift` | Everything the reader has chosen, and asking the phone for its location |
-| `Views/Theme.swift` | The pastel rose and gold, in both light and dark |
-| `Views/PassageView.swift` | Renders a passage: Hebrew, English, credits. Tells verses from paragraphs and numbers them |
-| `Views/TodayView.swift` | The home screen |
-| `Views/TehillimView.swift` | The day's Tehillim |
-| `Views/TikkunView.swift` | The Tikkun HaKlali, as one continuous reading that remembers your place |
-| `Views/WeeklyView.swift` | The week's Torah |
-| `Views/ZmanimView.swift` | All the times, and which minhag you hold by |
-| `Views/SearchView.swift` | Search, with suggestions as you type |
-| `Views/AboutView.swift` | Settings, sources and privacy |
-| `BreslovWidget/BreslovWidget.swift` | The widget, in five sizes |
+| `Package.swift` | The Swift package. A library, not an executable — xtool supplies the app's entry point when it packs it |
+| `xtool.yml` | Bundle ID, which product is the app, where the Info.plist is |
+| `Support/Info.plist` | The sentence iOS shows when the app asks for your location. Without it the system kills the app the moment it asks |
+| `Sources/BreslovDaily/BreslovDailyApp.swift` | The app's entry point |
+| `Sources/BreslovDaily/Models/Models.swift` | The shapes the server sends |
+| `Sources/BreslovDaily/Services/API.swift` | Fetching, caching, keeping the last good copy on screen when the network fails |
+| `Sources/BreslovDaily/Services/Settings.swift` | Everything the reader has chosen, and asking the phone for its location |
+| `Sources/BreslovDaily/Views/Theme.swift` | The colours, in both light and dark |
+| `Sources/BreslovDaily/Views/PassageView.swift` | Renders a passage: Hebrew, English, credits |
+| `Sources/BreslovDaily/Views/TodayView.swift` | The home screen |
+| `Sources/BreslovDaily/Views/TehillimView.swift` | The day's Tehillim |
+| `Sources/BreslovDaily/Views/TikkunView.swift` | The Tikkun HaKlali, remembering your place |
+| `Sources/BreslovDaily/Views/WeeklyView.swift` | The week's Torah |
+| `Sources/BreslovDaily/Views/ZmanimView.swift` | All the times, and which minhag you hold by |
+| `Sources/BreslovDaily/Views/SearchView.swift` | Search, with suggestions as you type |
+| `Sources/BreslovDaily/Views/AboutView.swift` | Settings, sources and privacy |
+| `WidgetKit-parked/BreslovWidget.swift` | The native widget. Switched off — see `WHY.md` beside it |
+| `Support/BreslovWidget-Info.plist` | Written and waiting for the day it is switched on |
 
 ---
 
 ## Honestly: expect to fix things on the first build
 
-This Swift was written without a Swift compiler available, so it has never been
-compiled. Its structure has been checked — brackets balance, every type is
-defined, and every field name was verified against what the server actually
-sends — but that is not the same as building.
+**This Swift has never been compiled.** There is no Swift compiler on the
+machine it was written on, and there is not one there now.
 
-Expect Xcode to complain about something the first time. Send the error text
-and it can be fixed quickly; the logic and the layout are the hard part and
-they are done.
+What *has* been checked, and can be checked without one: `xtool.yml` parses,
+every key in it is a key xtool's own `PackSchemaBase` decodes, both plists
+parse, the product named in the manifest matches a library and a target in
+`Package.swift`, `Sources/BreslovDaily/` holds the fourteen Swift files,
+`@main` is inside the target, nothing is loose in `Sources/` for SwiftPM to
+trip over, and the location permission the code asks for has its sentence in
+the Info.plist.
+
+That is the layout being right. It is not the code compiling.
+
+Expect the first `xtool dev` to stop on something. Send the error text and it
+can be fixed quickly — the logic and the screens are the hard part and they
+are written.

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The sentence iOS shows when the app asks for your location. It is
+	     required: an app that calls requestWhenInUseAuthorization without one
+	     of these keys is terminated by the system the moment it asks, with no
+	     prompt and no error anyone would recognise. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to work out the zmanim where you are. It is sent to this app's own server to do the sum and is not stored anywhere.</string>
+
+	<!-- Portrait only, both ways up. The reading views are a column of text
+	     and nothing here is laid out for landscape. -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+
+	<key>CFBundleDisplayName</key>
+	<string>Breslov Daily</string>
+</dict>
+</plist>

@@ -10,7 +10,8 @@
     "check": "node scripts/selftest.js",
     "smoke": "node scripts/smoke.js",
     "resilience": "node scripts/resilience.js",
-    "widget": "node scripts/widget-check.js"
+    "widget": "node scripts/widget-check.js",
+    "check:ios": "python3 -I scripts/check-ios.py"
   },
   "dependencies": {
     "@hebcal/core": "^5.4.11",

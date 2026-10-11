@@ -1,0 +1,28 @@
+# How xtool turns the Swift package next to this file into an iPhone app.
+#
+# The schema is xtool's own (version 1). Every key below is one it reads:
+# PackSchema wants a bundleID (or an orgID), and takes an optional product,
+# infoPath, entitlementsPath, iconPath, resources and extensions.
+version: 1
+
+# Change this to something that is yours before you put it anywhere near the
+# App Store. For installing on your own phone with a free Apple ID it only has
+# to be unique to you.
+bundleID: com.example.BreslovDaily
+
+product: BreslovDaily
+
+# The app asks for your location to work out the zmanim where you are, and iOS
+# kills any app that asks without having said why first. The text in this file
+# is the sentence the phone shows in that permission box.
+infoPath: Support/Info.plist
+
+# ---- the widget, switched off on purpose -----------------------------------
+# Turning this on also means uncommenting the product and target in
+# Package.swift. Read WidgetKit-parked/WHY.md first -- as of build 72 this
+# produces an extension that crashes on launch, which is xtool's bug and not
+# this app's.
+#
+# extensions:
+# - product: BreslovWidget
+#   infoPath: Support/BreslovWidget-Info.plist

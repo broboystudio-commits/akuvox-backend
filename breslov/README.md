@@ -258,7 +258,7 @@ breslov/
 │   └── make-icons.js      draws the app icons
 ├── ios/
 │   ├── scriptable/        the widget that works today
-│   └── native/            Swift source for an App Store app
+│   └── native/            an xtool project — builds on Linux/Windows, no Mac
 └── data/cache/            downloaded texts live here
 ```
 

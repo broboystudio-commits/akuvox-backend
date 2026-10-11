@@ -71,50 +71,28 @@ with no slash on the end. You can test it in Safari first — open
 
 ---
 
-## 2. The real App Store app — needs a Mac with Xcode
+## 2. The real app — no Mac needed any more
 
-`native/` holds the Swift source for a proper app and a real WidgetKit widget.
+`native/` holds the Swift for a proper app. It used to say you needed a Mac
+with Xcode. You do not: [xtool](https://github.com/xtool-org/xtool) builds and
+signs iOS apps from a Swift package on Linux or Windows, and `native/` is laid
+out as an xtool project.
 
-**Be aware:** these files were written here but **have not been compiled**,
-because building Swift requires Xcode on a Mac. Treat them as a working
-starting point, not a finished app. Expect to fix small things the first time
-you build.
+**Everything about it is in [`native/README.md`](native/README.md)** — what to
+install, what it costs, and two warnings worth reading before you start:
 
-You also need an Apple Developer account ($99/year) to put anything on the
-App Store.
+- the **native widget is switched off**, because xtool cannot currently build
+  a WidgetKit extension that runs ([issue #313](https://github.com/xtool-org/xtool/issues/313),
+  opened 10 October 2026, still open). The Scriptable widget above is
+  unaffected and keeps working;
+- Apple's licence agreement says their SDK belongs on Apple hardware, and
+  xtool takes it out of a copy of Xcode you download. That is a real grey
+  area and it is Apple's agreement to interpret.
 
-### Setting it up in Xcode
+**The Swift in there has never been compiled** — there is no Swift compiler on
+the machine it was written on. The project layout has been checked against
+xtool's own schema and SwiftPM's rules; the code has not been built. Expect
+the first build to stop on something.
 
-1. Xcode → **File → New → Project → iOS → App**.
-   Name it `BreslovDaily`, interface **SwiftUI**, language **Swift**.
-2. Drag these into the app target:
-   - `native/BreslovDaily/BreslovDailyApp.swift`
-   - `native/BreslovDaily/ContentView.swift`
-3. **File → New → Target → Widget Extension**, name it `BreslovWidget`.
-   Untick "Include Live Activity". Replace the file Xcode generates with
-   `native/BreslovWidget/BreslovWidget.swift`.
-4. Add `native/Shared/BreslovAPI.swift` to **both** targets — tick both boxes
-   in the file inspector on the right.
-5. Select the project → **Signing & Capabilities** → **+ Capability** →
-   **App Groups**, on both targets. Make a group such as
-   `group.com.yourname.breslovdaily`.
-6. In `BreslovAPI.swift` change two lines:
-   ```swift
-   static let server = URL(string: "https://your-address")!
-   static let appGroup = "group.com.yourname.breslovdaily"
-   ```
-7. In `BreslovWidget.swift`, set the latitude, longitude and time zone near
-   the top of `BreslovProvider` to where you live.
-8. Build and run.
-
-### What each file does
-
-| File | Purpose |
-|---|---|
-| `Shared/BreslovAPI.swift` | Fetches `/api/widget`, decodes it, and saves the last good copy so the widget still works offline |
-| `BreslovDaily/BreslovDailyApp.swift` | The app entry point |
-| `BreslovDaily/ContentView.swift` | Shows the website inside the app |
-| `BreslovWidget/BreslovWidget.swift` | The widget itself — timeline, refresh schedule, and a view for each size |
-
-The widget asks iOS to refresh a minute after the next zman, so the countdown
-stays honest without draining the battery. iOS decides the final timing.
+You still need an Apple Developer account ($99/year) to put anything on the
+App Store. Running it on your own phone is free.
