@@ -14,10 +14,10 @@
  * anything, and they are the heavy part.
  */
 
-var VERSION = 'breslov-v72';
+var VERSION = 'breslov-v73';
 
 var SHELL = [
-  '/', '/index.html', '/styles.css?v=72', '/app.js?v=72',
+  '/', '/index.html', '/styles.css?v=73', '/app.js?v=73',
   '/manifest.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-180.png',
   // The Hebrew face the app opens with. It is served from this server now

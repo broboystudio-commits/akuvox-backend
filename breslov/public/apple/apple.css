@@ -1,0 +1,502 @@
+/* ===========================================================================
+   Breslov Daily — the Apple-design copy.
+
+   Everything in this file is scoped to html[data-design="apple"], which is
+   only ever set when a tab asks for it (?design=apple). The current design
+   never loads this file.
+
+   It applies the apple-design skill in full, including the half the current
+   build deliberately turned down: translucent materials. Section numbers in
+   the comments are the skill's own.
+   =========================================================================== */
+
+/* ---- tokens: grouped backgrounds, fills, materials ---------------------- */
+/* iOS separates "the page" from "the cells on it" by a step in grey, not by
+   borders or shadows: systemGroupedBackground under, a white cell on top. The
+   warm paper of the current design is kept, one step deeper, so cells read as
+   cells without a line round them. */
+html[data-design="apple"] {
+  --page:      #f2efec;
+  --surface:   #ffffff;
+  --surface-2: #e9e5e1;
+  --fill:      rgba(118, 112, 120, 0.12);
+  --fill-2:    rgba(118, 112, 120, 0.20);
+  --sep:       rgba(60, 50, 58, 0.18);
+  --material:  rgba(246, 243, 240, 0.72);
+  --material-edge: rgba(60, 50, 58, 0.16);
+  --ap-shadow: 0 0 28px rgba(40, 28, 34, 0.16);
+  --ap-dim:    rgba(16, 10, 14, 0.10);
+  --radius:    12px;
+  --radius-lg: 14px;
+  --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --ui-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+html[data-design="apple"][data-theme="dark"] {
+  --page:      #0b0a0c;
+  --surface:   #1c1b1e;
+  --surface-2: #2a282c;
+  --fill:      rgba(120, 116, 128, 0.24);
+  --fill-2:    rgba(120, 116, 128, 0.34);
+  --sep:       rgba(235, 228, 238, 0.16);
+  --material:  rgba(22, 21, 24, 0.70);
+  --material-edge: rgba(235, 228, 238, 0.14);
+  --ap-shadow: 0 0 28px rgba(0, 0, 0, 0.55);
+  --ap-dim:    rgba(0, 0, 0, 0.32);
+}
+
+html[data-design="apple"] body {
+  background: var(--page);
+  font-family: var(--ui);
+  /* §2: horizontal drags belong to the page, so the swipe back from the edge
+     is ours rather than the browser's. Vertical scrolling and pinch-zoom are
+     untouched. */
+  touch-action: pan-y pinch-zoom;
+}
+
+/* ---- §15 typography: size-specific tracking and leading ----------------- */
+/* Large titles, the way an iOS navigation bar opens: big, bold, tight. */
+html[data-design="apple"] .hubhead { padding: 2px 4px 14px; }
+html[data-design="apple"] .hubhead h1 {
+  font-family: var(--ui-display);
+  font-size: 2.125rem;          /* 34 */
+  line-height: 1.2;             /* 41 */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  margin: 0;
+}
+html[data-design="apple"] .hubsub {
+  font-size: 0.9375rem;         /* 15 */
+  line-height: 1.33;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+/* Section headers over grouped lists: small, upper case, aligned with the
+   text inside the cells rather than with the cells' edges. */
+html[data-design="apple"] .rows-head {
+  font-family: var(--ui);
+  font-size: 0.8125rem;         /* 13 */
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  padding: 0 16px;
+  margin: 22px 0 7px;
+}
+
+/* ---- grouped lists: the iOS inset-grouped table ------------------------- */
+html[data-design="apple"] .rows {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+html[data-design="apple"] .row {
+  position: relative;
+  min-height: 44px;
+  padding: 11px 16px;
+  border-top: 0;
+  background: transparent;
+  /* §1: the highlight comes on the instant the finger lands and fades out
+     when it lifts -- on, not eased on. */
+  transition: background-color 280ms ease-out;
+}
+/* Separators inset to the text, not the cell edge, and half a point thick. */
+html[data-design="apple"] .row + .row::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 16px; right: 0;
+  height: 1px;
+  background: var(--sep);
+  transform: scaleY(0.5);
+  transform-origin: top;
+  pointer-events: none;
+}
+html[data-design="apple"] .row.is-pressed,
+html[data-design="apple"] .row:active {
+  background: var(--fill-2);
+  transition: none;
+}
+html[data-design="apple"] .row.is-plain.is-pressed { background: transparent; }
+html[data-design="apple"] .row-title {
+  font-size: 1.0625rem;         /* 17: iOS body */
+  line-height: 1.29;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+html[data-design="apple"] .row-sub {
+  font-size: 0.9375rem;         /* 15 */
+  line-height: 1.33;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+html[data-design="apple"] .row-go {
+  width: 8px; height: 8px;
+  border-width: 2px;
+  border-color: var(--text-3);
+  opacity: 0.7;
+}
+
+/* Cards become grouped cells too: no line, no shadow, the step in grey does
+   the separating. */
+html[data-design="apple"] .card {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+/* ---- §12 materials: translucent chrome, content scrolls underneath ------ */
+/* The nav bar is clear at the top of a page and becomes material only once
+   something has scrolled beneath it -- iOS's "scroll edge appearance". A
+   hairline that is always there says "this is a separate band"; one that
+   arrives with the content says "this is floating over what you are reading".
+   --edge is 0 at the top and 1 once the page has moved. */
+html[data-design="apple"] .topbar {
+  --edge: 0;
+  background: color-mix(in srgb, var(--material) calc(var(--edge) * 100%), var(--page));
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0;
+  box-shadow: 0 0.5px 0 rgba(0, 0, 0, calc(var(--edge) * 0.16));
+}
+html[data-design="apple"][data-theme="dark"] .topbar {
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, calc(var(--edge) * 0.14));
+}
+/* The nav bar never tucks away in this copy. iOS keeps it; the large title
+   is what gives the room back. */
+html[data-design="apple"] .topbar.is-tucked { transform: none !important; }
+
+/* The tab bar: translucent, flush, content scrolling under it. */
+@media (max-width: 899px) {
+  html[data-design="apple"] .tabs {
+    background: var(--material);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-top: 0;
+    box-shadow: 0 -0.5px 0 var(--material-edge);
+  }
+}
+@media (min-width: 900px) {
+  /* The rail on a wide screen is an iPad sidebar: the heavier material that
+     marks a structural region, §12. */
+  html[data-design="apple"] .tabs {
+    background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+    -webkit-backdrop-filter: saturate(160%) blur(24px);
+    backdrop-filter: saturate(160%) blur(24px);
+    border: 0;
+    box-shadow: 0.5px 0 0 var(--material-edge);
+  }
+}
+/* Both bars sit above the pages while they move (.ap-stage is 20). */
+html[data-design="apple"] .tabs { z-index: 40; }
+
+/* No sliding pill. An iOS tab bar says which tab you are on with colour. */
+html[data-design="apple"] .bar-lens { display: none !important; }
+html[data-design="apple"] .tab {
+  font-family: var(--ui);
+  font-size: 0.625rem;          /* 10 */
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  /* Vibrancy over a moving background: a touch heavier than it would be on
+     a solid one, §12. */
+  color: var(--text-2);
+}
+html[data-design="apple"] .tab.is-active { color: var(--accent); font-weight: 600; }
+html[data-design="apple"] .tab svg { width: 25px; height: 25px; stroke-width: 1.7; }
+html[data-design="apple"] .tab.is-pressed svg { transform: scale(0.9); transition: transform 100ms ease-out; }
+
+/* ---- the nav bar's inline title ----------------------------------------- */
+/* When a page's large title scrolls under the bar, the bar takes over: a
+   back button on the left, the title in the middle, both arriving as the
+   big title leaves, moving up as it moves up (§8, hint in the direction of
+   the motion). --collapse runs 0 to 1 with the scroll, frame for frame. */
+html[data-design="apple"] .bar { position: relative; }
+html[data-design="apple"] .topbar { --collapse: 0; }
+html[data-design="apple"] .dateblock {
+  opacity: calc(1 - var(--collapse) * 1.6);
+  transform: translateY(calc(var(--collapse) * -4px));
+}
+html[data-design="apple"] .ap-nav {
+  position: absolute;
+  inset: 0 52px 0 12px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  opacity: var(--collapse);
+  transform: translateY(calc((1 - var(--collapse)) * 6px));
+}
+html[data-design="apple"] .topbar.is-collapsed .ap-nav { pointer-events: auto; }
+html[data-design="apple"] .topbar.is-collapsed .dateblock { pointer-events: none; }
+html[data-design="apple"] .topbar.is-searching .ap-nav { display: none; }
+html[data-design="apple"] .ap-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 34%;
+  padding: 8px 6px 8px 2px;
+  background: none;
+  border: 0;
+  font: 400 1.0625rem/1.2 var(--ui);
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  touch-action: manipulation;
+}
+html[data-design="apple"] .ap-back[hidden] { display: none; }
+html[data-design="apple"] .ap-back::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 11px; height: 11px;
+  border-left: 2.4px solid currentColor;
+  border-bottom: 2.4px solid currentColor;
+  transform: rotate(45deg);
+  margin: 0 2px 0 4px;
+}
+html[data-design="apple"] .ap-back.is-pressed { opacity: 0.4; }
+html[data-design="apple"] .ap-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 46%;
+  font: 600 1.0625rem/1.2 var(--ui);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The back row at the top of a page: the iOS back button, in the content
+   until the bar takes it over. */
+html[data-design="apple"] .backrow {
+  font-family: var(--ui);
+  font-size: 1.0625rem;
+  color: var(--accent);
+  margin: 0 0 4px -6px;
+  padding: 6px 6px;
+}
+html[data-design="apple"] .backrow > span:first-child {
+  width: 11px; height: 11px;
+  border-left-width: 2.4px;
+  border-bottom-width: 2.4px;
+}
+
+/* ---- controls ----------------------------------------------------------- */
+/* §1: feedback on the press, instant, 100ms out. A filled button dims as
+   well as giving a little, the way UIButton does. */
+html[data-design="apple"] .btn {
+  min-height: 50px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  background-image: none;
+  box-shadow: none;
+  color: #fff;
+  font: 600 1.0625rem/1.2 var(--ui);
+  letter-spacing: -0.01em;
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+}
+html[data-design="apple"][data-theme="dark"] .btn { color: #1a1015; }
+html[data-design="apple"] .btn.is-pressed,
+html[data-design="apple"] .btn:active {
+  opacity: 0.7;
+  transform: scale(0.97);
+  transition: opacity 0ms, transform 100ms ease-out;
+}
+html[data-design="apple"] .btn.ghost {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* The iOS switch: 51 by 31, a white knob, the track filling with the tint. */
+html[data-design="apple"] .switch {
+  width: 51px; height: 31px;
+  border: 0;
+  background: var(--fill-2);
+  background-image: none;
+  transition: background-color 250ms ease;
+}
+html[data-design="apple"] .switch::after {
+  top: 2px; left: 2px;
+  width: 27px; height: 27px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  /* A toggle is not under a finger the whole way, so a fixed curve is fine
+     here -- but a springy one, because the knob is thrown, §4. */
+  transition: transform 340ms cubic-bezier(0.3, 1.35, 0.5, 1);
+}
+html[data-design="apple"] .switch[aria-checked="true"] {
+  background: var(--accent);
+  background-image: none;
+}
+html[data-design="apple"] .switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+/* Steppers and the size buttons: a segmented control. */
+html[data-design="apple"] .stepper {
+  gap: 0;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--fill);
+}
+html[data-design="apple"] .stepper button {
+  min-width: 44px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--ui);
+  color: var(--text);
+}
+html[data-design="apple"] .stepper button + button { box-shadow: -0.5px 0 0 var(--sep); }
+html[data-design="apple"] .stepper button.is-pressed { background: var(--surface); }
+
+/* Selects: a plain grouped value, the chevron after it. */
+html[data-design="apple"] .choice,
+html[data-design="apple"] .choice-row > .choice,
+html[data-design="apple"] .rows-form .choice {
+  border: 0;
+  border-radius: 9px;
+  background-color: var(--fill);
+  font-family: var(--ui);
+  font-size: 1.0625rem;
+}
+
+/* ---- search: the iOS search field, with a Cancel ------------------------ */
+html[data-design="apple"] .search-field {
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fill);
+  box-shadow: none;
+}
+html[data-design="apple"] .search-field:focus-within {
+  border: 0;
+  box-shadow: none;
+  background: var(--fill-2);
+}
+html[data-design="apple"] .search-field input { font-family: var(--ui); font-size: 1.0625rem; }
+/* The close button says what it does, the way iOS does: Cancel. */
+html[data-design="apple"] .topbar.is-searching #searchBtn {
+  width: auto;
+  padding: 8px 4px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+html[data-design="apple"] .topbar.is-searching #searchBtn .glyph-close { display: none !important; }
+html[data-design="apple"] .topbar.is-searching #searchBtn::after {
+  content: "Cancel";
+  font: 400 1.0625rem/1 var(--ui);
+  color: var(--accent);
+}
+/* §12 "materialize, don't just fade": the suggestion list arrives as a
+   surface coming into focus -- blur and scale together, not only opacity. */
+html[data-design="apple"] .suggest {
+  border: 0;
+  border-radius: 13px;
+  background: var(--material);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 12px 40px rgba(20, 12, 18, 0.18), 0 0 0 0.5px var(--material-edge);
+  animation: ap-materialize 260ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  transform-origin: top center;
+}
+@keyframes ap-materialize {
+  from { opacity: 0; transform: scale(0.97); filter: blur(6px); }
+}
+
+/* ---- the number wheel: UIPickerView -------------------------------------- */
+/* A filled, rounded band behind the chosen row instead of two hairlines.
+   `isolation` makes the wheel its own stacking context so the band can sit
+   behind the numbers without falling behind the card. */
+html[data-design="apple"] .wheel { isolation: isolate; }
+html[data-design="apple"] .wheel-rails {
+  z-index: -1;
+  left: 6px; right: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--fill);
+}
+html[data-design="apple"] .wheel-item { font-family: var(--ui); font-size: 1.25rem; }
+html[data-design="apple"] .wheel-item.is-chosen { font-size: 1.375rem; font-weight: 600; }
+
+/* ---- folds ------------------------------------------------------------- */
+html[data-design="apple"] .fold > summary {
+  min-height: 44px;
+  font-family: var(--ui);
+  font-size: 1.0625rem;
+}
+/* The content eases in from just above, 'backwards' fill only -- an
+   animation that keeps its end value outranks every transition after it,
+   which is the bug this app has already had once. */
+html[data-design="apple"] .fold[open] > .fold-body {
+  animation: ap-unfold 280ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes ap-unfold {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+/* ---- the page itself while it moves (driven from apple.js) ------------- */
+/* The base design's own page entrance is switched off here: this copy moves
+   whole pages instead, and two motions on one change is one too many. */
+html[data-design="apple"] .panel.is-entering > * { animation: none !important; }
+
+.ap-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 20;                 /* under the nav bar (30) and the tab bar */
+  overflow: hidden;
+  pointer-events: none;        /* a tap goes straight to the real page beneath */
+  contain: strict;
+}
+.ap-sheet {
+  position: absolute;
+  inset: 0;
+  background: var(--page);
+  will-change: transform;
+}
+.ap-sheet.is-top { box-shadow: var(--ap-shadow); }
+.ap-sheet > main {
+  position: absolute;
+  margin: 0;
+  max-width: none;
+}
+.ap-dim {
+  position: absolute;
+  inset: 0;
+  background: var(--ap-dim);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- §14: reduced motion, reduced transparency, more contrast ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-design="apple"] .switch::after { transition: transform 1ms; }
+  html[data-design="apple"] .suggest,
+  html[data-design="apple"] .fold[open] > .fold-body { animation: none; }
+  html[data-design="apple"] .dateblock,
+  html[data-design="apple"] .ap-nav { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-design="apple"] .topbar,
+  html[data-design="apple"] .tabs,
+  html[data-design="apple"] .suggest {
+    background: var(--page) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@media (prefers-contrast: more) {
+  html[data-design="apple"] {
+    --sep: rgba(0, 0, 0, 0.45);
+    --material: var(--page);
+  }
+  html[data-design="apple"] .topbar,
+  html[data-design="apple"] .tabs { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  html[data-design="apple"] .tabs { box-shadow: 0 -1px 0 var(--text-2); }
+}

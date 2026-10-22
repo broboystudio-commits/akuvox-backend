@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="72">
+<html lang="en" data-build="73">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=72" />
+<link rel="stylesheet" href="/styles.css?v=73" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -26,6 +26,61 @@
     } catch (e) {
       document.documentElement.setAttribute('data-theme', 'light');
     }
+  })();
+</script>
+<script>
+  // Which design this tab shows. The current one, unless asked otherwise.
+  //
+  // `?design=apple` switches this tab to the Apple-design copy and
+  // `?design=current` switches it back. The choice is kept in window.name,
+  // which belongs to this one tab (or this one frame of the compare page) and
+  // survives moving between pages and reloading -- so it never leaks into
+  // another tab, and the copy is never shown to anybody who did not ask.
+  (function () {
+    var want = '';
+    try {
+      var m = /[?&]design=(apple|current)(?:&|$)/.exec(location.search);
+      if (m) { want = m[1]; window.name = 'bd-design:' + want; }
+      else {
+        var n = /^bd-design:(apple|current)$/.exec(window.name || '');
+        if (n) want = n[1];
+      }
+    } catch (e) {}
+    if (want !== 'apple') return;
+    document.documentElement.setAttribute('data-design', 'apple');
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/apple/apple.css?v=73';
+    document.head.appendChild(css);
+    var js = document.createElement('script');
+    js.src = '/apple/apple.js?v=73';
+    document.head.appendChild(js);
+  })();
+
+  // Inside the compare page, each frame tells the page where it went, and
+  // goes where it is told -- so both designs can be kept on the same page
+  // while you look at them. Does nothing anywhere else.
+  (function () {
+    try {
+      if (window.parent === window) return;
+      if (!/\/compare(\.html)?$/.test(window.parent.location.pathname)) return;
+    } catch (e) { return; }
+    document.addEventListener('bd:panel', function (e) {
+      if (window.__bdMirroring) return;
+      window.parent.postMessage({ bd: 'panel', name: e.detail, frame: window.name }, location.origin);
+    });
+    window.addEventListener('message', function (e) {
+      if (e.origin !== location.origin || !e.data || e.data.bd !== 'goto') return;
+      var path = e.data.name === 'today' ? '/' : '/' + e.data.name;
+      if (location.pathname === path) return;
+      window.__bdMirroring = true;
+      try {
+        history.pushState(null, '', path + location.search);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+      } finally {
+        window.__bdMirroring = false;
+      }
+    });
   })();
 </script>
 </head>
@@ -1086,6 +1141,6 @@
 
 </main>
 
-<script src="/app.js?v=72"></script>
+<script src="/app.js?v=73"></script>
 </body>
 </html>

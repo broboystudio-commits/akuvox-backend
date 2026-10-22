@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '72';
+  var BUILD = '73';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -2745,6 +2745,12 @@
 
   /** Has the phone asked for no movement? */
   function stillness() {
+    // The Apple-design copy (public/apple/) runs its own page motion -- iOS
+    // push and pop, and a swipe back from the edge -- and its nav bar does
+    // not tuck away. The two things this gates are exactly the two it
+    // replaces, so in that copy the answer here is "stay still" and the copy
+    // does the moving. With the copy switched off this line does nothing.
+    if (document.documentElement.getAttribute('data-design') === 'apple') return true;
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch (e) { return false; }

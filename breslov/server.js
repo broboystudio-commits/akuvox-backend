@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
  * Open /api/health to see which build is actually running -- the quickest way
  * to tell a stale browser apart from a deploy that never happened.
  */
-const BUILD = '72';
+const BUILD = '73';
 
 app.use(cors());
 
@@ -1069,6 +1069,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
   },
 }));
+
+// The side-by-side of the current design and the Apple-design copy. Behind
+// the same lock as everything else.
+app.get('/compare', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'compare.html'));
+});
 
 // Anything else that is not an API call goes to the app shell.
 app.get(/^\/(?!api\/).*/, (req, res) => {
