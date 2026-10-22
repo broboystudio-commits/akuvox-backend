@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="73">
+<html lang="en" data-build="74">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -13,7 +13,8 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 <link rel="icon" href="/icons/icon-192.png" />
-<link rel="stylesheet" href="/styles.css?v=73" />
+<link rel="stylesheet" href="/styles.css?v=74" />
+<link rel="stylesheet" href="/apple/apple.css?v=74" />
 <script>
   // Runs before anything is painted: picks the saved theme, or follows the
   // phone's own setting if nothing has been chosen yet.
@@ -29,15 +30,17 @@
   })();
 </script>
 <script>
-  // Which design this tab shows. The current one, unless asked otherwise.
+  // Which design this tab shows: the Apple design, unless asked otherwise.
   //
-  // `?design=apple` switches this tab to the Apple-design copy and
-  // `?design=current` switches it back. The choice is kept in window.name,
-  // which belongs to this one tab (or this one frame of the compare page) and
+  // `?design=current` switches this tab back to the previous design and
+  // `?design=apple` returns it. The choice is kept in window.name, which
+  // belongs to this one tab (or this one frame of the compare page) and
   // survives moving between pages and reloading -- so it never leaks into
-  // another tab, and the copy is never shown to anybody who did not ask.
+  // another tab. apple.css is linked above so the first paint is already
+  // right; every rule in it waits for data-design="apple", so it does
+  // nothing to the previous design.
   (function () {
-    var want = '';
+    var want = 'apple';
     try {
       var m = /[?&]design=(apple|current)(?:&|$)/.exec(location.search);
       if (m) { want = m[1]; window.name = 'bd-design:' + want; }
@@ -48,12 +51,8 @@
     } catch (e) {}
     if (want !== 'apple') return;
     document.documentElement.setAttribute('data-design', 'apple');
-    var css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = '/apple/apple.css?v=73';
-    document.head.appendChild(css);
     var js = document.createElement('script');
-    js.src = '/apple/apple.js?v=73';
+    js.src = '/apple/apple.js?v=74';
     document.head.appendChild(js);
   })();
 
@@ -1141,6 +1140,6 @@
 
 </main>
 
-<script src="/app.js?v=73"></script>
+<script src="/app.js?v=74"></script>
 </body>
 </html>

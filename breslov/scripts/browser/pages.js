@@ -1,8 +1,9 @@
 /**
- * The current design still holds what build 72 established.
+ * Every page holds what build 72 established, in both designs: the Apple
+ * design everyone sees, and the previous one kept behind ?design=current.
  *
  *   PORT=3222 node scripts/browser/stub-server.js &
- *   node scripts/browser/current-design.js
+ *   node scripts/browser/pages.js
  *
  * Every page, at a phone width and a desktop width, both themes: it opens
  * with no script errors, shows its panel, does not scroll sideways, renders
@@ -24,6 +25,10 @@ const say = (name, ok, detail) => {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME });
+  for (const design of ['apple', 'current']) {
+  console.log(`\n${design === 'apple' ? 'The Apple design (the default)' : 'The previous design (?design=current)'}\n`);
+  // The default needs no query; the previous design has to be asked for.
+  const ask = design === 'apple' ? '' : '?design=current';
   for (const [label, width, theme] of [['phone', 390, 'light'], ['phone', 390, 'dark'], ['desktop', 1280, 'light']]) {
     const ctx = await browser.newContext({ viewport: { width, height: 860 } });
     await ctx.addInitScript((t) => { try { localStorage.setItem('bd.theme', JSON.stringify(t)); } catch (e) {} }, theme);
@@ -33,7 +38,7 @@ const say = (name, ok, detail) => {
     const problems = [];
     let lowest = { ratio: 99, where: '' };
     for (const name of PAGES) {
-      await page.goto(SITE + '/' + name, { waitUntil: 'domcontentloaded' });
+      await page.goto(SITE + '/' + name + ask, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(900);
       const r = await page.evaluate(() => {
         const out = {};
@@ -86,7 +91,7 @@ const say = (name, ok, detail) => {
         return out;
       });
       const where = name || 'today';
-      if (r.design !== null) problems.push(`${where}: data-design is "${r.design}"`);
+      if (r.design !== (design === 'apple' ? 'apple' : null)) problems.push(`${where}: data-design is "${r.design}"`);
       if (r.panel !== 'panel-' + (name || 'today')) problems.push(`${where}: showing ${r.panel}`);
       if (r.sideways > 1) problems.push(`${where}: scrolls sideways ${r.sideways}px`);
       if (r.pills) problems.push(`${where}: ${r.pills} pill(s)`);
@@ -94,24 +99,35 @@ const say = (name, ok, detail) => {
       if (r.gradients) problems.push(`${where}: ${r.gradients} gradient(s)`);
       if (r.low.ratio < lowest.ratio) lowest = { ratio: r.low.ratio, where: `${where} "${r.low.text}"` };
     }
-    say(`${label} ${theme}: all ${PAGES.length} pages open, in the current design, with nothing out of place`,
+    say(`${label} ${theme}: all ${PAGES.length} pages open, in this design, with nothing out of place`,
       problems.length === 0, problems.join('; ') || 'no pills, no gradients, no duplicate ids, nothing sideways');
     say(`${label} ${theme}: secondary text stays readable`, lowest.ratio >= 4.5,
       `lowest ${lowest.ratio.toFixed(2)}:1 on ${lowest.where}`);
     say(`${label} ${theme}: no script errors`, errors.length === 0, errors.join(' | ') || 'none');
 
+    // At rest nothing should be redrawing. The tab bar's pane once re-marked
+    // its tabs every frame, forever -- invisible, and a flat battery.
+    const busy = await page.evaluate(() => new Promise((done) => {
+      let n = 0;
+      const mo = new MutationObserver((m) => { n += m.length; });
+      mo.observe(document.querySelector('.tabs'), { subtree: true, attributes: true });
+      setTimeout(() => { mo.disconnect(); done(n); }, 1500);
+    }));
+    say(`${label} ${theme}: the tab bar is still when nothing is happening`, busy === 0, `${busy} changes in 1.5s`);
+
     if (label === 'phone' && theme === 'light') {
-      await page.goto(SITE + '/', { waitUntil: 'domcontentloaded' });
+      await page.goto(SITE + '/' + ask, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(800);
       const before = await page.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().height));
       await page.click('#searchBtn');
       await page.waitForTimeout(500);
       const after = await page.evaluate(() => Math.round(document.querySelector('.topbar').getBoundingClientRect().height));
-      say('phone: the header does not move when search opens', before === after, `${before} → ${after}px`);
+      say(`phone ${design}: the header does not move when search opens`, before === after, `${before} → ${after}px`);
     }
     await ctx.close();
   }
+  }
   await browser.close();
-  console.log(bad ? `\n${bad} failing.\n` : '\nThe current design is as build 72 left it.\n');
+  console.log(bad ? `\n${bad} failing.\n` : '\nBoth designs hold what build 72 established, on every page.\n');
   process.exitCode = bad ? 1 : 0;
 })().catch((e) => { console.error(e); process.exit(1); });

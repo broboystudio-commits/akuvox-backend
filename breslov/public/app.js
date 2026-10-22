@@ -15,7 +15,7 @@
    * Rather than leave someone with a blank app they cannot fix from a phone,
    * we notice the mismatch, throw away the caches and reload once.
    */
-  var BUILD = '73';
+  var BUILD = '74';
 
   /** The ?healed= marker survives a reload without needing storage, so this
    *  can never turn into a refresh loop. */
@@ -2469,9 +2469,23 @@
     function watchFlight() {
       if (flight) window.cancelAnimationFrame(flight);
       var still = 0, wasAt = null, frames = 0;
+      // Classes are only ever touched when they actually change. The bar is
+      // watched for class changes (below) and every change brings this
+      // straight back, so writing a class that was already right -- even
+      // removing one that was not there counts as a change -- kept this
+      // running sixty times a second for as long as the app was open.
+      var mark = function (node, on) {
+        if (node.classList.contains('is-passing') !== on) node.classList.toggle('is-passing', on);
+      };
       var step = function () {
         flight = 0;
         var box = lens.getBoundingClientRect();
+        // No pane on screen (the sidebar on a wide screen hides it): nothing
+        // is passing anything.
+        if (!box.width) {
+          Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) { mark(node, false); });
+          return;
+        }
         var at = Math.round(box.left + box.width / 2);
         still = (at === wasAt) ? still + 1 : 0;
         wasAt = at;
@@ -2483,15 +2497,13 @@
           if (d < gap) { gap = d; near = node; }
         });
         Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) {
-          node.classList.toggle('is-passing', node === near && !node.classList.contains('is-active'));
+          mark(node, node === near && !node.classList.contains('is-active'));
         });
 
         // Two still frames means it has arrived; the cap is for a spring that
         // never quite settles on a fractional pixel.
         if (still >= 2 || ++frames > 90) {
-          Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) {
-            node.classList.remove('is-passing');
-          });
+          Array.prototype.forEach.call(bar.querySelectorAll(itemSelector), function (node) { mark(node, false); });
           return;
         }
         flight = window.requestAnimationFrame(step);

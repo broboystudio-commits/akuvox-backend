@@ -208,6 +208,16 @@ html[data-design="apple"] .tab.is-active { color: var(--accent); font-weight: 60
 html[data-design="apple"] .tab svg { width: 25px; height: 25px; stroke-width: 1.7; }
 html[data-design="apple"] .tab.is-pressed svg { transform: scale(0.9); transition: transform 100ms ease-out; }
 
+/* On a wide screen the tabs are a sidebar running the full height, so it
+   has to pass under the header (30) -- above it, its glass covered the date
+   and the next zman -- while still staying over the moving pages (20). And
+   a sidebar row reads at body size, like an iPad's, not at a tab bar's 10. */
+@media (min-width: 900px) {
+  html[data-design="apple"] .tabs { z-index: 25; }
+  html[data-design="apple"] .tab { font-size: 1rem; letter-spacing: 0; }
+  html[data-design="apple"] .tab svg { width: 20px; height: 20px; }
+}
+
 /* ---- the nav bar's inline title ----------------------------------------- */
 /* When a page's large title scrolls under the bar, the bar takes over: a
    back button on the left, the title in the middle, both arriving as the

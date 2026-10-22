@@ -1,15 +1,16 @@
 /**
- * The Apple-design copy, measured.
+ * The Apple design, measured.
  *
  *   PORT=3222 node scripts/browser/stub-server.js &
- *   node scripts/browser/apple-copy.js
+ *   node scripts/browser/apple-design.js
  *
  * Needs playwright-core (npm i --no-save playwright-core) and a Chromium;
  * CHROME= points at one if it is not where this machine keeps it.
  *
- * It checks the two promises the copy makes -- that the current design is
- * left exactly alone unless a tab asks for the copy, and that the copy does
- * what the apple-design skill says -- by driving real touches through the
+ * It checks that every tab opens in the Apple design unless it asks for the
+ * previous one with ?design=current, that the previous design is still whole
+ * behind that link, and that the Apple design does what the apple-design
+ * skill says -- by driving real touches through the
  * browser's input layer and reading what is on screen, not what the
  * stylesheet says should be.
  */
@@ -74,19 +75,23 @@ async function filmStage(page, ms) {
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME });
 
-  // ------------------------------------------------- the current design
-  console.log('\nThe current design is left alone\n');
+  // ------------------------------------------------ the previous design
+  console.log('\nThe previous design is still whole behind ?design=current\n');
   {
-    const { context, page, errors, asked } = await open(browser, '/');
-    const r = await page.evaluate(() => ({
-      design: document.documentElement.getAttribute('data-design'),
-      lens: !!document.querySelector('.bar-lens'),
-      stage: !!document.querySelector('.ap-stage, .ap-nav'),
-    }));
-    say('no design attribute without asking', r.design === null, String(r.design));
-    say('the copy\'s files are never even requested',
-      !asked.some((p) => p.startsWith('/apple/')), asked.filter((p) => p.startsWith('/apple/')).join(', ') || 'none');
-    say('nothing of the copy is in the page', !r.stage);
+    const { context, page, errors, asked } = await open(browser, '/?design=current');
+    const r = await page.evaluate(() => {
+      const tabs = getComputedStyle(document.querySelector('.tabs'));
+      return {
+        design: document.documentElement.getAttribute('data-design'),
+        stage: !!document.querySelector('.ap-stage, .ap-nav'),
+        blur: tabs.backdropFilter || tabs.webkitBackdropFilter || '',
+      };
+    });
+    say('no design attribute when it is asked for', r.design === null, String(r.design));
+    say('the Apple script is never even requested',
+      !asked.includes('/apple/apple.js'), asked.filter((p) => p.startsWith('/apple/')).join(', ') || 'none');
+    say('nothing of the Apple design is in the page', !r.stage);
+    say('apple.css is linked but inert: no Apple glass on the tab bar', !/blur\(20px\)/.test(r.blur), r.blur || 'none');
     say('no errors', errors.length === 0, errors.join(' | ') || 'none');
     // The header still tucks away on scroll in the current design -- the one
     // behaviour the copy's hook changes, so the one most worth proving.
@@ -99,11 +104,11 @@ async function filmStage(page, ms) {
     await context.close();
   }
 
-  // ------------------------------------------------------ the copy loads
-  console.log('\nThe copy loads only when asked, and stays\n');
+  // ------------------------------------------- the Apple design is default
+  console.log('\nEvery tab opens in the Apple design\n');
   let apple;
   {
-    apple = await open(browser, '/read?design=apple');
+    apple = await open(browser, '/read');
     const { page, errors } = apple;
     await ready(page);
     const r = await page.evaluate(() => {
@@ -117,7 +122,7 @@ async function filmStage(page, ms) {
         name: window.name,
       };
     });
-    say('?design=apple switches this tab to the copy', r.design === 'apple');
+    say('with nothing in the address, the Apple design', r.design === 'apple', String(r.design));
     say('the tab bar is a translucent material (§12)', /blur\(20px\)/.test(r.blur), r.blur);
     say('no sliding pill in the tab bar', r.lens === 'none' || r.lens === 'absent', r.lens);
     say('the nav bar has an inline title ready (§8)', r.nav);
@@ -131,11 +136,20 @@ async function filmStage(page, ms) {
     say('it survives moving and reloading in the same tab',
       kept[0] === 'apple', `${kept[1]} is still ${kept[0]}`);
 
+    // Asking for the previous design in one tab changes that tab only.
+    const old = await apple.context.newPage();
+    await old.goto(SITE + '/read?design=current', { waitUntil: 'domcontentloaded' });
+    await old.waitForTimeout(900);
+    await old.goto(SITE + '/week', { waitUntil: 'domcontentloaded' });
+    await old.waitForTimeout(900);
+    const stays = await old.evaluate(() => document.documentElement.getAttribute('data-design'));
+    say('?design=current keeps that tab on the previous design', stays === null, String(stays));
     const other = await apple.context.newPage();
     await other.goto(SITE + '/read', { waitUntil: 'domcontentloaded' });
     await other.waitForTimeout(900);
     const leaked = await other.evaluate(() => document.documentElement.getAttribute('data-design'));
-    say('and never leaks into another tab', leaked === null, String(leaked));
+    say('and never leaks into another tab', leaked === 'apple', String(leaked));
+    await old.close();
     await other.close();
   }
 
@@ -513,6 +527,6 @@ async function filmStage(page, ms) {
 
   await apple.context.close();
   await browser.close();
-  console.log(bad ? `\n${bad} failing.\n` : '\nThe copy does what the skill says, and the current design is untouched.\n');
+  console.log(bad ? `\n${bad} failing.\n` : '\nThe Apple design is the default and does what the skill says; the previous design is intact.\n');
   process.exitCode = bad ? 1 : 0;
 })().catch((e) => { console.error(e); process.exit(1); });
