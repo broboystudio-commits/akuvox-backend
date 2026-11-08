@@ -1,0 +1,27 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Vela lives in the vela-app/ folder of this repo, on its own branch, so the
+# Resident Portal on main is never touched. When creating the Blueprint in Render,
+# set "Blueprint Path" to vela-app/render.yaml and pick the branch below.
+#
+# Free plan: the server's disk is wiped on every restart or deploy, so accounts and
+# uploaded videos are temporary. See README.md for switching to a persistent disk.
+services:
+  - type: web
+    name: vela-app
+    runtime: node
+    plan: free
+    repo: https://github.com/broboystudio-commits/akuvox-backend
+    branch: claude/gifted-albattani-gxfkrb
+    rootDir: vela-app
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_MODE
+        value: ephemeral
+      - key: MAX_UPLOAD_MB
+        value: "50"
